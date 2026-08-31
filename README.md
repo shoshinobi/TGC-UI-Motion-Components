@@ -8,6 +8,20 @@ format they need.
 (Vercel project `intsub/tgc-ui-motion-components`, Vite preset, no config needed
 beyond `vercel.json`).
 
+## Components in this bench
+
+More than one — switch with the **`component`** dropdown at the top of the Leva
+panel, or deep-link with `?c=`. The address bar updates as you switch, so it's
+always copy-pasteable.
+
+| Component | Open it | Spec | Status |
+|---|---|---|---|
+| **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [Approved spec ↓](#-approved-motion-specs--flame-pictogram) | ✅ approved 2026-08-31 |
+| **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [Approved spec ↓](#-approved-motion-specs--feedback-sheet) | ✅ approved 2026-08-31 |
+
+Each component's tab has its own **Export** buttons — `copy Framer Motion` and
+`copy JSON tokens` — that produce exactly the spec locked in below.
+
 ## Run
 
 ```bash
@@ -21,7 +35,9 @@ in both axes).
 
 ---
 
-## For the developer — what changed in the code you provided
+## For the developer — the code
+
+### Flame Pictogram — your code, near-verbatim
 
 Your `FlamePictogram` component is used **almost verbatim** — the changes are
 additive. The one behavioural change: `FLAME_DEFAULT_CONFIG` now holds the
@@ -39,10 +55,21 @@ values are in git history (commit `f6a4dd5`).
 | `--color-error` is set inline on the SVG from `motionConfig.color` | So the colour is tweakable in isolation | In the app, keep your global `--color-error`; don't pass `color` and this is a no-op |
 | **Second render path** for per-layer stagger / speed | **`motion/react` cannot animate `scale` on SVG child nodes (`<path>`, `<g>`) — only on an `<svg>` root.** When any layer has a non-default `delay`/`speed`, each flame layer is rendered as its own stacked `<motion.svg>`. | This is the path the approved spec uses. A non-layered spec would stay a single `<motion.svg>`. |
 
-Everything else in the repo — `App.tsx`, `src/lib/buildSpec.ts`, Leva, Vite — is
-just the tuning harness. You don't need any of it.
+Everything else in the repo — `App.tsx`, `src/benches/`, `src/lib/build*Spec.ts`,
+Leva, Vite — is just the tuning harness. You don't need any of it.
+
+### Feedback Sheet — rebuilt from Storybook
+
+No source was handed over, so `src/components/FeedbackSheet.tsx` is a **rebuild**
+from the story `design-system-feedbacksheet--error`, in plain scoped CSS
+(`.fsheet-*` in `src/index.css`) — visually faithful but **not** your design-system
+component. Use it only as the motion reference: the **✅ Approved motion specs —
+Feedback Sheet** section below is the deliverable — the per-layer `initial` /
+`animate` / `transition` to apply to your real `FeedbackSheet`'s elements.
 
 ## For the developer — how to implement an approved spec
+
+### Flame Pictogram
 
 **If the spec is not layered** (one shared `animate` / `transition`): keep your
 component exactly as you wrote it and paste the values from the **Framer Motion**
@@ -74,6 +101,18 @@ and a `LAYERS` array of `{ duration, delay }` per shape:
 
 The **JSON motion tokens** block is the same information framework-neutral
 (`transition`, `layerDelays`, `layerSpeeds`, resolved `layerDurations`).
+
+### Feedback Sheet
+
+Each layer is already its own element in your component (panel, gradient, icon,
+`h1`, body `p`, button). Make each a `motion.*` and paste the matching block from
+the approved spec. Two things to carry over:
+
+- Move the resting tilts onto the motion element (`initial`/`animate` `rotate: 2`
+  for the heading, `1` for body + button) instead of a CSS `transform` — motion
+  owns the transform once it animates `y`/`scale`.
+- The icon's `rotate` is a keyframe array with its own sub-transition
+  (`transition={{ ...spring, rotate: { duration, ease, times } }}`).
 
 ---
 
@@ -187,7 +226,98 @@ keyframe (`0.98`) back to the first (`1`) each cycle — a ~2% jump. It's subtle
 
 ---
 
+## ✅ Approved motion specs — Feedback Sheet
+
+> **Approved by Malcolm — 2026-08-31.** The **enter** animation for the
+> `feedback-sheet` (error variant). Each layer is a separate `motion.*` element.
+> These values are the component's built-in default
+> (`SHEET_DEFAULT_CONFIG` in `src/components/FeedbackSheet.tsx`) and the bench's
+> starting state — "reset defaults" in the Leva panel restores them.
+
+Structure (outer → in): overlay `flex items-end justify-center` → **sheet panel**
+(`role="dialog"`, `overflow-hidden`, `rounded-t-2xl`, `backdrop-blur-[25px]`) →
+gradient wash + content column. The resting tilts (heading `2°`, body/button
+`1°`) are carried on the motion element as `rotate`, not CSS, so they compose
+with `scale`.
+
+### Framer Motion (`motion/react`) — one block per layer
+
+```tsx
+// Sheet panel (slides up)
+initial={{ y: '100%' }}
+animate={{ y: 0 }}
+transition={{ type: 'spring', stiffness: 260, damping: 30 }}
+
+// Gradient wash
+initial={{ opacity: 0, y: 20 }}
+animate={{ opacity: 1, y: 0 }}
+transition={{ delay: 0.06, duration: 0.5, ease: 'easeOut' }}
+
+// Icon — slam in + hard rattle
+initial={{ opacity: 0, scale: 5 }}
+animate={{ opacity: 1, scale: 1, rotate: [0, -16, 16, -16, 16, -16, 16, -16, 16, -16, 16, 0] }}
+transition={{
+  type: 'spring', stiffness: 720, damping: 40, mass: 2.8,
+  rotate: { duration: 0.8, ease: 'easeOut', times: [0, 0.091, 0.182, 0.273, 0.364, 0.455, 0.545, 0.636, 0.727, 0.818, 0.909, 1] },
+}}
+
+// Heading
+initial={{ opacity: 0, y: 16, rotate: 2 }}
+animate={{ opacity: 1, y: 0, rotate: 2 }}
+transition={{ delay: 0.24, duration: 0.4, ease: 'easeOut' }}
+
+// Body copy
+initial={{ opacity: 0, y: 16, rotate: 1 }}
+animate={{ opacity: 1, y: 0, rotate: 1 }}
+transition={{ delay: 0.3, duration: 0.4, ease: 'easeOut' }}
+
+// Action button — starts after every other layer has settled (~0.7 s)
+initial={{ opacity: 0, scale: 0, rotate: 1 }}
+animate={{ opacity: 1, scale: 1, rotate: 1 }}
+transition={{ delay: 0.7, type: 'spring', stiffness: 750, damping: 29, mass: 0.9 }}
+```
+
+### Per-layer summary
+
+| Layer | from | motion | delay |
+|---|---|---|---|
+| sheet panel | `y: 100%` | spring `260 / 30` | 0 |
+| gradient wash | `opacity 0`, `y 20` | tween `0.5s easeOut` | 0.06 s |
+| icon | `opacity 0`, `scale 5` | spring `720 / 40`, mass `2.8` + `rotate` rattle `±16°` × 10 swings over `0.8s`, no decay | 0 |
+| heading | `opacity 0`, `y 16` | tween `0.4s easeOut` | 0.24 s |
+| body | `opacity 0`, `y 16` | tween `0.4s easeOut` | 0.30 s |
+| action button | `opacity 0`, `scale 0` | spring `750 / 29`, mass `0.9` | **0.7 s** (auto: after all other layers settle) |
+
+### JSON motion tokens
+
+```json
+{
+  "name": "feedback-sheet",
+  "enter": {
+    "sheet":    { "from": { "opacity": 1, "y": "100%", "scale": 1, "rotate": 0 }, "delay": 0,    "type": "spring", "stiffness": 260, "damping": 30, "mass": 1 },
+    "gradient": { "from": { "opacity": 0, "y": 20,     "scale": 1, "rotate": 0 }, "delay": 0.06, "type": "tween",  "duration": 0.5, "ease": "easeOut" },
+    "icon":     { "from": { "opacity": 0, "y": 0,      "scale": 5, "rotate": 0 }, "delay": 0,    "type": "spring", "stiffness": 720, "damping": 40, "mass": 2.8,
+                  "shake": { "duration": 0.8, "times": [0,0.091,0.182,0.273,0.364,0.455,0.545,0.636,0.727,0.818,0.909,1],
+                             "rotateKeyframes": [0,-16,16,-16,16,-16,16,-16,16,-16,16,0] } },
+    "heading":  { "from": { "opacity": 0, "y": 16,     "scale": 1, "rotate": 2 }, "delay": 0.24, "type": "tween",  "duration": 0.4, "ease": "easeOut" },
+    "body":     { "from": { "opacity": 0, "y": 16,     "scale": 1, "rotate": 1 }, "delay": 0.3,  "type": "tween",  "duration": 0.4, "ease": "easeOut" },
+    "button":   { "from": { "opacity": 0, "y": 0,      "scale": 0, "rotate": 1 }, "delay": 0.7,  "startAfterAll": true, "type": "spring", "stiffness": 750, "damping": 29, "mass": 0.9 }
+  }
+}
+```
+
+**Note:** the button's `delay: 0.7` is derived from when the other layers settle
+(spring settle-time estimate + tween end). If you retune the icon/content, the
+bench recomputes it; hard-code the number you ship.
+
+---
+
 ## Panel reference
+
+Pick the component from the `component` dropdown at the top of the Leva panel
+(or `?c=flame` / `?c=sheet`). `↻ Replay` sits on the stage.
+
+**Flame Pictogram**
 
 | Group | Controls |
 |---|---|
@@ -198,8 +328,17 @@ keyframe (`0.98`) back to the first (`1`) each cycle — a ~2% jump. It's subtle
 | **Per-layer** | outer / middle / inner → `delay (s)` and `speed ×` |
 | **Export** | reset to approved spec · restart animation · copy Framer Motion · copy JSON tokens |
 
+**Feedback Sheet**
+
+| Group | Controls |
+|---|---|
+| **Stage** | viewport (phone / tablet / full), scrim, paused |
+| **Layers** | one folder per layer (sheet · gradient · icon · heading · body · button); each has `type`, `from opac.`, `from Y`, `from scale`, `delay`, `wait for all`, and sub-folders **spring** (stiffness / damping / mass), **tween** (duration / ease), **shake** (rotate° / shift px / swings / duration / decay) |
+| **Export** | reset defaults · replay animation · copy Framer Motion · copy JSON tokens · copy config (for defaults) |
+
 ## Components
 
-| Component | File | Source of truth |
-|---|---|---|
-| Flame Pictogram | [src/components/FlamePictogram.tsx](src/components/FlamePictogram.tsx) | `FLAME_DEFAULT_CONFIG` |
+| Component | File | Source of truth | Spec |
+|---|---|---|---|
+| Flame Pictogram | [src/components/FlamePictogram.tsx](src/components/FlamePictogram.tsx) | `FLAME_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
+| Feedback Sheet | [src/components/FeedbackSheet.tsx](src/components/FeedbackSheet.tsx) | `SHEET_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
