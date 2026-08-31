@@ -4,6 +4,10 @@ Local preview + [Leva](https://github.com/pmndrs/leva) tuning bench for the app'
 motion components. Tweak parameters live, then hand the developer the spec in the
 format they need.
 
+**Live:** https://tgc-ui-motion-components.vercel.app — auto-deploys from `main`
+(Vercel project `intsub/tgc-ui-motion-components`, Vite preset, no config needed
+beyond `vercel.json`).
+
 ## Run
 
 ```bash
