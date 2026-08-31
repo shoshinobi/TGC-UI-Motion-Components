@@ -43,8 +43,10 @@ export type GaugeMotionConfig = {
   flashColor: string
   flashBlur: number
   flashSpread: number
-  /** peak opacity, 0–1 */
+  /** peak opacity 0–1; > 1 stacks that many glow layers (only visible with a lighten blend) */
   flashIntensity: number
+  /** how the glow composites with the dark stage behind it */
+  flashBlend: 'normal' | 'screen' | 'plus-lighter'
   flashDuration: number
   /** seconds relative to the estimated settle time (negative = earlier) */
   flashOffset: number
@@ -87,6 +89,7 @@ export const GAUGE_DEFAULT_CONFIG: GaugeMotionConfig = {
   flashBlur: 24,
   flashSpread: 4,
   flashIntensity: 1,
+  flashBlend: 'plus-lighter',
   flashDuration: 0.8,
   flashOffset: -0.32,
   flashPulses: 1,
@@ -124,12 +127,19 @@ export function gaugeFlashAt(c: GaugeMotionConfig): number {
   return Math.max(0, Math.round((gaugeSettleTime(c) + c.flashOffset) * 1000) / 1000)
 }
 
-/** Opacity keyframes + times for the flash (fast rise, decaying pulses). */
+/** `box-shadow` for the flash — a glow, stacked `round(intensity)` deep so higher
+ *  intensities genuinely add light under a `screen` / `plus-lighter` blend. */
+export function flashShadow(c: GaugeMotionConfig): string {
+  const layers = Math.max(1, Math.round(c.flashIntensity))
+  return Array.from({ length: layers }, () => `0 0 ${c.flashBlur}px ${c.flashSpread}px ${c.flashColor}`).join(', ')
+}
+
+/** Opacity keyframes + times for the flash (fast rise, decaying pulses; opacity clamps at 1). */
 export function flashKeyframes(intensity: number, pulses: number): { values: number[]; times: number[] } {
   const n = Math.max(1, Math.round(pulses))
   const values: number[] = [0]
   for (let i = 0; i < n; i++) {
-    values.push(Math.round(intensity * Math.max(0.25, 1 - i * 0.3) * 1000) / 1000, 0)
+    values.push(Math.round(Math.min(1, intensity) * Math.max(0.25, 1 - i * 0.3) * 1000) / 1000, 0)
   }
   // fast attack on the first pulse, even spacing after
   const times: number[] = [0]
@@ -250,17 +260,18 @@ export function Gauge({ motionConfig, paused }: GaugeProps) {
         )}
 
         <motion.div className='gauge-label' style={{ bottom: fillH }}>
+          {/* behind the (opaque) pill so its blend mode composites with the stage, not the white pill */}
+          {c.flash && !paused && (
+            <motion.span
+              className='gauge-flash'
+              aria-hidden='true'
+              style={{ boxShadow: flashShadow(c), mixBlendMode: c.flashBlend } as React.CSSProperties}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: flash.values }}
+              transition={{ delay: flashAt, duration: c.flashDuration, times: flash.times, ease: 'easeOut' }}
+            />
+          )}
           <div className='gauge-pill'>
-            {c.flash && !paused && (
-              <motion.span
-                className='gauge-flash'
-                aria-hidden='true'
-                style={{ boxShadow: `0 0 ${c.flashBlur}px ${c.flashSpread}px ${c.flashColor}` }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: flash.values }}
-                transition={{ delay: flashAt, duration: c.flashDuration, times: flash.times, ease: 'easeOut' }}
-              />
-            )}
             {c.countUp ? <motion.span>{countText}</motion.span> : <span>{staticText}</span>}
           </div>
         </motion.div>

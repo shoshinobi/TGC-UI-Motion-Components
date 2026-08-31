@@ -384,12 +384,19 @@ A **light-blue** (`#A5C4D8`) glow pulses on the pill. The fire time is derived �
 **as the fill is rushing in** (~1.02 s), peaking just before the bar lands, not
 after.
 
+It's a glow layer **behind** the (opaque) pill with `mix-blend-mode` so it
+composites with the dark stage, not the white pill. `blend: plus-lighter` is
+additive (default); `screen` is softer; `normal` just draws over. **Only reads on
+a dark background.** `intensity` is peak opacity 0–1; values above 1 **stack that
+many glow layers** so a `plus-lighter` flash keeps getting brighter.
+
 ```tsx
-// absolute overlay inside the pill (pill is position: relative)
+// glow layer BEHIND the pill (pill is opaque; label wrapper is the positioning context)
 <motion.span
   aria-hidden
   style={{
     position: 'absolute', inset: -2, borderRadius: 8, pointerEvents: 'none',
+    mixBlendMode: 'plus-lighter',
     boxShadow: '0 0 24px 4px #A5C4D8',
   }}
   initial={{ opacity: 0 }}
@@ -406,7 +413,7 @@ after.
 | value format | **`full`** → `7,000`; also `compact` (`7k`) / `raw` |
 | enter | **`ramp`** — 0.8 s `easeIn` to `×0.4`, then spring `795 / 51 / 2.1`; `delay 0.2` |
 | count-up | **on** · holds `0.05 s` past the fill settle · `easeInOut` into the final |
-| pill flash | on · `#A5C4D8` · blur 24 / spread 4 · intensity 1 · 0.8 s · 1 pulse · **offset −0.32 s** (fires before settle) |
+| pill flash | on · `#A5C4D8` · `plus-lighter` blend · blur 24 / spread 4 · intensity 1 · 0.8 s · 1 pulse · **offset −0.32 s** (fires before settle) |
 | fill gradient | `#E0B678` (top) → `#204C68` at `75%` |
 | track | `12 px` wide × `384 px` tall |
 | pointer / min-label | shown |
@@ -429,9 +436,9 @@ after.
     "note": "finishes 0.05s after the fill settles (~1.34s)"
   },
   "flash": {
-    "target": "value-pill glow (box-shadow opacity)",
+    "target": "value-pill glow, behind the pill (box-shadow opacity)",
     "at": 1.02, "note": "delay 0.2 + run 1.14 - 0.32 offset",
-    "boxShadow": "0 0 24px 4px #A5C4D8",
+    "boxShadow": "0 0 24px 4px #A5C4D8", "blend": "plus-lighter",
     "duration": 0.8, "opacityKeyframes": [0, 1, 0], "times": [0, 0.11, 1]
   },
   "appearance": {
@@ -474,7 +481,7 @@ Pick the component from the `component` dropdown at the top of the Leva panel
 | **Stage** | background (dark / light / ember), paused |
 | **Gauge → reading** | `value`, `min`, `max`, `format` (compact / full / raw), `count up` + `↳ hold past settle (s)` + `↳ ease in to final` |
 | **Gauge → enter** | `delay (s)`, `type` (spring / tween / **ramp**); sub-folders **ramp** (build-up s / build-up ease / hand off at ×target), **spring** (stiffness / damping / mass), **tween** (duration ≤ 10 s / ease) |
-| **Gauge → pill flash** | `enabled`, `offset vs settle (s)`, `duration (s)`, `pulses`, `colour`, `intensity`, `blur (px)`, `spread (px)` |
+| **Gauge → pill flash** | `enabled`, `offset vs settle (s)`, `duration (s)`, `pulses`, `colour`, `blend` (plus-lighter / screen / normal), `intensity` (0–4, >1 stacks layers), `blur (px)`, `spread (px)` |
 | **Gauge → appearance** | `fill top`, `fill bottom`, `gradient stop %`, `track width (px)`, `track height (px)`, `pointer`, `min label` |
 | **Export** | reset defaults · replay animation · copy Framer Motion · copy JSON tokens · copy config (for defaults) |
 

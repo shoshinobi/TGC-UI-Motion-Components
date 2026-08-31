@@ -1,5 +1,6 @@
 import {
   flashKeyframes,
+  flashShadow,
   gaugeFlashAt,
   gaugeRunTime,
   gaugeSettleTime,
@@ -81,13 +82,16 @@ function flashBlock(c: GaugeMotionConfig): string[] {
   const at = gaugeFlashAt(c)
   const settle = gaugeSettleTime(c)
   const off = c.flashOffset ? ` ${c.flashOffset > 0 ? '+' : '-'} ${num(Math.abs(c.flashOffset))}s offset` : ''
+  const layers = Math.max(1, Math.round(c.flashIntensity))
   return [
     `// Value-pill flash — fires ~${at}s in (fill settles ~${settle}s${off}).`,
-    `// Absolute overlay inside the pill (pill is position: relative):`,
+    `// Glow layer BEHIND the (opaque) pill so its blend composites with the dark`,
+    `// stage, not the white pill. Only reads on a dark background.`,
     `<motion.span`,
     `  aria-hidden`,
     `  style={{ position: 'absolute', inset: -2, borderRadius: 8, pointerEvents: 'none',`,
-    `           boxShadow: '0 0 ${num(c.flashBlur)}px ${num(c.flashSpread)}px ${c.flashColor}' }}`,
+    `           mixBlendMode: '${c.flashBlend}',`,
+    `           boxShadow: '${flashShadow(c)}' }}${layers > 1 ? `   // ${layers}× stacked` : ''}`,
     `  initial={{ opacity: 0 }}`,
     `  animate={{ opacity: [${values.join(', ')}] }}`,
     `  transition={{ delay: ${at}, duration: ${num(c.flashDuration)}, times: [${times.join(', ')}], ease: 'easeOut' }}`,
@@ -136,10 +140,11 @@ export function buildGaugeJsonSpec(c: GaugeMotionConfig): string {
       ...(c.flash
         ? {
             flash: {
-              target: 'value-pill glow (box-shadow opacity)',
+              target: 'value-pill glow, behind the pill (box-shadow opacity)',
               at: gaugeFlashAt(c),
               note: `settle ≈ ${gaugeSettleTime(c)}s${c.flashOffset ? ` ${c.flashOffset > 0 ? '+' : '-'} ${Math.abs(c.flashOffset)}s` : ''}`,
-              boxShadow: `0 0 ${c.flashBlur}px ${c.flashSpread}px ${c.flashColor}`,
+              boxShadow: flashShadow(c),
+              blend: c.flashBlend,
               duration: r(c.flashDuration),
               opacityKeyframes: flashKeyframes(c.flashIntensity, c.flashPulses).values,
               times: flashKeyframes(c.flashIntensity, c.flashPulses).times,
