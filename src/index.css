@@ -1,0 +1,177 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --color-error: #ff5053;
+  font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  height: 100%;
+}
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Reserve room for the Leva panel when it's docked beside the content (wide
+   viewports, expanded). Narrow viewports let it overlay + the stage scrolls. */
+@media (min-width: 720px) {
+  .shell[data-panel='expanded'] .stage,
+  .shell[data-panel='expanded'] .dock {
+    padding-right: 316px;
+  }
+}
+
+/* ---------- Stage ---------- */
+
+.stage {
+  flex: 1 1 0;
+  min-height: 160px;
+  display: flex;
+  overflow: auto;
+  transition: background 0.2s ease;
+}
+.stage[data-bg='dark'] {
+  background: #0b0b0d;
+}
+.stage[data-bg='light'] {
+  background: #f4f4f5;
+}
+.stage[data-bg='ember'] {
+  background: radial-gradient(60% 60% at 50% 100%, #3a1512 0%, #120a09 60%, #0b0b0d 100%);
+}
+
+/* margin:auto centres the block and keeps it fully scrollable when it
+   outgrows the stage (unlike align/justify centring, which clips the top). */
+.stage-inner {
+  margin: auto;
+  padding: clamp(16px, 4vw, 48px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(20px, 5vh, 40px);
+}
+
+.flame-slot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.baseline {
+  width: min(220px, 60vw);
+  height: 1px;
+  background: currentColor;
+  opacity: 0.25;
+}
+
+.context-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: clamp(14px, 4vw, 28px);
+  color: #71717a;
+}
+
+.context-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: #a1a1aa;
+}
+.stage[data-bg='light'] .context-line {
+  color: #52525b;
+}
+
+/* ---------- Dock (spec output) ---------- */
+
+.dock {
+  flex: 0 0 auto;
+  background: #111113;
+  border-top: 1px solid #26262a;
+  padding: 14px clamp(12px, 3vw, 20px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 12px;
+  max-height: 46vh;
+  overflow: auto;
+}
+
+.spec {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid #26262a;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #0d0d0f;
+}
+.spec-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #26262a;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+.spec-head span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.spec pre {
+  margin: 0;
+  padding: 12px;
+  max-height: 38vh;
+  overflow: auto;
+  overscroll-behavior: contain;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #e4e4e7;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.copy-btn {
+  flex: 0 0 auto;
+  border: 1px solid #3f3f46;
+  background: #1c1c1f;
+  color: #e4e4e7;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.copy-btn:hover {
+  background: #27272a;
+}
+.copy-btn[data-copied='true'] {
+  color: #4ade80;
+  border-color: #22c55e;
+}
