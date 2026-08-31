@@ -23,17 +23,21 @@ in both axes).
 
 ## For the developer — what changed in the code you provided
 
-Your `FlamePictogram` component is used **almost verbatim**. The changes are
-additive and the default behaviour is byte-for-byte the animation you delivered.
+Your `FlamePictogram` component is used **almost verbatim** — the changes are
+additive. The one behavioural change: `FLAME_DEFAULT_CONFIG` now holds the
+**approved spec** (below), not the values you delivered, so the component
+animates the approved way with no `motionConfig` passed. Your original delivered
+values are in git history (commit `f6a4dd5`).
 
 `src/components/FlamePictogram.tsx`:
 
 | Change | Why | Impact on your code |
 |---|---|---|
-| Added optional props `motionConfig?: Partial<FlameMotionConfig>` and `paused?: boolean` | Lets the Leva panel drive the animation live | None — omit both and it renders/animates exactly as delivered. `FLAME_DEFAULT_CONFIG` holds your original values. |
-| Extracted the 3 `<path>` `d` strings + gradient coords into a `FLAME_LAYERS` array | Needed to render layers individually (below) | Cosmetic — same paths, same gradients |
+| Added optional props `motionConfig?: Partial<FlameMotionConfig>` and `paused?: boolean` | Lets the Leva panel drive the animation live | None — omit both and it uses `FLAME_DEFAULT_CONFIG` (= the approved spec). |
+| `FLAME_DEFAULT_CONFIG` updated to the approved spec | Sign-off 2026-08-31 | This is the animation to ship. It's **layered** (see below), so the default render path is now the stacked-`<motion.svg>` one. |
+| Extracted the 3 `<path>` `d` strings + gradient coords into a `FLAME_LAYERS` array | Needed to render layers individually | Cosmetic — same paths, same gradients |
 | `--color-error` is set inline on the SVG from `motionConfig.color` | So the colour is tweakable in isolation | In the app, keep your global `--color-error`; don't pass `color` and this is a no-op |
-| **Second render path** for per-layer stagger / speed | **`motion/react` cannot animate `scale` on SVG child nodes (`<path>`, `<g>`) — only on an `<svg>` root.** When any layer has a non-default `delay`/`speed`, each flame layer is rendered as its own stacked `<motion.svg>`. | Only taken when a spec actually uses per-layer timing. The plain spec stays a single `<motion.svg>`. |
+| **Second render path** for per-layer stagger / speed | **`motion/react` cannot animate `scale` on SVG child nodes (`<path>`, `<g>`) — only on an `<svg>` root.** When any layer has a non-default `delay`/`speed`, each flame layer is rendered as its own stacked `<motion.svg>`. | This is the path the approved spec uses. A non-layered spec would stay a single `<motion.svg>`. |
 
 Everything else in the repo — `App.tsx`, `src/lib/buildSpec.ts`, Leva, Vite — is
 just the tuning harness. You don't need any of it.
@@ -79,6 +83,10 @@ The **JSON motion tokens** block is the same information framework-neutral
 > shapes run on separate timelines, so it must be implemented as three stacked
 > `<motion.svg>` layers (motion can't animate `scale` on SVG children). The
 > single-`<motion.svg>` form does **not** reproduce it.
+>
+> These values are also the component's built-in default
+> (`FLAME_DEFAULT_CONFIG` in `src/components/FlamePictogram.tsx`) and the bench's
+> starting state — "reset to approved spec" in the Leva panel restores them.
 
 ### Shared animation (all three layers)
 
@@ -188,7 +196,7 @@ keyframe (`0.98`) back to the first (`1`) each cycle — a ~2% jump. It's subtle
 | **Timing** | `duration`, `ease` (named + `custom`), cubic-bezier handles, `loop`, `repeatType`, `repeatDelay` |
 | **Keyframes** | frames 1–4 → `time` / `scaleX` / `scaleY` |
 | **Per-layer** | outer / middle / inner → `delay (s)` and `speed ×` |
-| **Export** | reset to developer spec · restart animation · copy Framer Motion · copy JSON tokens |
+| **Export** | reset to approved spec · restart animation · copy Framer Motion · copy JSON tokens |
 
 ## Components
 

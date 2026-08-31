@@ -2,6 +2,6 @@ node_modules
 dist
 .DS_Store
 *.local
-tsconfig.tsbuildinfo
+*.tsbuildinfo
 .vercel
 .env*.local

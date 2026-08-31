@@ -30,18 +30,21 @@ export type FlameMotionConfig = {
   color: string
 }
 
+// Approved motion spec — signed off 2026-08-31. See README "✅ Approved motion
+// specs". This is a layered spec (middle layer delayed, inner layer faster), so
+// with these defaults the component renders as three stacked <motion.svg> layers.
 export const FLAME_DEFAULT_CONFIG: FlameMotionConfig = {
-  scaleX: [1, 18 / 16, 1, 1],
-  scaleY: [1, 34 / 32, 40 / 32, 1],
-  times: [0, 0.35, 0.7, 1],
-  duration: 1.1,
-  ease: 'easeInOut',
+  scaleX: [0.75, 1.005, 0.93, 0.75],
+  scaleY: [1, 0.8325, 0.93, 0.98],
+  times: [0, 0.5, 0.75, 1],
+  duration: 0.4,
+  ease: 'linear',
   repeat: Infinity,
   repeatType: 'loop',
   repeatDelay: 0,
   transformOrigin: 'bottom',
-  layerDelays: { outer: 0, middle: 0, inner: 0 },
-  layerSpeeds: { outer: 1, middle: 1, inner: 1 },
+  layerDelays: { outer: 0, middle: 0.05, inner: 0 },
+  layerSpeeds: { outer: 1, middle: 1, inner: 1.1 },
   color: '#FF5053',
 }
 

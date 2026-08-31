@@ -19,35 +19,37 @@ const EASE_OPTIONS = [
 ]
 
 /**
- * The developer's original spec — the values baked into FlamePictogram when no
- * `motionConfig` is passed. "Reset to developer spec" restores exactly these.
+ * The approved motion spec (signed off 2026-08-31) — the values baked into
+ * FlamePictogram when no `motionConfig` is passed, and the Leva panel's starting
+ * point. "Reset to approved spec" restores exactly these. Kept in sync with
+ * FLAME_DEFAULT_CONFIG and the README "✅ Approved motion specs" section.
  */
-const DEV_DEFAULTS = {
+const APPROVED_SPEC = {
   appearance: {
     color: FLAME_DEFAULT_CONFIG.color,
-    transformOrigin: 'bottom',
+    transformOrigin: FLAME_DEFAULT_CONFIG.transformOrigin,
   },
   timing: {
     duration: FLAME_DEFAULT_CONFIG.duration,
-    ease: 'easeInOut',
+    ease: FLAME_DEFAULT_CONFIG.ease as string,
     bezierX1: 0.42,
     bezierY1: 0,
     bezierX2: 0.58,
     bezierY2: 1,
-    loop: true,
-    repeatType: 'loop',
-    repeatDelay: 0,
+    loop: FLAME_DEFAULT_CONFIG.repeat === Infinity,
+    repeatType: FLAME_DEFAULT_CONFIG.repeatType,
+    repeatDelay: FLAME_DEFAULT_CONFIG.repeatDelay,
   },
   keyframes: {
-    t1: 0, sx1: 1, sy1: 1,
-    t2: 0.35, sx2: 18 / 16, sy2: 34 / 32,
-    t3: 0.7, sx3: 1, sy3: 40 / 32,
-    t4: 1, sx4: 1, sy4: 1,
+    t1: FLAME_DEFAULT_CONFIG.times[0], sx1: FLAME_DEFAULT_CONFIG.scaleX[0], sy1: FLAME_DEFAULT_CONFIG.scaleY[0],
+    t2: FLAME_DEFAULT_CONFIG.times[1], sx2: FLAME_DEFAULT_CONFIG.scaleX[1], sy2: FLAME_DEFAULT_CONFIG.scaleY[1],
+    t3: FLAME_DEFAULT_CONFIG.times[2], sx3: FLAME_DEFAULT_CONFIG.scaleX[2], sy3: FLAME_DEFAULT_CONFIG.scaleY[2],
+    t4: FLAME_DEFAULT_CONFIG.times[3], sx4: FLAME_DEFAULT_CONFIG.scaleX[3], sy4: FLAME_DEFAULT_CONFIG.scaleY[3],
   },
   layers: {
-    delayOuter: 0, speedOuter: 1,
-    delayMiddle: 0, speedMiddle: 1,
-    delayInner: 0, speedInner: 1,
+    delayOuter: FLAME_DEFAULT_CONFIG.layerDelays.outer, speedOuter: FLAME_DEFAULT_CONFIG.layerSpeeds.outer,
+    delayMiddle: FLAME_DEFAULT_CONFIG.layerDelays.middle, speedMiddle: FLAME_DEFAULT_CONFIG.layerSpeeds.middle,
+    delayInner: FLAME_DEFAULT_CONFIG.layerDelays.inner, speedInner: FLAME_DEFAULT_CONFIG.layerSpeeds.inner,
   },
 }
 
@@ -74,60 +76,60 @@ export function App() {
   })
 
   const [appearance, setAppearance] = useControls('Appearance', () => ({
-    color: DEV_DEFAULTS.appearance.color,
+    color: APPROVED_SPEC.appearance.color,
     transformOrigin: {
-      value: DEV_DEFAULTS.appearance.transformOrigin,
+      value: APPROVED_SPEC.appearance.transformOrigin,
       options: ['bottom', 'center', 'top', 'left bottom', 'right bottom'],
     },
   }))
 
   const [timing, setTiming] = useControls('Timing', () => ({
-    duration: { value: DEV_DEFAULTS.timing.duration, min: 0.1, max: 5, step: 0.05 },
-    ease: { value: DEV_DEFAULTS.timing.ease, options: EASE_OPTIONS },
-    bezierX1: { value: DEV_DEFAULTS.timing.bezierX1, min: 0, max: 1, step: 0.01, label: 'cubic x1' },
-    bezierY1: { value: DEV_DEFAULTS.timing.bezierY1, min: -1, max: 2, step: 0.01, label: 'cubic y1' },
-    bezierX2: { value: DEV_DEFAULTS.timing.bezierX2, min: 0, max: 1, step: 0.01, label: 'cubic x2' },
-    bezierY2: { value: DEV_DEFAULTS.timing.bezierY2, min: -1, max: 2, step: 0.01, label: 'cubic y2' },
-    loop: DEV_DEFAULTS.timing.loop,
-    repeatType: { value: DEV_DEFAULTS.timing.repeatType, options: ['loop', 'mirror', 'reverse'] },
-    repeatDelay: { value: DEV_DEFAULTS.timing.repeatDelay, min: 0, max: 3, step: 0.05 },
+    duration: { value: APPROVED_SPEC.timing.duration, min: 0.1, max: 5, step: 0.05 },
+    ease: { value: APPROVED_SPEC.timing.ease, options: EASE_OPTIONS },
+    bezierX1: { value: APPROVED_SPEC.timing.bezierX1, min: 0, max: 1, step: 0.01, label: 'cubic x1' },
+    bezierY1: { value: APPROVED_SPEC.timing.bezierY1, min: -1, max: 2, step: 0.01, label: 'cubic y1' },
+    bezierX2: { value: APPROVED_SPEC.timing.bezierX2, min: 0, max: 1, step: 0.01, label: 'cubic x2' },
+    bezierY2: { value: APPROVED_SPEC.timing.bezierY2, min: -1, max: 2, step: 0.01, label: 'cubic y2' },
+    loop: APPROVED_SPEC.timing.loop,
+    repeatType: { value: APPROVED_SPEC.timing.repeatType, options: ['loop', 'mirror', 'reverse'] },
+    repeatDelay: { value: APPROVED_SPEC.timing.repeatDelay, min: 0, max: 3, step: 0.05 },
   }))
 
   const [kf, setKf] = useControls('Keyframes', () => ({
-    'frame 1 · rest': folder({
-      t1: { value: DEV_DEFAULTS.keyframes.t1, min: 0, max: 1, step: 0.01, label: 'time' },
-      sx1: { value: DEV_DEFAULTS.keyframes.sx1, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
-      sy1: { value: DEV_DEFAULTS.keyframes.sy1, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
+    'frame 1': folder({
+      t1: { value: APPROVED_SPEC.keyframes.t1, min: 0, max: 1, step: 0.01, label: 'time' },
+      sx1: { value: APPROVED_SPEC.keyframes.sx1, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
+      sy1: { value: APPROVED_SPEC.keyframes.sy1, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
     }),
-    'frame 2 · widen': folder({
-      t2: { value: DEV_DEFAULTS.keyframes.t2, min: 0, max: 1, step: 0.01, label: 'time' },
-      sx2: { value: DEV_DEFAULTS.keyframes.sx2, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
-      sy2: { value: DEV_DEFAULTS.keyframes.sy2, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
+    'frame 2': folder({
+      t2: { value: APPROVED_SPEC.keyframes.t2, min: 0, max: 1, step: 0.01, label: 'time' },
+      sx2: { value: APPROVED_SPEC.keyframes.sx2, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
+      sy2: { value: APPROVED_SPEC.keyframes.sy2, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
     }),
-    'frame 3 · leap': folder({
-      t3: { value: DEV_DEFAULTS.keyframes.t3, min: 0, max: 1, step: 0.01, label: 'time' },
-      sx3: { value: DEV_DEFAULTS.keyframes.sx3, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
-      sy3: { value: DEV_DEFAULTS.keyframes.sy3, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
+    'frame 3': folder({
+      t3: { value: APPROVED_SPEC.keyframes.t3, min: 0, max: 1, step: 0.01, label: 'time' },
+      sx3: { value: APPROVED_SPEC.keyframes.sx3, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
+      sy3: { value: APPROVED_SPEC.keyframes.sy3, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
     }),
-    'frame 4 · settle': folder({
-      t4: { value: DEV_DEFAULTS.keyframes.t4, min: 0, max: 1, step: 0.01, label: 'time' },
-      sx4: { value: DEV_DEFAULTS.keyframes.sx4, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
-      sy4: { value: DEV_DEFAULTS.keyframes.sy4, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
+    'frame 4': folder({
+      t4: { value: APPROVED_SPEC.keyframes.t4, min: 0, max: 1, step: 0.01, label: 'time' },
+      sx4: { value: APPROVED_SPEC.keyframes.sx4, min: 0.2, max: 3, step: 0.01, label: 'scaleX' },
+      sy4: { value: APPROVED_SPEC.keyframes.sy4, min: 0.2, max: 3, step: 0.01, label: 'scaleY' },
     }),
   }))
 
   const [layers, setLayers] = useControls('Per-layer', () => ({
     outer: folder({
-      delayOuter: { value: DEV_DEFAULTS.layers.delayOuter, min: 0, max: 1, step: 0.01, label: 'delay (s)' },
-      speedOuter: { value: DEV_DEFAULTS.layers.speedOuter, min: 0.25, max: 4, step: 0.05, label: 'speed ×' },
+      delayOuter: { value: APPROVED_SPEC.layers.delayOuter, min: 0, max: 1, step: 0.01, label: 'delay (s)' },
+      speedOuter: { value: APPROVED_SPEC.layers.speedOuter, min: 0.25, max: 4, step: 0.05, label: 'speed ×' },
     }),
     middle: folder({
-      delayMiddle: { value: DEV_DEFAULTS.layers.delayMiddle, min: 0, max: 1, step: 0.01, label: 'delay (s)' },
-      speedMiddle: { value: DEV_DEFAULTS.layers.speedMiddle, min: 0.25, max: 4, step: 0.05, label: 'speed ×' },
+      delayMiddle: { value: APPROVED_SPEC.layers.delayMiddle, min: 0, max: 1, step: 0.01, label: 'delay (s)' },
+      speedMiddle: { value: APPROVED_SPEC.layers.speedMiddle, min: 0.25, max: 4, step: 0.05, label: 'speed ×' },
     }),
     inner: folder({
-      delayInner: { value: DEV_DEFAULTS.layers.delayInner, min: 0, max: 1, step: 0.01, label: 'delay (s)' },
-      speedInner: { value: DEV_DEFAULTS.layers.speedInner, min: 0.25, max: 4, step: 0.05, label: 'speed ×' },
+      delayInner: { value: APPROVED_SPEC.layers.delayInner, min: 0, max: 1, step: 0.01, label: 'delay (s)' },
+      speedInner: { value: APPROVED_SPEC.layers.speedInner, min: 0.25, max: 4, step: 0.05, label: 'speed ×' },
     }),
   }))
 
@@ -161,11 +163,11 @@ export function App() {
   const json = buildJsonSpec(config)
 
   useControls('Export', {
-    'reset to developer spec': button(() => {
-      setAppearance(DEV_DEFAULTS.appearance)
-      setTiming(DEV_DEFAULTS.timing)
-      setKf(DEV_DEFAULTS.keyframes)
-      setLayers(DEV_DEFAULTS.layers)
+    'reset to approved spec': button(() => {
+      setAppearance(APPROVED_SPEC.appearance)
+      setTiming(APPROVED_SPEC.timing)
+      setKf(APPROVED_SPEC.keyframes)
+      setLayers(APPROVED_SPEC.layers)
       setNonce((n) => n + 1)
     }),
     'restart animation': button(() => setNonce((n) => n + 1)),
