@@ -333,64 +333,56 @@ a bottom-anchored gradient **fill box** (`height = fraction`), a
 at `bottom = fraction`, and a static **min label** below the track. Fill gradient
 is `linear-gradient(180deg, --color-primary 0%, --color-secondary 75%)`.
 
-### The animation — one `fraction`, 0 → target
+### The fill animation — one `fraction`, 0 → target, in two phases (`ramp`)
 
 ```tsx
 // target = (value - min) / (max - min)   e.g. 7000 of 0–10000 → 0.7
 const fraction = useMotionValue(0)
 
 useEffect(() => {
-  const controls = animate(fraction, target, {
-    type: 'spring', stiffness: 90, damping: 9, mass: 1, delay: 0.2,
+  // phase 1 — slow, accelerating build-up to 40% of the target (0.8 s, easeIn)
+  const build = animate(fraction, target * 0.4, { duration: 0.8, ease: 'easeIn', delay: 0.2 })
+  build.then(() => {
+    // phase 2 — a heavily-damped spring covers the last 60% + a small overshoot
+    animate(fraction, target, { type: 'spring', stiffness: 795, damping: 51, mass: 2.1 })
   })
-  return () => controls.stop()
+  return () => build.stop()
 }, [])
 
 // fill box     style={{ height: useTransform(fraction, f => `${f * 100}%`) }}
 // pointer zone style={{ height: useTransform(fraction, f => `${(1 - f) * 100}%`) }}
 // value pill   style={{ bottom: useTransform(fraction, f => `${f * 100}%`) }}
-// pill text    format(value)   // static — not a count-up
 ```
 
-The spring overshoots the fill past the target (~18 % for `90 / 9 / 1`) and
-settles in ~1.1 s after the delay. `type` also offers **`tween`** (`duration` up
-to 10 s / `ease` — non-bouncy) and **`ramp`** (an ease-in build-up, then the
-spring for the finish):
+> `build.then(…)` — `animate(motionValue, …)` returns a thenable; there is **no
+> `.finished`** on it (that's the element/selector form).
 
-```tsx
-useEffect(() => {
-  // phase 1 — slow, accelerating build-up to 80% of the target
-  const build = animate(fraction, target * 0.8, { duration: 1.4, ease: 'easeIn', delay: 0.2 })
-  build.then(() => {
-    // phase 2 — the spring covers the last stretch + overshoot
-    animate(fraction, target, { type: 'spring', stiffness: 90, damping: 9, mass: 1 })
-  })
-  return () => build.stop()
-}, [])
-```
+The whole fill settles ~1.34 s after mount. `type` also offers plain **`spring`**
+and **`tween`** (`duration` up to 10 s / `ease`) if you don't want the build-up.
 
-### Count-up (off by default)
+### Count-up (on)
 
-When `countUp` is on, the pill number runs on **its own timeline** — a tween from
-`min` to `value` that **finishes `countUpDelay` (0.4 s) after the fill settles**
-(so it keeps ticking after the bar has stopped) and eases in to the final number
-(`countUpEase`, `easeOut`). `format: 'raw'` shows every digit; `compact` jumps.
+The pill number runs on **its own timeline** — a `min → value` tween that
+**finishes `countUpDelay` (0.05 s) after the fill settles** and eases in with
+`easeInOut`. `format: 'full'` → `7,000` (comma-grouped); `raw` / `compact` also
+available.
 
 ```tsx
 const count = useMotionValue(min)
 useEffect(() => {
-  // duration = fill run-time + countUpDelay
-  const c = animate(count, value, { duration: 1.3, ease: 'easeOut', delay: 0.2 })
+  // duration = fill run-time (~0.99 s) + countUpDelay (0.05 s)
+  const c = animate(count, value, { duration: 1.19, ease: 'easeInOut', delay: 0.2 })
   return () => c.stop()
 }, [])
-// pill text = useTransform(count, v => format(v))
+// pill text = useTransform(count, v => value.toLocaleString('en-US'))
 ```
 
-### Value-pill flash — fires when the fill settles
+### Value-pill flash
 
-A white glow pulses on the value pill once the spring has settled. The fire time
-is derived — `delay + spring 2%-settle-time` (≈ `1.1 s` here) plus an `offset`
-you can nudge — so it re-times itself if the spring is retuned.
+A **light-blue** (`#A5C4D8`) glow pulses on the pill. The fire time is derived —
+`delay + fill run-time + flashOffset` — with `flashOffset: -0.32`, so it fires
+**as the fill is rushing in** (~1.02 s), peaking just before the bar lands, not
+after.
 
 ```tsx
 // absolute overlay inside the pill (pill is position: relative)
@@ -398,26 +390,23 @@ you can nudge — so it re-times itself if the spring is retuned.
   aria-hidden
   style={{
     position: 'absolute', inset: -2, borderRadius: 8, pointerEvents: 'none',
-    boxShadow: '0 0 18px 3px #FFFFFF',
+    boxShadow: '0 0 24px 4px #A5C4D8',
   }}
   initial={{ opacity: 0 }}
-  animate={{ opacity: [0, 0.9, 0] }}
-  transition={{ delay: 1.1, duration: 0.5, times: [0, 0.22, 1], ease: 'easeOut' }}
+  animate={{ opacity: [0, 1, 0] }}
+  transition={{ delay: 1.02, duration: 0.8, times: [0, 0.11, 1], ease: 'easeOut' }}
 />
 ```
-
-`opacity` keyframes carry the pulse (`pulses > 1` adds decaying repeats); the
-`boxShadow` colour / blur / spread and the peak `intensity` are the glow's look.
 
 ### Reading + appearance
 
 | | value |
 |---|---|
 | default reading | `7000` of `0`–`10000` → fraction `0.7` |
-| value format | `compact` → `7k` (`Math.round(value / 1000) + 'k'`, matches the DS); also `full` (`7,000`) / `raw` |
-| enter | `spring` `90 / 9 / 1`, `delay 0.2` (also `tween` ≤ 10 s / `ramp`) |
-| count-up | off · when on: holds `0.4 s` past the fill settle, `easeOut` into the final |
-| pill flash | on · white · blur 18 / spread 3 · intensity 0.9 · 0.5 s · 1 pulse · fires at settle (`offset 0`) |
+| value format | **`full`** → `7,000`; also `compact` (`7k`) / `raw` |
+| enter | **`ramp`** — 0.8 s `easeIn` to `×0.4`, then spring `795 / 51 / 2.1`; `delay 0.2` |
+| count-up | **on** · holds `0.05 s` past the fill settle · `easeInOut` into the final |
+| pill flash | on · `#A5C4D8` · blur 24 / spread 4 · intensity 1 · 0.8 s · 1 pulse · **offset −0.32 s** (fires before settle) |
 | fill gradient | `#E0B678` (top) → `#204C68` at `75%` |
 | track | `12 px` wide × `384 px` tall |
 | pointer / min-label | shown |
@@ -427,17 +416,23 @@ you can nudge — so it re-times itself if the spring is retuned.
 ```json
 {
   "name": "gauge",
-  "reading": { "value": 7000, "min": 0, "max": 10000, "fraction": 0.7, "format": "compact" },
+  "reading": { "value": 7000, "min": 0, "max": 10000, "fraction": 0.7, "format": "full" },
   "enter": {
-    "property": "fraction", "from": 0, "to": 0.7,
-    "delay": 0.2, "type": "spring", "stiffness": 90, "damping": 9, "mass": 1,
+    "property": "fraction", "from": 0, "to": 0.7, "delay": 0.2, "type": "ramp",
+    "phase1": { "to": 0.28, "type": "tween", "duration": 0.8, "ease": "easeIn" },
+    "phase2": { "to": 0.7, "type": "spring", "stiffness": 795, "damping": 51, "mass": 2.1 },
     "drives": ["fill height = fraction", "pointer height = 1 - fraction", "value-pill bottom = fraction"]
+  },
+  "countUp": {
+    "target": "value-pill number", "from": 0, "to": 7000,
+    "type": "tween", "duration": 1.19, "ease": "easeInOut",
+    "note": "finishes 0.05s after the fill settles (~1.34s)"
   },
   "flash": {
     "target": "value-pill glow (box-shadow opacity)",
-    "at": 1.1, "note": "settle ≈ 1.1s",
-    "boxShadow": "0 0 18px 3px #FFFFFF",
-    "duration": 0.5, "opacityKeyframes": [0, 0.9, 0], "times": [0, 0.22, 1]
+    "at": 1.02, "note": "delay 0.2 + run 1.14 - 0.32 offset",
+    "boxShadow": "0 0 24px 4px #A5C4D8",
+    "duration": 0.8, "opacityKeyframes": [0, 1, 0], "times": [0, 0.11, 1]
   },
   "appearance": {
     "fillGradient": "linear-gradient(180deg, #E0B678 0%, #204C68 75%)",

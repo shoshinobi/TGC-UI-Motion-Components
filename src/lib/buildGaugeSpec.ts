@@ -31,7 +31,7 @@ export function buildGaugeJsxSpec(c: GaugeMotionConfig): string {
     enter.push(
       `  // phase 1 — ease-in build-up to ${num(c.rampTo * 100)}% of the target`,
       `  const build = animate(fraction, ${r(target * c.rampTo)}, { duration: ${num(c.rampDuration)}, ease: ${easeToken(c.rampEase)}${c.delay ? `, delay: ${num(c.delay)}` : ''} })`,
-      `  build.finished.then(() => {`,
+      `  build.then(() => {`,
       `    // phase 2 — spring covers the last stretch + overshoot`,
       `    animate(fraction, ${target}, ${springOpts})`,
       `  })`,
