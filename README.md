@@ -18,6 +18,7 @@ always copy-pasteable.
 |---|---|---|---|
 | **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [Approved spec ↓](#-approved-motion-specs--flame-pictogram) | ✅ approved 2026-08-31 |
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [Approved spec ↓](#-approved-motion-specs--feedback-sheet) | ✅ approved 2026-08-31 |
+| **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [Approved spec ↓](#-approved-motion-specs--gauge) | ✅ approved 2026-08-31 |
 
 Each component's tab has its own **Export** buttons — `copy Framer Motion` and
 `copy JSON tokens` — that produce exactly the spec locked in below.
@@ -66,6 +67,13 @@ from the story `design-system-feedbacksheet--error`, in plain scoped CSS
 component. Use it only as the motion reference: the **✅ Approved motion specs —
 Feedback Sheet** section below is the deliverable — the per-layer `initial` /
 `animate` / `transition` to apply to your real `FeedbackSheet`'s elements.
+
+### Gauge — rebuilt from Storybook
+
+Same deal: `src/components/Gauge.tsx` is a rebuild from `design-system-gauge--default`
+(scoped `.gauge-*` CSS). Your real DS `Gauge` already has the fill / pointer /
+label elements — the deliverable is the single `fraction` motion value and the
+three `useTransform` bindings in the **✅ Approved motion specs — Gauge** section.
 
 ## For the developer — how to implement an approved spec
 
@@ -312,6 +320,134 @@ bench recomputes it; hard-code the number you ship.
 
 ---
 
+## ✅ Approved motion specs — Gauge
+
+> **Approved by Malcolm — 2026-08-31.** The mount animation for the vertical bar
+> `gauge`. `SHEET`-style: `GAUGE_DEFAULT_CONFIG` in
+> `src/components/Gauge.tsx` holds it; the bench's "reset defaults" restores it.
+
+**Structure** (from the story): `role="meter"` track (`w-3`, `h-full`) containing
+a bottom-anchored gradient **fill box** (`height = fraction`), a
+`pointer-events-none` **pointer zone** above it (`height = 1 − fraction`) with a
+1px top-fading hair-line + a small arrow cap, a **value pill** absolutely placed
+at `bottom = fraction`, and a static **min label** below the track. Fill gradient
+is `linear-gradient(180deg, --color-primary 0%, --color-secondary 75%)`.
+
+### The animation — one `fraction`, 0 → target
+
+```tsx
+// target = (value - min) / (max - min)   e.g. 7000 of 0–10000 → 0.7
+const fraction = useMotionValue(0)
+
+useEffect(() => {
+  const controls = animate(fraction, target, {
+    type: 'spring', stiffness: 90, damping: 9, mass: 1, delay: 0.2,
+  })
+  return () => controls.stop()
+}, [])
+
+// fill box     style={{ height: useTransform(fraction, f => `${f * 100}%`) }}
+// pointer zone style={{ height: useTransform(fraction, f => `${(1 - f) * 100}%`) }}
+// value pill   style={{ bottom: useTransform(fraction, f => `${f * 100}%`) }}
+// pill text    format(value)   // static — not a count-up
+```
+
+The spring overshoots the fill past the target (~18 % for `90 / 9 / 1`) and
+settles in ~1.1 s after the delay. `type` also offers **`tween`** (`duration` up
+to 10 s / `ease` — non-bouncy) and **`ramp`** (an ease-in build-up, then the
+spring for the finish):
+
+```tsx
+useEffect(() => {
+  // phase 1 — slow, accelerating build-up to 80% of the target
+  const build = animate(fraction, target * 0.8, { duration: 1.4, ease: 'easeIn', delay: 0.2 })
+  build.then(() => {
+    // phase 2 — the spring covers the last stretch + overshoot
+    animate(fraction, target, { type: 'spring', stiffness: 90, damping: 9, mass: 1 })
+  })
+  return () => build.stop()
+}, [])
+```
+
+### Count-up (off by default)
+
+When `countUp` is on, the pill number runs on **its own timeline** — a tween from
+`min` to `value` that **finishes `countUpDelay` (0.4 s) after the fill settles**
+(so it keeps ticking after the bar has stopped) and eases in to the final number
+(`countUpEase`, `easeOut`). `format: 'raw'` shows every digit; `compact` jumps.
+
+```tsx
+const count = useMotionValue(min)
+useEffect(() => {
+  // duration = fill run-time + countUpDelay
+  const c = animate(count, value, { duration: 1.3, ease: 'easeOut', delay: 0.2 })
+  return () => c.stop()
+}, [])
+// pill text = useTransform(count, v => format(v))
+```
+
+### Value-pill flash — fires when the fill settles
+
+A white glow pulses on the value pill once the spring has settled. The fire time
+is derived — `delay + spring 2%-settle-time` (≈ `1.1 s` here) plus an `offset`
+you can nudge — so it re-times itself if the spring is retuned.
+
+```tsx
+// absolute overlay inside the pill (pill is position: relative)
+<motion.span
+  aria-hidden
+  style={{
+    position: 'absolute', inset: -2, borderRadius: 8, pointerEvents: 'none',
+    boxShadow: '0 0 18px 3px #FFFFFF',
+  }}
+  initial={{ opacity: 0 }}
+  animate={{ opacity: [0, 0.9, 0] }}
+  transition={{ delay: 1.1, duration: 0.5, times: [0, 0.22, 1], ease: 'easeOut' }}
+/>
+```
+
+`opacity` keyframes carry the pulse (`pulses > 1` adds decaying repeats); the
+`boxShadow` colour / blur / spread and the peak `intensity` are the glow's look.
+
+### Reading + appearance
+
+| | value |
+|---|---|
+| default reading | `7000` of `0`–`10000` → fraction `0.7` |
+| value format | `compact` → `7k` (`Math.round(value / 1000) + 'k'`, matches the DS); also `full` (`7,000`) / `raw` |
+| enter | `spring` `90 / 9 / 1`, `delay 0.2` (also `tween` ≤ 10 s / `ramp`) |
+| count-up | off · when on: holds `0.4 s` past the fill settle, `easeOut` into the final |
+| pill flash | on · white · blur 18 / spread 3 · intensity 0.9 · 0.5 s · 1 pulse · fires at settle (`offset 0`) |
+| fill gradient | `#E0B678` (top) → `#204C68` at `75%` |
+| track | `12 px` wide × `384 px` tall |
+| pointer / min-label | shown |
+
+### JSON motion tokens
+
+```json
+{
+  "name": "gauge",
+  "reading": { "value": 7000, "min": 0, "max": 10000, "fraction": 0.7, "format": "compact" },
+  "enter": {
+    "property": "fraction", "from": 0, "to": 0.7,
+    "delay": 0.2, "type": "spring", "stiffness": 90, "damping": 9, "mass": 1,
+    "drives": ["fill height = fraction", "pointer height = 1 - fraction", "value-pill bottom = fraction"]
+  },
+  "flash": {
+    "target": "value-pill glow (box-shadow opacity)",
+    "at": 1.1, "note": "settle ≈ 1.1s",
+    "boxShadow": "0 0 18px 3px #FFFFFF",
+    "duration": 0.5, "opacityKeyframes": [0, 0.9, 0], "times": [0, 0.22, 1]
+  },
+  "appearance": {
+    "fillGradient": "linear-gradient(180deg, #E0B678 0%, #204C68 75%)",
+    "trackWidth": 12, "trackHeight": 384, "showPointer": true, "showMinLabel": true
+  }
+}
+```
+
+---
+
 ## Panel reference
 
 Pick the component from the `component` dropdown at the top of the Leva panel
@@ -336,9 +472,21 @@ Pick the component from the `component` dropdown at the top of the Leva panel
 | **Layers** | one folder per layer (sheet · gradient · icon · heading · body · button); each has `type`, `from opac.`, `from Y`, `from scale`, `delay`, `wait for all`, and sub-folders **spring** (stiffness / damping / mass), **tween** (duration / ease), **shake** (rotate° / shift px / swings / duration / decay) |
 | **Export** | reset defaults · replay animation · copy Framer Motion · copy JSON tokens · copy config (for defaults) |
 
+**Gauge**
+
+| Group | Controls |
+|---|---|
+| **Stage** | background (dark / light / ember), paused |
+| **Gauge → reading** | `value`, `min`, `max`, `format` (compact / full / raw), `count up` + `↳ hold past settle (s)` + `↳ ease in to final` |
+| **Gauge → enter** | `delay (s)`, `type` (spring / tween / **ramp**); sub-folders **ramp** (build-up s / build-up ease / hand off at ×target), **spring** (stiffness / damping / mass), **tween** (duration ≤ 10 s / ease) |
+| **Gauge → pill flash** | `enabled`, `offset vs settle (s)`, `duration (s)`, `pulses`, `colour`, `intensity`, `blur (px)`, `spread (px)` |
+| **Gauge → appearance** | `fill top`, `fill bottom`, `gradient stop %`, `track width (px)`, `track height (px)`, `pointer`, `min label` |
+| **Export** | reset defaults · replay animation · copy Framer Motion · copy JSON tokens · copy config (for defaults) |
+
 ## Components
 
 | Component | File | Source of truth | Spec |
 |---|---|---|---|
 | Flame Pictogram | [src/components/FlamePictogram.tsx](src/components/FlamePictogram.tsx) | `FLAME_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Feedback Sheet | [src/components/FeedbackSheet.tsx](src/components/FeedbackSheet.tsx) | `SHEET_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
+| Gauge | [src/components/Gauge.tsx](src/components/Gauge.tsx) | `GAUGE_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |

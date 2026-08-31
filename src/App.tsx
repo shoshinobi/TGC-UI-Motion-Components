@@ -2,15 +2,21 @@ import { useEffect, useState } from 'react'
 import { Leva, useControls } from 'leva'
 import { FlameBench } from '@/benches/FlameBench'
 import { SheetBench } from '@/benches/SheetBench'
+import { GaugeBench } from '@/benches/GaugeBench'
 
-const COMPONENTS = ['Flame Pictogram', 'Feedback Sheet'] as const
+const COMPONENTS = ['Flame Pictogram', 'Feedback Sheet', 'Gauge'] as const
 
-const SLUG_OF: Record<string, string> = { 'Flame Pictogram': 'flame', 'Feedback Sheet': 'sheet' }
+const SLUG_OF: Record<string, string> = {
+  'Flame Pictogram': 'flame',
+  'Feedback Sheet': 'sheet',
+  Gauge: 'gauge',
+}
 
 function initialComponent(): string {
   if (typeof window === 'undefined') return COMPONENTS[0]
   const c = new URLSearchParams(window.location.search).get('c')?.toLowerCase() ?? ''
   if (c.startsWith('sheet') || c.startsWith('feedback')) return 'Feedback Sheet'
+  if (c.startsWith('gauge') || c.startsWith('meter')) return 'Gauge'
   if (c.startsWith('flame')) return 'Flame Pictogram'
   return COMPONENTS[0]
 }
@@ -47,7 +53,13 @@ export function App() {
         theme={{ sizes: { rootWidth: 'min(340px, calc(100vw - 20px))' } }}
       />
 
-      {component === 'Feedback Sheet' ? <SheetBench key='sheet' /> : <FlameBench key='flame' />}
+      {component === 'Feedback Sheet' ? (
+        <SheetBench key='sheet' />
+      ) : component === 'Gauge' ? (
+        <GaugeBench key='gauge' />
+      ) : (
+        <FlameBench key='flame' />
+      )}
     </div>
   )
 }

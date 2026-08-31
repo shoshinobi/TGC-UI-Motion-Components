@@ -383,3 +383,108 @@ body {
   font-style: italic;
   text-transform: uppercase;
 }
+
+/* ===================== Gauge bench ===================== */
+
+.gauge-stage-inner {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  padding: clamp(24px, 5vw, 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.gauge-wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.gauge-track {
+  position: relative;
+  height: 100%;
+  font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+
+.gauge-fill-box {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+.gauge-fill {
+  width: 100%;
+  height: 100%;
+}
+
+.gauge-pointer {
+  pointer-events: none;
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+}
+.gauge-hairline {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background-image: linear-gradient(to bottom, #fff, rgb(255 255 255 / 0));
+}
+.gauge-tri {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 9px;
+  height: 5px;
+  transform: translateX(-50%);
+  fill: #000;
+  stroke: #fff;
+  overflow: visible;
+}
+
+.gauge-label {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%) translateY(-10%);
+}
+.gauge-pill {
+  position: relative;
+  border: 2px solid #000;
+  border-radius: 6px;
+  background: #fff;
+  padding: 0 6px;
+  white-space: nowrap;
+}
+.gauge-pill > span:not(.gauge-flash) {
+  position: relative;
+  z-index: 1;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 400;
+  color: #000;
+}
+.gauge-flash {
+  position: absolute;
+  inset: -2px;
+  display: block;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.gauge-min {
+  position: absolute;
+  bottom: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Inter', sans-serif;
+  font-size: 12px;
+  line-height: 17px;
+  font-style: italic;
+  color: #204c68;
+}

@@ -1,4 +1,5 @@
 import { motion, type Easing, type MotionProps, type TargetAndTransition, type Transition } from 'motion/react'
+import { springSettleTime } from '@/lib/spring'
 
 /**
  * Rebuilt from the design-system Storybook story
@@ -73,15 +74,6 @@ function mergeConfig(partial?: Partial<SheetMotionConfig>): SheetMotionConfig {
   }, {} as SheetMotionConfig)
 }
 
-/** 2% settling time of a spring — used to time "start after all". */
-export function springSettleTime(stiffness: number, damping: number, mass: number): number {
-  const m = Math.max(mass, 0.01)
-  const w0 = Math.sqrt(stiffness / m)
-  const zeta = damping / (2 * Math.sqrt(stiffness * m))
-  if (!Number.isFinite(w0) || w0 <= 0) return 0.6
-  const t = zeta < 1 ? -Math.log(0.02 * Math.sqrt(Math.max(1 - zeta * zeta, 1e-6))) / (zeta * w0) : 4 / w0
-  return Math.min(2, Math.max(0.2, t))
-}
 
 function layerEnd(a: SheetLayerAnim): number {
   const dur = a.type === 'spring' ? springSettleTime(a.stiffness, a.damping, a.mass) : a.duration
