@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useControls, folder, button } from 'leva'
 import { FlamePictogram, FLAME_DEFAULT_CONFIG, type FlameMotionConfig } from '@/components/FlamePictogram'
 import { buildJsxSpec, buildJsonSpec } from '@/lib/buildSpec'
-import { SpecCard, copyText } from '@/components/SpecCard'
+import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
 
 const EASE_OPTIONS = [
   'linear',
@@ -152,6 +152,7 @@ export function FlameBench() {
 
   const jsx = buildJsxSpec(config)
   const json = buildJsonSpec(config)
+  const copy = useLiveCopy({ jsx, json, config: stringifyConfig(config) })
 
   useControls('Export', {
     'reset to approved spec': button(() => {
@@ -162,8 +163,9 @@ export function FlameBench() {
       setNonce((n) => n + 1)
     }),
     'restart animation': button(() => setNonce((n) => n + 1)),
-    'copy Framer Motion': button(() => copyText(jsx)),
-    'copy JSON tokens': button(() => copyText(json)),
+    'copy Framer Motion': button(copy('jsx')),
+    'copy JSON tokens': button(copy('json')),
+    'copy config (for defaults)': button(copy('config')),
   })
 
   // Remount whenever a timing-affecting param changes so the preview always

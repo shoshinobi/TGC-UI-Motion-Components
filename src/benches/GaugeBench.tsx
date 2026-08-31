@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useControls, folder, button } from 'leva'
 import { Gauge, GAUGE_DEFAULT_CONFIG, type GaugeMotionConfig } from '@/components/Gauge'
 import { buildGaugeJsxSpec, buildGaugeJsonSpec } from '@/lib/buildGaugeSpec'
-import { SpecCard, copyText } from '@/components/SpecCard'
+import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
 
 const EASE_OPTIONS = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'circIn', 'circOut', 'backIn', 'backOut', 'anticipate']
 const RAMP_EASE_OPTIONS = ['linear', 'easeIn', 'circIn', 'backIn']
@@ -162,6 +162,7 @@ export function GaugeBench() {
 
   const jsx = buildGaugeJsxSpec(config)
   const json = buildGaugeJsonSpec(config)
+  const copy = useLiveCopy({ jsx, json, config: stringifyConfig(config) })
 
   useControls('Export', {
     'reset defaults': button(() => {
@@ -169,9 +170,9 @@ export function GaugeBench() {
       setNonce((n) => n + 1)
     }),
     'replay animation': button(() => setNonce((n) => n + 1)),
-    'copy Framer Motion': button(() => copyText(jsx)),
-    'copy JSON tokens': button(() => copyText(json)),
-    'copy config (for defaults)': button(() => copyText(JSON.stringify(config, null, 2))),
+    'copy Framer Motion': button(copy('jsx')),
+    'copy JSON tokens': button(copy('json')),
+    'copy config (for defaults)': button(copy('config')),
   })
 
   const animKey = `${nonce}-${JSON.stringify(config)}`

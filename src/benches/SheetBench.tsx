@@ -9,7 +9,7 @@ import {
   type SheetMotionConfig,
 } from '@/components/FeedbackSheet'
 import { buildSheetJsxSpec, buildSheetJsonSpec } from '@/lib/buildSheetSpec'
-import { SpecCard, copyText } from '@/components/SpecCard'
+import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
 
 const EASE_OPTIONS = ['linear', 'easeIn', 'easeOut', 'easeInOut', 'circOut', 'backOut', 'anticipate']
 
@@ -145,6 +145,7 @@ export function SheetBench() {
 
   const jsx = buildSheetJsxSpec(config)
   const json = buildSheetJsonSpec(config)
+  const copy = useLiveCopy({ jsx, json, config: stringifyConfig(config) })
 
   useControls('Export', {
     'reset defaults': button(() => {
@@ -152,9 +153,9 @@ export function SheetBench() {
       setNonce((n) => n + 1)
     }),
     'replay animation': button(() => setNonce((n) => n + 1)),
-    'copy Framer Motion': button(() => copyText(jsx)),
-    'copy JSON tokens': button(() => copyText(json)),
-    'copy config (for defaults)': button(() => copyText(JSON.stringify(config, null, 2))),
+    'copy Framer Motion': button(copy('jsx')),
+    'copy JSON tokens': button(copy('json')),
+    'copy config (for defaults)': button(copy('config')),
   })
 
   const frameWidth = stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'

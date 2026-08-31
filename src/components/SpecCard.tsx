@@ -1,7 +1,27 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 export function copyText(text: string) {
   navigator.clipboard.writeText(text).catch(() => {})
+}
+
+/** JSON of a motion config, keeping `Infinity` legible (for pasting back as a default). */
+export function stringifyConfig(config: unknown): string {
+  return JSON.stringify(config, (_k, v) => (v === Infinity ? 'Infinity' : v === -Infinity ? '-Infinity' : v), 2)
+}
+
+/**
+ * Leva `button()` freezes its onClick closure at first render, so
+ * `button(() => copyText(jsx))` would keep copying the *first* render's value.
+ * This routes through a ref that's refreshed every render, so the Leva buttons
+ * copy whatever is on screen now.
+ *
+ *   const copy = useLiveCopy({ jsx, json, config })
+ *   useControls('Export', { 'copy JSON': button(copy('json')) })
+ */
+export function useLiveCopy<T extends Record<string, string>>(payload: T): (key: keyof T) => () => void {
+  const ref = useRef(payload)
+  ref.current = payload
+  return (key) => () => copyText(ref.current[key])
 }
 
 /** One scrollable, copyable code panel in the bottom dock. */
