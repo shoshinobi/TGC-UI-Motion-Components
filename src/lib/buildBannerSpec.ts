@@ -90,12 +90,13 @@ export function buildBannerJsxSpec(c: BannerStackMotionConfig): string {
   L.push(`  )`)
   L.push(`})}`)
   L.push(``)
-  L.push(`// Card chrome: front card sits at ${nn(c.frontRotate)}° (\`transform: rotate\`); every card has a`)
-  L.push(`// ${nn(c.borderWidth)}px ${c.borderColor} edge. For pos > 0, a full-bleed black overlay at`)
-  L.push(`// opacity ${nn(c.stackDarken)} dims the card AND its border equally — so put the border as an`)
-  L.push(`// inset box-shadow (or a wrapper) and lay the overlay over the top:`)
-  L.push(`//   .banner-card       { box-shadow: inset 0 0 0 ${nn(c.borderWidth)}px ${c.borderColor};`)
-  L.push(`//                        transform: rotate(${nn(c.frontRotate)}deg) }`)
+  L.push(`// Card chrome: the front card sits at ${nn(c.frontRotate)}° (\`transform: rotate\`); every card`)
+  L.push(`// has a solid ${nn(c.borderWidth)}px ${c.borderColor} border. Cards behind the front one (pos > 0)`)
+  L.push(`// are dimmed equally: a full-bleed black overlay at opacity ${nn(c.stackDarken)} over the`)
+  L.push(`// content, and the same amount mixed into the border colour:`)
+  L.push(`//   .banner-card       { border: ${nn(c.borderWidth)}px solid ${c.borderColor};`)
+  L.push(`//                        transform: rotate(${nn(c.frontRotate)}deg); transition: border-color .2s }`)
+  L.push(`//   pos > 0            → borderColor = color-mix(in srgb, ${c.borderColor}, #000 <dim*100>%)`)
   L.push(`//   .banner-card__dim  { position: absolute; inset: 0; background: #000; opacity: <dim>;`)
   L.push(`//                        transition: opacity .2s }   // <dim> = 0 on the front card`)
 
@@ -153,10 +154,15 @@ export function buildBannerJsonSpec(c: BannerStackMotionConfig): string {
         frontCardTilt: r(c.frontRotate),
         darkenBehind: {
           value: r(c.stackDarken),
-          note: 'opacity of a solid-black overlay on EVERY card where pos > 0 — equal, not per-depth; sits over the border too',
+          note: 'EVERY card where pos > 0 — equal, not per-depth: black overlay at this opacity over the content, same amount mixed into the border colour',
         },
       },
-      border: { target: 'every card', color: c.borderColor, width: r(c.borderWidth), note: 'dimmed along with the card when pos > 0' },
+      border: {
+        target: 'every card',
+        color: c.borderColor,
+        width: r(c.borderWidth),
+        note: 'solid; for pos > 0 mix `stackDarken` of #000 into it so it dims with the card',
+      },
       shuffle: { target: 'the other cards easing forward one slot, and the flown-out card receding to the back', transition: shuffle },
       cta: {
         target: 'FoldableButton — front card only',

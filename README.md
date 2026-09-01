@@ -510,8 +510,8 @@ the last banner wraps to the first. The banner count is the developer's preset
 | | `stackOpacityStep` | opacity drop per step back (`0` = all opaque) |
 | | `stackRotateStep` | degrees of fan per step back |
 | | `frontRotate` | top card's resting tilt (° — either direction); the fan adds `stackRotateStep` on top |
-| | `stackDarken` | 0–1 — black overlay on **every** card behind the front one, equal for all — **dims the border too** |
-| **border** (every card) | `borderColor` / `borderWidth` | the edge stroke (inset box-shadow so the dim covers it) |
+| | `stackDarken` | 0–1 — dims **every** card behind the front one equally: overlay on the content + `color-mix` into the border |
+| **border** (every card) | `borderColor` / `borderWidth` | solid edge stroke |
 | **shuffle** | `shuffleType` + timing | the recede-to-back + the other cards easing forward one slot |
 | **CTA button** | `ctaAnimate` · `ctaDelay` · `ctaFromScale/Opacity` | scale the FoldableButton in (front card only) |
 | | `ctaType` (`spring` low-damping = elastic / `tween` `backOut`) · `ctaOrigin` | the pop |
@@ -560,10 +560,10 @@ the last banner wraps to the first. The banner count is the developer's preset
 ```
 
 `frontRotate 2` = the top card's resting tilt (° — negative tilts the other way);
-the fan adds `stackRotateStep` per card behind it. `stackDarken 0.4` = a
-solid-black overlay at 0.4 opacity on **every** card behind the front one (equal,
-not per-depth) — **it covers the border too**, so implement the border as an
-inset box-shadow (or a wrapper) with the overlay on top. Every card's border is
+the fan adds `stackRotateStep` per card behind it. `stackDarken 0.4` dims **every**
+card behind the front one, equally (not per-depth): a solid-black overlay at 0.4
+opacity over the content, and `color-mix(in srgb, borderColor, #000 40%)` for the
+border so it dims by the same amount. Every card's border is a **solid**
 `2 px #FFFFFF`. `frontRotate` / `stackDarken` / border are shared across all three
 viewport configs.
 

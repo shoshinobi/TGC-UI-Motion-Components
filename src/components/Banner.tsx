@@ -48,6 +48,10 @@ export function Banner({
   className,
   style,
 }: BannerProps) {
+  // Solid border, darkened by the same amount as the dim overlay on cards behind the front one.
+  const dimmedBorder =
+    dim > 0 ? `color-mix(in srgb, ${borderColor}, #000 ${Math.round(dim * 100)}%)` : borderColor
+
   const cta = !isPeeking && (
     <FoldableButton tone='white' size='md' onClick={onCtaClick} className='banner-card__cta'>
       {ctaLabel}
@@ -61,7 +65,7 @@ export function Banner({
         style={
           {
             ['--banner-tint']: tint,
-            ['--banner-border-color']: borderColor,
+            ['--banner-border-color']: dimmedBorder,
             ['--banner-border-width']: `${borderWidth}px`,
             ['--banner-rotate']: `${rotate}deg`,
           } as CSSProperties
