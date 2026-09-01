@@ -19,6 +19,7 @@ always copy-pasteable.
 | **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [Approved spec ↓](#-approved-motion-specs--flame-pictogram) | ✅ approved 2026-08-31 |
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [Approved spec ↓](#-approved-motion-specs--feedback-sheet) | ✅ approved 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [Approved spec ↓](#-approved-motion-specs--gauge) | ✅ approved 2026-08-31 |
+| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [Approved spec ↓](#-approved-motion-specs--banner-stack) | ✅ phone + full width · tablet pending |
 
 Each component's tab has its own **Export** buttons — `copy Framer Motion` and
 `copy JSON tokens` — that produce exactly the spec locked in below.
@@ -74,6 +75,18 @@ Same deal: `src/components/Gauge.tsx` is a rebuild from `design-system-gauge--de
 (scoped `.gauge-*` CSS). Your real DS `Gauge` already has the fill / pointer /
 label elements — the deliverable is the single `fraction` motion value and the
 three `useTransform` bindings in the **✅ Approved motion specs — Gauge** section.
+
+### Banner Stack — your code, near-verbatim
+
+`src/components/BannerStack.tsx` + `Banner.tsx` started from **your files**. Two
+changes: every motion number now comes from a `motionConfig` object, and — per
+Malcolm's feedback — the `AnimatePresence` mount/unmount model was replaced with
+a **persistent, infinitely-looping stack** (cards never unmount; the swiped one
+is thrown onto the back, the rest shuffle forward). `handleDragEnd` and the swipe
+thresholds are unchanged. `Typography` / `FoldableButton` / `Image` /
+`LinearGradient` are dummy stubs in `banner-stubs.tsx` — swap the real DS
+components back in. Once Malcolm signs off, the values become
+`BANNER_DEFAULT_CONFIG` and this section gets the ✅.
 
 ## For the developer — how to implement an approved spec
 
@@ -450,6 +463,187 @@ many glow layers** so a `plus-lighter` flash keeps getting brighter.
 
 ---
 
+## ✅ Approved motion specs — Banner Stack
+
+> **Per-viewport.** A config per screen size. **Phone** approved 2026-09-01
+> (`BANNER_DEFAULT_CONFIG` / `BANNER_CONFIG_PHONE` in
+> `src/components/BannerStack.tsx`) — the base. **Full width** to follow; the app
+> swaps configs at a breakpoint.
+>
+> On the bench, **switching the Stage `viewport`** loads that viewport's approved
+> config into the panel (unsaved tweaks for the one you leave are discarded).
+> **`★ save as approved (this viewport)`** persists the current panel as that
+> viewport's config (per-viewport `localStorage`); **`reset this viewport to code
+> default`** clears it back to the baked-in config. `copy config` captures all 32
+> parameters — send that back for me to bake in permanently.
+
+**The interaction** (modelled on [codepen.io/tahazsh/pen/yLWPNrG](https://codepen.io/tahazsh/pen/yLWPNrG)):
+the front card **follows the pointer** while dragging. On release, if the drag
+cleared a *small* distance **or** was a flick, an automatic two-phase move plays:
+
+1. **fly-out** — the card slides out to `flyOutDistance` px from centre, toward
+   the swipe direction (`flyOutDuration`, on top of the stack);
+2. **recede** — it then drops in z, shrinks and fades onto the **back** slot
+   (using the `shuffle` timing), while every other card eases one slot forward.
+
+If the drag *doesn't* commit, the card springs back to centre. You only ever
+nudge it; the rest plays itself.
+
+**Infinite loop, no mount/unmount.** Every banner is a persistent `motion.div`;
+its transform comes from its position in the cycle (`pos = (i − active + n) % n`),
+`active` from a **monotonic** step — so the keys never repeat, and swiping past
+the last banner wraps to the first. The banner count is the developer's preset
+(the `banners` array; the bench ships 3).
+
+| Group | Parameter | What it does |
+|---|---|---|
+| **drag / release** | `swipeOffsetPx` | px of drag that commits on release |
+| | `swipeVelocity` | px/s flick that commits with barely any distance (either wins) |
+| | `snapBackStiffness / snapBackDamping` | the spring when a drag *doesn't* commit |
+| **fly-out** (on release) | `flyOutDistance` | px from centre the card automatically slides out to before receding |
+| | `directionAware` | the fly-out goes toward the swipe direction |
+| | `flyOutRotate` | degrees (× dir) it tilts on the way out |
+| | `flyOutDuration` + `flyOutEase` | the fly-out timing (the recede then uses `shuffle`) |
+| **stack fan-out** | `stackCount` | how many cards are visible in the fan |
+| | `stackGapX` / `stackGapY` | px each card further back is offset right / down |
+| | `stackScaleStep` | scale shrink per step back |
+| | `stackOpacityStep` | opacity drop per step back (`0` = all opaque) |
+| | `stackRotateStep` | degrees of fan per step back |
+| **shuffle** | `shuffleType` + timing | the recede-to-back + the other cards easing forward one slot |
+| **CTA button** | `ctaAnimate` · `ctaDelay` · `ctaFromScale/Opacity` | scale the FoldableButton in (front card only) |
+| | `ctaType` (`spring` low-damping = elastic / `tween` `backOut`) · `ctaOrigin` | the pop |
+
+### Phone (default / base)
+
+```json
+{
+  "swipeOffsetPx": 140,
+  "swipeVelocity": 450,
+  "snapBackStiffness": 680,
+  "snapBackDamping": 22,
+  "directionAware": true,
+  "flyOutDistance": 300,
+  "flyOutRotate": 8,
+  "flyOutDuration": 0.16,
+  "flyOutEase": "circOut",
+  "stackCount": 3,
+  "stackGapX": 16,
+  "stackGapY": 2,
+  "stackScaleStep": 0.05,
+  "stackOpacityStep": 0,
+  "stackRotateStep": 4,
+  "shuffleType": "tween",
+  "shuffleDuration": 0.2,
+  "shuffleEase": "easeInOut",
+  "shuffleStiffness": 320,
+  "shuffleDamping": 32,
+  "shuffleMass": 1,
+  "ctaAnimate": true,
+  "ctaDelay": 0.3,
+  "ctaFromScale": 0,
+  "ctaFromOpacity": 0,
+  "ctaType": "spring",
+  "ctaDuration": 0.5,
+  "ctaEase": "backOut",
+  "ctaStiffness": 600,
+  "ctaDamping": 29,
+  "ctaMass": 1,
+  "ctaOrigin": "center"
+}
+```
+
+**What's distinctive about the phone tune:** commit needs a **deliberate drag**
+(`140 px`) or a flick (`450 px/s`) — no accidental swipes on a small screen. The
+card is **thrown hard and fast** (`flyOutDistance 300`, `flyOutDuration 0.16 s`,
+`circOut`) — it clears the phone frame — then the stack snaps forward quickly
+(`shuffle 0.2 s`). The resting stack is a **tight opaque fan**: `stackOpacityStep 0`
+(every card full opacity), `stackRotateStep 4°` and `stackGapX 16` / `stackGapY 2`
+— reads like a hand of cards rather than a receding pile. Snap-back is springy
+(`680 / 22`); the CTA pop is firmer than the base (`ctaDamping 29`).
+
+### Full width
+
+Same motion as phone — only the **five size-driven values** change (a longer
+commit drag, a much larger fly-out for the wide frame, a wider + flatter fan):
+
+| | phone | full |
+|---|---|---|
+| `swipeOffsetPx` | 140 | **200** |
+| `flyOutDistance` | 300 | **800** |
+| `stackGapX` | 16 | **30** |
+| `stackGapY` | 2 | **0** |
+| `stackRotateStep` | 4 | **1.5** |
+
+```json
+{
+  "swipeOffsetPx": 200,
+  "swipeVelocity": 450,
+  "snapBackStiffness": 680,
+  "snapBackDamping": 22,
+  "directionAware": true,
+  "flyOutDistance": 800,
+  "flyOutRotate": 8,
+  "flyOutDuration": 0.16,
+  "flyOutEase": "circOut",
+  "stackCount": 3,
+  "stackGapX": 30,
+  "stackGapY": 0,
+  "stackScaleStep": 0.05,
+  "stackOpacityStep": 0,
+  "stackRotateStep": 1.5,
+  "shuffleType": "tween",
+  "shuffleDuration": 0.2,
+  "shuffleEase": "easeInOut",
+  "shuffleStiffness": 320,
+  "shuffleDamping": 32,
+  "shuffleMass": 1,
+  "ctaAnimate": true,
+  "ctaDelay": 0.3,
+  "ctaFromScale": 0,
+  "ctaFromOpacity": 0,
+  "ctaType": "spring",
+  "ctaDuration": 0.5,
+  "ctaEase": "backOut",
+  "ctaStiffness": 600,
+  "ctaDamping": 29,
+  "ctaMass": 1,
+  "ctaOrigin": "center"
+}
+```
+
+`BANNER_CONFIG_FULL` in `src/components/BannerStack.tsx` (spread over
+`BANNER_CONFIG_PHONE` with the five overrides).
+
+### Tablet
+
+Inherits **phone** for now — Malcolm to tune it on the bench (switch the Stage
+`viewport` to `tablet`, dial it in, `★ save as approved`, send the config).
+
+### For the developer — switching configs
+
+Both configs are exported from `src/components/BannerStack.tsx`; **the switching
+logic is yours**. Pass the right one as `motionConfig`:
+
+```tsx
+import { BANNER_CONFIG_PHONE, BANNER_CONFIG_FULL } from './BannerStack'
+
+const config = isWide ? BANNER_CONFIG_FULL : BANNER_CONFIG_PHONE
+<BannerStack banners={banners} motionConfig={config} />
+```
+
+Only 5 values differ, so you could also spread the deltas onto one base if that's
+cleaner in your setup.
+
+---
+
+The **Export → copy Framer Motion** button prints the whole persistent-stack
+render (the `slot(pos)` function, the per-card `animate`, the drag handler with
+`dragConstraints` + `dragTransition`, the CTA), ready to drop into your
+`BannerStack`. **copy JSON tokens** is the same, framework-neutral. **copy config**
+gives the flat object above.
+
+---
+
 ## Panel reference
 
 Pick the component from the `component` dropdown at the top of the Leva panel
@@ -485,6 +679,23 @@ Pick the component from the `component` dropdown at the top of the Leva panel
 | **Gauge → appearance** | `fill top`, `fill bottom`, `gradient stop %`, `track width (px)`, `track height (px)`, `pointer`, `min label` |
 | **Export** | reset defaults · replay animation · copy Framer Motion · copy JSON tokens · copy config (for defaults) |
 
+**Banner Stack**
+
+| Group | Controls |
+|---|---|
+| **Stage** | viewport (phone / tablet / full), background, paused |
+| **BannerStack → drag / release** | commit distance (px), flick velocity (px/s), snap-back stiffness / damping |
+| **BannerStack → fly-out (on release)** | distance out (px), toward swipe direction, rotate out (°), duration out (s), ease out |
+| **BannerStack → stack fan-out** | visible cards, gap X (right edge) / gap Y, scale − per step, opacity − per step, fan rotate per step |
+| **BannerStack → shuffle** | type; **shuffleTween** (duration / ease), **shuffleSpring** (stiffness / damping / mass) |
+| **BannerStack → CTA button** | scale in (front card only), delay, from scale / opacity, transform origin (**center**), type; **ctaTween** (duration / ease), **ctaSpring** (stiffness ↑ snappier / damping ↓ elastic / mass) |
+| **BannerStack → Export** | next banner ▸ · **★ save as approved (this viewport)** · reset this viewport to code default · replay · copy Framer Motion / JSON tokens / config |
+
+Switching the **Stage → viewport** (phone / tablet / full) loads that viewport's approved config; tablet + full currently fall back to the phone config.
+| **Export** | next banner ▸ · reset defaults · replay animation · copy Framer Motion · copy JSON tokens · copy config (for defaults) |
+
+Stage buttons: `↻ Replay` (reset to first card + re-enter) and `Next ▸` (advance the stack without dragging).
+
 ## Components
 
 | Component | File | Source of truth | Spec |
@@ -492,3 +703,4 @@ Pick the component from the `component` dropdown at the top of the Leva panel
 | Flame Pictogram | [src/components/FlamePictogram.tsx](src/components/FlamePictogram.tsx) | `FLAME_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Feedback Sheet | [src/components/FeedbackSheet.tsx](src/components/FeedbackSheet.tsx) | `SHEET_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Gauge | [src/components/Gauge.tsx](src/components/Gauge.tsx) | `GAUGE_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
+| Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_PHONE` / `BANNER_CONFIG_FULL` | ✅ phone + full 2026-09-01 · tablet pending |

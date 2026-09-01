@@ -3,13 +3,15 @@ import { Leva, useControls } from 'leva'
 import { FlameBench } from '@/benches/FlameBench'
 import { SheetBench } from '@/benches/SheetBench'
 import { GaugeBench } from '@/benches/GaugeBench'
+import { BannerBench } from '@/benches/BannerBench'
 
-const COMPONENTS = ['Flame Pictogram', 'Feedback Sheet', 'Gauge'] as const
+const COMPONENTS = ['Flame Pictogram', 'Feedback Sheet', 'Gauge', 'Banner Stack'] as const
 
 const SLUG_OF: Record<string, string> = {
   'Flame Pictogram': 'flame',
   'Feedback Sheet': 'sheet',
   Gauge: 'gauge',
+  'Banner Stack': 'banner',
 }
 
 function initialComponent(): string {
@@ -17,6 +19,7 @@ function initialComponent(): string {
   const c = new URLSearchParams(window.location.search).get('c')?.toLowerCase() ?? ''
   if (c.startsWith('sheet') || c.startsWith('feedback')) return 'Feedback Sheet'
   if (c.startsWith('gauge') || c.startsWith('meter')) return 'Gauge'
+  if (c.startsWith('banner') || c.startsWith('stack') || c.startsWith('carousel')) return 'Banner Stack'
   if (c.startsWith('flame')) return 'Flame Pictogram'
   return COMPONENTS[0]
 }
@@ -57,6 +60,8 @@ export function App() {
         <SheetBench key='sheet' />
       ) : component === 'Gauge' ? (
         <GaugeBench key='gauge' />
+      ) : component === 'Banner Stack' ? (
+        <BannerBench key='banner' />
       ) : (
         <FlameBench key='flame' />
       )}
