@@ -4,6 +4,7 @@ import {
   BannerStack,
   BANNER_CONFIG_FULL,
   BANNER_CONFIG_PHONE,
+  BANNER_CONFIG_TABLET,
   BANNER_DEFAULT_CONFIG,
   type BannerSample,
   type BannerStackMotionConfig,
@@ -36,13 +37,10 @@ function flatten(cfg: BannerStackMotionConfig): FlatConfig {
   return out
 }
 
-/**
- * The approved config per viewport. Phone + full-width are signed off; tablet
- * inherits phone for now (pending its own tune).
- */
+/** The approved config per viewport — all three signed off 2026-09-01. */
 const VIEWPORT_CODE_CONFIG: Record<Viewport, BannerStackMotionConfig> = {
   phone: BANNER_CONFIG_PHONE,
-  tablet: BANNER_CONFIG_PHONE, // TODO: BANNER_CONFIG_TABLET
+  tablet: BANNER_CONFIG_TABLET,
   full: BANNER_CONFIG_FULL,
 }
 

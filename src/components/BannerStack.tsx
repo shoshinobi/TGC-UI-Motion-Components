@@ -116,6 +116,21 @@ export const BANNER_DEFAULT_CONFIG: BannerStackMotionConfig = {
 export const BANNER_CONFIG_PHONE = BANNER_DEFAULT_CONFIG
 
 /**
+ * Approved — **tablet** viewport (2026-09-01). Between phone and full: a slightly
+ * longer commit drag, a mid fly-out, a wider + flatter fan, and a softer
+ * `easeInOut` fly-out (vs phone/full's `circOut`).
+ */
+export const BANNER_CONFIG_TABLET: BannerStackMotionConfig = {
+  ...BANNER_CONFIG_PHONE,
+  swipeOffsetPx: 150,
+  flyOutDistance: 500,
+  flyOutEase: 'easeInOut',
+  stackGapX: 25,
+  stackGapY: 1,
+  stackRotateStep: 2,
+}
+
+/**
  * Approved — **full-width** viewport (2026-09-01). Same motion as phone; only the
  * size-driven values differ: a longer commit drag, a much bigger fly-out (wide
  * frame), a wider and flatter fan.

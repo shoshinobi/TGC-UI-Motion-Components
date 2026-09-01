@@ -19,7 +19,7 @@ always copy-pasteable.
 | **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [Approved spec ↓](#-approved-motion-specs--flame-pictogram) | ✅ approved 2026-08-31 |
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [Approved spec ↓](#-approved-motion-specs--feedback-sheet) | ✅ approved 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [Approved spec ↓](#-approved-motion-specs--gauge) | ✅ approved 2026-08-31 |
-| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [Approved spec ↓](#-approved-motion-specs--banner-stack) | ✅ phone + full width · tablet pending |
+| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [Approved spec ↓](#-approved-motion-specs--banner-stack) | ✅ phone · tablet · full width |
 
 Each component's tab has its own **Export** buttons — `copy Framer Motion` and
 `copy JSON tokens` — that produce exactly the spec locked in below.
@@ -81,12 +81,12 @@ three `useTransform` bindings in the **✅ Approved motion specs — Gauge** sec
 `src/components/BannerStack.tsx` + `Banner.tsx` started from **your files**. Two
 changes: every motion number now comes from a `motionConfig` object, and — per
 Malcolm's feedback — the `AnimatePresence` mount/unmount model was replaced with
-a **persistent, infinitely-looping stack** (cards never unmount; the swiped one
-is thrown onto the back, the rest shuffle forward). `handleDragEnd` and the swipe
-thresholds are unchanged. `Typography` / `FoldableButton` / `Image` /
+a **persistent, infinitely-looping stack** (cards never unmount; position derives
+from a monotonic step; on release the front card flies out then recedes onto the
+back while the rest shuffle forward). `Typography` / `FoldableButton` / `Image` /
 `LinearGradient` are dummy stubs in `banner-stubs.tsx` — swap the real DS
-components back in. Once Malcolm signs off, the values become
-`BANNER_DEFAULT_CONFIG` and this section gets the ✅.
+components back in. **Approved** (per viewport) — see below; the switching logic
+between configs is yours.
 
 ## For the developer — how to implement an approved spec
 
@@ -616,23 +616,35 @@ commit drag, a much larger fly-out for the wide frame, a wider + flatter fan):
 
 ### Tablet
 
-Inherits **phone** for now — Malcolm to tune it on the bench (switch the Stage
-`viewport` to `tablet`, dial it in, `★ save as approved`, send the config).
+Between phone and full — **6 overrides** on the phone base (note `flyOutEase` is
+`easeInOut` here, not the `circOut` phone/full use):
+
+| | phone | **tablet** | full |
+|---|---|---|---|
+| `swipeOffsetPx` | 140 | **150** | 200 |
+| `flyOutDistance` | 300 | **500** | 800 |
+| `flyOutEase` | circOut | **easeInOut** | circOut |
+| `stackGapX` | 16 | **25** | 30 |
+| `stackGapY` | 2 | **1** | 0 |
+| `stackRotateStep` | 4 | **2** | 1.5 |
+
+`BANNER_CONFIG_TABLET` in `src/components/BannerStack.tsx`.
 
 ### For the developer — switching configs
 
-Both configs are exported from `src/components/BannerStack.tsx`; **the switching
-logic is yours**. Pass the right one as `motionConfig`:
+All three configs are exported from `src/components/BannerStack.tsx`; **the
+switching logic is yours**. Pass the right one as `motionConfig`:
 
 ```tsx
-import { BANNER_CONFIG_PHONE, BANNER_CONFIG_FULL } from './BannerStack'
+import { BANNER_CONFIG_PHONE, BANNER_CONFIG_TABLET, BANNER_CONFIG_FULL } from './BannerStack'
 
-const config = isWide ? BANNER_CONFIG_FULL : BANNER_CONFIG_PHONE
+const config =
+  width >= FULL_BP ? BANNER_CONFIG_FULL : width >= TABLET_BP ? BANNER_CONFIG_TABLET : BANNER_CONFIG_PHONE
 <BannerStack banners={banners} motionConfig={config} />
 ```
 
-Only 5 values differ, so you could also spread the deltas onto one base if that's
-cleaner in your setup.
+Only ~6 values differ between neighbours, so spreading deltas onto one base works
+too if that's cleaner in your setup.
 
 ---
 
@@ -691,7 +703,7 @@ Pick the component from the `component` dropdown at the top of the Leva panel
 | **BannerStack → CTA button** | scale in (front card only), delay, from scale / opacity, transform origin (**center**), type; **ctaTween** (duration / ease), **ctaSpring** (stiffness ↑ snappier / damping ↓ elastic / mass) |
 | **BannerStack → Export** | next banner ▸ · **★ save as approved (this viewport)** · reset this viewport to code default · replay · copy Framer Motion / JSON tokens / config |
 
-Switching the **Stage → viewport** (phone / tablet / full) loads that viewport's approved config; tablet + full currently fall back to the phone config.
+Switching the **Stage → viewport** (phone / tablet / full) loads that viewport's approved config.
 | **Export** | next banner ▸ · reset defaults · replay animation · copy Framer Motion · copy JSON tokens · copy config (for defaults) |
 
 Stage buttons: `↻ Replay` (reset to first card + re-enter) and `Next ▸` (advance the stack without dragging).
@@ -703,4 +715,4 @@ Stage buttons: `↻ Replay` (reset to first card + re-enter) and `Next ▸` (adv
 | Flame Pictogram | [src/components/FlamePictogram.tsx](src/components/FlamePictogram.tsx) | `FLAME_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Feedback Sheet | [src/components/FeedbackSheet.tsx](src/components/FeedbackSheet.tsx) | `SHEET_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Gauge | [src/components/Gauge.tsx](src/components/Gauge.tsx) | `GAUGE_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
-| Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_PHONE` / `BANNER_CONFIG_FULL` | ✅ phone + full 2026-09-01 · tablet pending |
+| Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_{PHONE,TABLET,FULL}` | ✅ 3 viewports 2026-09-01 |
