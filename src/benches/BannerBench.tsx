@@ -93,6 +93,7 @@ export function BannerBench() {
       stackScaleStep: { value: D.stackScaleStep, min: 0, max: 0.2, step: 0.005, label: 'scale − per step' },
       stackOpacityStep: { value: D.stackOpacityStep, min: 0, max: 1, step: 0.05, label: 'opacity − per step' },
       stackRotateStep: { value: D.stackRotateStep, min: -12, max: 12, step: 0.5, label: 'fan rotate per step (°)' },
+      frontRotate: { value: D.frontRotate, min: -15, max: 15, step: 0.5, label: 'front card tilt (°)' },
       stackDarken: { value: D.stackDarken, min: 0, max: 1, step: 0.05, label: 'darken cards behind' },
     }),
     border: folder({

@@ -45,7 +45,9 @@ export type BannerStackMotionConfig = {
   stackScaleStep: number
   stackOpacityStep: number
   stackRotateStep: number
-  /** 0–1 — opacity of a dark overlay on EVERY card behind the front one (equal, not per-depth) */
+  /** resting tilt of the top card, degrees — negative tilts the other way. The fan adds `stackRotateStep` per card behind it */
+  frontRotate: number
+  /** 0–1 — opacity of a dark overlay on EVERY card behind the front one (equal, not per-depth) — also dims the border */
   stackDarken: number
 
   // --- border (every card) ---
@@ -97,6 +99,7 @@ export const BANNER_DEFAULT_CONFIG: BannerStackMotionConfig = {
   stackScaleStep: 0.05,
   stackOpacityStep: 0,
   stackRotateStep: 4,
+  frontRotate: 2,
   stackDarken: 0.4,
 
   borderColor: '#FFFFFF',
@@ -276,7 +279,8 @@ export function BannerStack({ banners, motionConfig, paused, advanceSignal = 0 }
               isPeeking={!isFront}
               ctaMotion={isFront ? ctaMotion : null}
               ctaOrigin={c.ctaOrigin}
-              dim={isFront ? 0 : c.stackDarken}
+              rotate={c.frontRotate}
+              dim={isFront || isFlyingOut ? 0 : c.stackDarken}
               borderColor={c.borderColor}
               borderWidth={c.borderWidth}
             />

@@ -22,10 +22,12 @@ export type BannerProps = Props<{
   /** When set, the CTA (top card only) scales/fades in with these motion props. */
   ctaMotion?: MotionProps | null
   ctaOrigin?: string
-  /** 0–1 — opacity of a dark overlay (BannerStack dims the cards behind the front one). */
+  /** 0–1 — opacity of a dark overlay (BannerStack dims the cards behind the front one; border included). */
   dim?: number
   borderColor?: string
   borderWidth?: number
+  /** resting tilt of the card, degrees */
+  rotate?: number
 }>
 
 export function Banner({
@@ -42,6 +44,7 @@ export function Banner({
   dim = 0,
   borderColor = '#FFFFFF',
   borderWidth = 2,
+  rotate = 2,
   className,
   style,
 }: BannerProps) {
@@ -60,6 +63,7 @@ export function Banner({
             ['--banner-tint']: tint,
             ['--banner-border-color']: borderColor,
             ['--banner-border-width']: `${borderWidth}px`,
+            ['--banner-rotate']: `${rotate}deg`,
           } as CSSProperties
         }
       >

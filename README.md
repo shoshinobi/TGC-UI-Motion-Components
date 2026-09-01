@@ -509,8 +509,9 @@ the last banner wraps to the first. The banner count is the developer's preset
 | | `stackScaleStep` | scale shrink per step back |
 | | `stackOpacityStep` | opacity drop per step back (`0` = all opaque) |
 | | `stackRotateStep` | degrees of fan per step back |
-| | `stackDarken` | 0–1 — black overlay on **every** card behind the front one, equal for all |
-| **border** (every card) | `borderColor` / `borderWidth` | the edge stroke |
+| | `frontRotate` | top card's resting tilt (° — either direction); the fan adds `stackRotateStep` on top |
+| | `stackDarken` | 0–1 — black overlay on **every** card behind the front one, equal for all — **dims the border too** |
+| **border** (every card) | `borderColor` / `borderWidth` | the edge stroke (inset box-shadow so the dim covers it) |
 | **shuffle** | `shuffleType` + timing | the recede-to-back + the other cards easing forward one slot |
 | **CTA button** | `ctaAnimate` · `ctaDelay` · `ctaFromScale/Opacity` | scale the FoldableButton in (front card only) |
 | | `ctaType` (`spring` low-damping = elastic / `tween` `backOut`) · `ctaOrigin` | the pop |
@@ -534,6 +535,7 @@ the last banner wraps to the first. The banner count is the developer's preset
   "stackScaleStep": 0.05,
   "stackOpacityStep": 0,
   "stackRotateStep": 4,
+  "frontRotate": 2,
   "stackDarken": 0.4,
   "borderColor": "#FFFFFF",
   "borderWidth": 2,
@@ -557,9 +559,13 @@ the last banner wraps to the first. The banner count is the developer's preset
 }
 ```
 
-`stackDarken 0.4` = a solid-black overlay at 0.4 opacity on **every** card behind
-the front one (equal, not per-depth); the front card is undimmed. Every card has
-a `2 px #FFFFFF` border. Both are shared across all three viewport configs.
+`frontRotate 2` = the top card's resting tilt (° — negative tilts the other way);
+the fan adds `stackRotateStep` per card behind it. `stackDarken 0.4` = a
+solid-black overlay at 0.4 opacity on **every** card behind the front one (equal,
+not per-depth) — **it covers the border too**, so implement the border as an
+inset box-shadow (or a wrapper) with the overlay on top. Every card's border is
+`2 px #FFFFFF`. `frontRotate` / `stackDarken` / border are shared across all three
+viewport configs.
 
 **What's distinctive about the phone tune:** commit needs a **deliberate drag**
 (`140 px`) or a flick (`450 px/s`) — no accidental swipes on a small screen. The
@@ -600,6 +606,7 @@ commit drag, a much larger fly-out for the wide frame, a wider + flatter fan):
   "stackScaleStep": 0.05,
   "stackOpacityStep": 0,
   "stackRotateStep": 1.5,
+  "frontRotate": 2,
   "stackDarken": 0.4,
   "borderColor": "#FFFFFF",
   "borderWidth": 2,
@@ -710,7 +717,7 @@ Pick the component from the `component` dropdown at the top of the Leva panel
 | **Stage** | viewport (phone / tablet / full), background, paused |
 | **BannerStack → drag / release** | commit distance (px), flick velocity (px/s), snap-back stiffness / damping |
 | **BannerStack → fly-out (on release)** | distance out (px), toward swipe direction, rotate out (°), duration out (s), ease out |
-| **BannerStack → stack fan-out** | visible cards, gap X (right edge) / gap Y, scale − per step, opacity − per step, fan rotate per step, **darken cards behind** |
+| **BannerStack → stack fan-out** | visible cards, gap X (right edge) / gap Y, scale − per step, opacity − per step, fan rotate per step, **front card tilt (°)**, **darken cards behind** |
 | **BannerStack → border** | colour, width (px) — every card |
 | **BannerStack → shuffle** | type; **shuffleTween** (duration / ease), **shuffleSpring** (stiffness / damping / mass) |
 | **BannerStack → CTA button** | scale in (front card only), delay, from scale / opacity, transform origin (**center**), type; **ctaTween** (duration / ease), **ctaSpring** (stiffness ↑ snappier / damping ↓ elastic / mass) |
