@@ -530,12 +530,12 @@ the last banner wraps to the first. The banner count is the developer's preset
   "flyOutDuration": 0.16,
   "flyOutEase": "circOut",
   "stackCount": 3,
-  "stackGapX": 16,
+  "stackGapX": 28,
   "stackGapY": 2,
-  "stackScaleStep": 0.05,
+  "stackScaleStep": 0.1,
   "stackOpacityStep": 0,
-  "stackRotateStep": 4,
-  "frontRotate": 2,
+  "stackRotateStep": 3,
+  "frontRotate": -2,
   "stackDarken": 0.4,
   "borderColor": "#FFFFFF",
   "borderWidth": 2,
@@ -559,35 +559,41 @@ the last banner wraps to the first. The banner count is the developer's preset
 }
 ```
 
-`frontRotate 2` = the top card's resting tilt (° — negative tilts the other way);
-the fan adds `stackRotateStep` per card behind it. `stackDarken 0.4` dims **every**
-card behind the front one, equally (not per-depth): a solid-black overlay at 0.4
+`frontRotate -2` = the top card's resting tilt (° — either direction); the fan
+adds `stackRotateStep` per card behind it. `stackDarken 0.4` dims **every** card
+behind the front one, equally (not per-depth): a solid-black overlay at 0.4
 opacity over the content, and `color-mix(in srgb, borderColor, #000 40%)` for the
 border so it dims by the same amount. Every card's border is a **solid**
-`2 px #FFFFFF`. `frontRotate` / `stackDarken` / border are shared across all three
-viewport configs.
+`2 px #FFFFFF`.
+
+`stackDarken` + border are shared across all three viewport configs. `frontRotate`
+and `stackScaleStep` are **not** — tablet + full keep `frontRotate 2` /
+`stackScaleStep 0.05` (their approved values; phone revised these on 2026-09-01).
 
 **What's distinctive about the phone tune:** commit needs a **deliberate drag**
 (`140 px`) or a flick (`450 px/s`) — no accidental swipes on a small screen. The
 card is **thrown hard and fast** (`flyOutDistance 300`, `flyOutDuration 0.16 s`,
 `circOut`) — it clears the phone frame — then the stack snaps forward quickly
-(`shuffle 0.2 s`). The resting stack is a **tight opaque fan**: `stackOpacityStep 0`
-(every card full opacity), `stackRotateStep 4°` and `stackGapX 16` / `stackGapY 2`
-— reads like a hand of cards rather than a receding pile. Snap-back is springy
+(`shuffle 0.2 s`). The resting stack is a **deeper opaque fan**: `stackOpacityStep 0`
+(every card full opacity), `stackScaleStep 0.1` + `stackRotateStep 3°` +
+`stackGapX 28` / `stackGapY 2`, the top card tilted `-2°`. Snap-back is springy
 (`680 / 22`); the CTA pop is firmer than the base (`ctaDamping 29`).
 
 ### Full width
 
-Same motion as phone — only the **five size-driven values** change (a longer
-commit drag, a much larger fly-out for the wide frame, a wider + flatter fan):
+Only the **size-driven values** change from phone — plus `frontRotate` and
+`stackScaleStep`, which stayed at their earlier approved values when phone was
+revised:
 
 | | phone | full |
 |---|---|---|
 | `swipeOffsetPx` | 140 | **200** |
 | `flyOutDistance` | 300 | **800** |
-| `stackGapX` | 16 | **30** |
+| `stackGapX` | 28 | **30** |
 | `stackGapY` | 2 | **0** |
-| `stackRotateStep` | 4 | **1.5** |
+| `stackScaleStep` | 0.1 | **0.05** |
+| `stackRotateStep` | 3 | **1.5** |
+| `frontRotate` | −2 | **2** |
 
 ```json
 {
@@ -635,17 +641,20 @@ commit drag, a much larger fly-out for the wide frame, a wider + flatter fan):
 
 ### Tablet
 
-Between phone and full — **6 overrides** on the phone base (note `flyOutEase` is
-`easeInOut` here, not the `circOut` phone/full use):
+Between phone and full (note `flyOutEase` is `easeInOut` here, not the `circOut`
+phone/full use). `stackScaleStep` / `frontRotate` also stayed put when phone was
+revised:
 
 | | phone | **tablet** | full |
 |---|---|---|---|
 | `swipeOffsetPx` | 140 | **150** | 200 |
 | `flyOutDistance` | 300 | **500** | 800 |
 | `flyOutEase` | circOut | **easeInOut** | circOut |
-| `stackGapX` | 16 | **25** | 30 |
+| `stackGapX` | 28 | **25** | 30 |
 | `stackGapY` | 2 | **1** | 0 |
-| `stackRotateStep` | 4 | **2** | 1.5 |
+| `stackScaleStep` | 0.1 | **0.05** | 0.05 |
+| `stackRotateStep` | 3 | **2** | 1.5 |
+| `frontRotate` | −2 | **2** | 2 |
 
 `BANNER_CONFIG_TABLET` in `src/components/BannerStack.tsx`.
 

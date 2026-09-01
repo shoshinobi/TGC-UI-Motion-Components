@@ -94,12 +94,12 @@ export const BANNER_DEFAULT_CONFIG: BannerStackMotionConfig = {
   flyOutEase: 'circOut',
 
   stackCount: 3,
-  stackGapX: 16,
+  stackGapX: 28,
   stackGapY: 2,
-  stackScaleStep: 0.05,
+  stackScaleStep: 0.1,
   stackOpacityStep: 0,
-  stackRotateStep: 4,
-  frontRotate: 2,
+  stackRotateStep: 3,
+  frontRotate: -2,
   stackDarken: 0.4,
 
   borderColor: '#FFFFFF',
@@ -141,6 +141,9 @@ export const BANNER_CONFIG_TABLET: BannerStackMotionConfig = {
   stackGapX: 25,
   stackGapY: 1,
   stackRotateStep: 2,
+  // pinned to their approved values — the phone base changed these on 2026-09-01
+  stackScaleStep: 0.05,
+  frontRotate: 2,
 }
 
 /**
@@ -155,6 +158,9 @@ export const BANNER_CONFIG_FULL: BannerStackMotionConfig = {
   stackGapX: 30,
   stackGapY: 0,
   stackRotateStep: 1.5,
+  // pinned to their approved values — the phone base changed these on 2026-09-01
+  stackScaleStep: 0.05,
+  frontRotate: 2,
 }
 
 function mergeConfig(partial?: Partial<BannerStackMotionConfig>): BannerStackMotionConfig {
