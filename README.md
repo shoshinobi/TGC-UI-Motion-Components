@@ -19,7 +19,7 @@ always copy-pasteable.
 | **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [Approved spec ↓](#-approved-motion-specs--flame-pictogram) | ✅ approved 2026-08-31 |
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [Approved spec ↓](#-approved-motion-specs--feedback-sheet) | ✅ approved 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [Approved spec ↓](#-approved-motion-specs--gauge) | ✅ approved 2026-08-31 |
-| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [Approved spec ↓](#-approved-motion-specs--banner-stack) | ✅ phone + full (rev) · tablet pending |
+| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [Approved spec ↓](#-approved-motion-specs--banner-stack) | ✅ phone · tablet · full (all rev 2026-09-01) |
 
 Each component's tab has its own **Export** buttons — `copy Framer Motion` and
 `copy JSON tokens` — that produce exactly the spec locked in below.
@@ -640,9 +640,8 @@ frame, and a much wider fan with a touch less tilt:
 
 ### Tablet
 
-Between phone and full (note `flyOutEase` is `easeInOut` here, not the `circOut`
-phone/full use). `stackScaleStep` / `frontRotate` are still at their earlier
-approved values — **pending a fresh tablet config** from Malcolm:
+Between phone and full — 8 overrides on the phone base (note `flyOutEase` is
+`easeInOut` here, not the `circOut` phone/full use):
 
 | | phone | **tablet** | full |
 |---|---|---|---|
@@ -653,7 +652,48 @@ approved values — **pending a fresh tablet config** from Malcolm:
 | `stackGapY` | 2 | **1** | 0 |
 | `stackScaleStep` | 0.1 | **0.05** | 0.095 |
 | `stackRotateStep` | 3 | **2** | 2.5 |
-| `frontRotate` | −2 | **2** | −1 |
+| `frontRotate` | −2 | **−1.5** | −1 |
+
+```json
+{
+  "swipeOffsetPx": 150,
+  "swipeVelocity": 450,
+  "snapBackStiffness": 680,
+  "snapBackDamping": 22,
+  "directionAware": true,
+  "flyOutDistance": 500,
+  "flyOutRotate": 8,
+  "flyOutDuration": 0.16,
+  "flyOutEase": "easeInOut",
+  "stackCount": 3,
+  "stackGapX": 25,
+  "stackGapY": 1,
+  "stackScaleStep": 0.05,
+  "stackOpacityStep": 0,
+  "stackRotateStep": 2,
+  "frontRotate": -1.5,
+  "stackDarken": 0.4,
+  "borderColor": "#FFFFFF",
+  "borderWidth": 2,
+  "shuffleType": "tween",
+  "shuffleDuration": 0.2,
+  "shuffleEase": "easeInOut",
+  "shuffleStiffness": 320,
+  "shuffleDamping": 32,
+  "shuffleMass": 1,
+  "ctaAnimate": true,
+  "ctaDelay": 0.3,
+  "ctaFromScale": 0,
+  "ctaFromOpacity": 0,
+  "ctaType": "spring",
+  "ctaDuration": 0.5,
+  "ctaEase": "backOut",
+  "ctaStiffness": 600,
+  "ctaDamping": 29,
+  "ctaMass": 1,
+  "ctaOrigin": "center"
+}
+```
 
 `BANNER_CONFIG_TABLET` in `src/components/BannerStack.tsx`.
 
@@ -743,4 +783,4 @@ Stage buttons: `↻ Replay` (reset to first card + re-enter) and `Next ▸` (adv
 | Flame Pictogram | [src/components/FlamePictogram.tsx](src/components/FlamePictogram.tsx) | `FLAME_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Feedback Sheet | [src/components/FeedbackSheet.tsx](src/components/FeedbackSheet.tsx) | `SHEET_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Gauge | [src/components/Gauge.tsx](src/components/Gauge.tsx) | `GAUGE_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
-| Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_{PHONE,TABLET,FULL}` | ✅ phone+full rev · tablet pending |
+| Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_{PHONE,TABLET,FULL}` | ✅ 3 viewports 2026-09-01 |
