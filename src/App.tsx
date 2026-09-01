@@ -4,14 +4,16 @@ import { FlameBench } from '@/benches/FlameBench'
 import { SheetBench } from '@/benches/SheetBench'
 import { GaugeBench } from '@/benches/GaugeBench'
 import { BannerBench } from '@/benches/BannerBench'
+import { RainBench } from '@/benches/RainBench'
 
-const COMPONENTS = ['Flame Pictogram', 'Feedback Sheet', 'Gauge', 'Banner Stack'] as const
+const COMPONENTS = ['Flame Pictogram', 'Feedback Sheet', 'Gauge', 'Banner Stack', 'Particle Rain'] as const
 
 const SLUG_OF: Record<string, string> = {
   'Flame Pictogram': 'flame',
   'Feedback Sheet': 'sheet',
   Gauge: 'gauge',
   'Banner Stack': 'banner',
+  'Particle Rain': 'rain',
 }
 
 function initialComponent(): string {
@@ -20,6 +22,7 @@ function initialComponent(): string {
   if (c.startsWith('sheet') || c.startsWith('feedback')) return 'Feedback Sheet'
   if (c.startsWith('gauge') || c.startsWith('meter')) return 'Gauge'
   if (c.startsWith('banner') || c.startsWith('stack') || c.startsWith('carousel')) return 'Banner Stack'
+  if (c.startsWith('rain') || c.startsWith('particle') || c.startsWith('confetti')) return 'Particle Rain'
   if (c.startsWith('flame')) return 'Flame Pictogram'
   return COMPONENTS[0]
 }
@@ -62,6 +65,8 @@ export function App() {
         <GaugeBench key='gauge' />
       ) : component === 'Banner Stack' ? (
         <BannerBench key='banner' />
+      ) : component === 'Particle Rain' ? (
+        <RainBench key='rain' />
       ) : (
         <FlameBench key='flame' />
       )}

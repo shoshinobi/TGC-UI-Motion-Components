@@ -676,3 +676,35 @@ body {
   left: auto;
   right: 12px;
 }
+
+/* ---------- Particle Rain ---------- */
+
+.rain-stage-inner {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 360px;
+  display: flex;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 32px);
+}
+.rain-frame {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-width: 100%;
+  border-radius: 16px;
+  outline: 1px solid #26262a;
+  overflow: hidden;
+}
+.stage[data-bg='light'] .rain-frame {
+  outline-color: #d4d4d8;
+}
+.rain-canvas-wrap {
+  position: absolute;
+  inset: 0;
+}
+.rain-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
