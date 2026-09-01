@@ -93,6 +93,11 @@ export function BannerBench() {
       stackScaleStep: { value: D.stackScaleStep, min: 0, max: 0.2, step: 0.005, label: 'scale − per step' },
       stackOpacityStep: { value: D.stackOpacityStep, min: 0, max: 1, step: 0.05, label: 'opacity − per step' },
       stackRotateStep: { value: D.stackRotateStep, min: -12, max: 12, step: 0.5, label: 'fan rotate per step (°)' },
+      stackDarken: { value: D.stackDarken, min: 0, max: 1, step: 0.05, label: 'darken cards behind' },
+    }),
+    border: folder({
+      borderColor: { value: D.borderColor, label: 'colour' },
+      borderWidth: { value: D.borderWidth, min: 0, max: 10, step: 0.5, label: 'width (px)' },
     }),
     'shuffle': folder({
       shuffleType: { value: D.shuffleType, options: ['tween', 'spring'] },

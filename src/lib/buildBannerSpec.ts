@@ -85,10 +85,17 @@ export function buildBannerJsxSpec(c: BannerStackMotionConfig): string {
   L.push(`      dragTransition={{ bounceStiffness: ${nn(c.snapBackStiffness)}, bounceDamping: ${nn(c.snapBackDamping)} }}`)
   L.push(`      onDragEnd={isFront ? handleDragEnd : undefined}`)
   L.push(`    >`)
-  L.push(`      <Banner {...banner} isPeeking={!isFront}${c.ctaAnimate ? ` ctaMotion={isFront ? ctaMotion : null}` : ''} />`)
+  L.push(`      <Banner {...banner} isPeeking={!isFront}${c.ctaAnimate ? ` ctaMotion={isFront ? ctaMotion : null}` : ''} dim={isFront ? 0 : ${nn(c.stackDarken)}} />`)
   L.push(`    </motion.div>`)
   L.push(`  )`)
   L.push(`})}`)
+  L.push(``)
+  L.push(`// On each card: a ${nn(c.borderWidth)}px solid ${c.borderColor} border, and — for pos > 0 —`)
+  L.push(`// a full-bleed black overlay at opacity ${nn(c.stackDarken)} (inside the border, above the`)
+  L.push(`// card content), so every card behind the front one is dimmed equally:`)
+  L.push(`//   .banner-card       { border: ${nn(c.borderWidth)}px solid ${c.borderColor} }`)
+  L.push(`//   .banner-card__dim  { position: absolute; inset: 0; background: #000; opacity: <dim>;`)
+  L.push(`//                        transition: opacity .2s }   // 0 on the front card`)
 
   if (c.ctaAnimate) {
     L.push(``)
@@ -141,7 +148,12 @@ export function buildBannerJsonSpec(c: BannerStackMotionConfig): string {
           rotate: r(c.stackRotateStep),
         },
         note: 'card `pos` slots back: x = gapX·pos, scale = 1 − scaleStep·pos, opacity = 1 − opacityStep·pos …',
+        darkenBehind: {
+          value: r(c.stackDarken),
+          note: 'opacity of a solid-black overlay on EVERY card where pos > 0 — equal, not per-depth',
+        },
       },
+      border: { target: 'every card', color: c.borderColor, width: r(c.borderWidth) },
       shuffle: { target: 'the other cards easing forward one slot, and the flown-out card receding to the back', transition: shuffle },
       cta: {
         target: 'FoldableButton — front card only',

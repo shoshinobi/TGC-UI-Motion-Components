@@ -45,6 +45,12 @@ export type BannerStackMotionConfig = {
   stackScaleStep: number
   stackOpacityStep: number
   stackRotateStep: number
+  /** 0–1 — opacity of a dark overlay on EVERY card behind the front one (equal, not per-depth) */
+  stackDarken: number
+
+  // --- border (every card) ---
+  borderColor: string
+  borderWidth: number
 
   // --- shuffle: every card easing into its new slot on a commit ---
   shuffleType: 'tween' | 'spring'
@@ -91,6 +97,10 @@ export const BANNER_DEFAULT_CONFIG: BannerStackMotionConfig = {
   stackScaleStep: 0.05,
   stackOpacityStep: 0,
   stackRotateStep: 4,
+  stackDarken: 0.4,
+
+  borderColor: '#FFFFFF',
+  borderWidth: 2,
 
   shuffleType: 'tween',
   shuffleDuration: 0.2,
@@ -266,6 +276,9 @@ export function BannerStack({ banners, motionConfig, paused, advanceSignal = 0 }
               isPeeking={!isFront}
               ctaMotion={isFront ? ctaMotion : null}
               ctaOrigin={c.ctaOrigin}
+              dim={isFront ? 0 : c.stackDarken}
+              borderColor={c.borderColor}
+              borderWidth={c.borderWidth}
             />
           </motion.div>
         )

@@ -22,6 +22,10 @@ export type BannerProps = Props<{
   /** When set, the CTA (top card only) scales/fades in with these motion props. */
   ctaMotion?: MotionProps | null
   ctaOrigin?: string
+  /** 0–1 — opacity of a dark overlay (BannerStack dims the cards behind the front one). */
+  dim?: number
+  borderColor?: string
+  borderWidth?: number
 }>
 
 export function Banner({
@@ -35,6 +39,9 @@ export function Banner({
   subtitleColor = 'var(--color-primary)',
   ctaMotion = null,
   ctaOrigin = 'bottom right',
+  dim = 0,
+  borderColor = '#FFFFFF',
+  borderWidth = 2,
   className,
   style,
 }: BannerProps) {
@@ -46,7 +53,16 @@ export function Banner({
 
   return (
     <div className={cn('banner', className)} style={style}>
-      <div className='banner-card' style={{ ['--banner-tint' as string]: tint } as CSSProperties}>
+      <div
+        className='banner-card'
+        style={
+          {
+            ['--banner-tint']: tint,
+            ['--banner-border-color']: borderColor,
+            ['--banner-border-width']: `${borderWidth}px`,
+          } as CSSProperties
+        }
+      >
         <LinearGradient gradient='banner-fade' className='banner-card__grad' />
         <div className='banner-card__body'>
           <Typography fontVariant='h4' className='banner-card__title' style={{ fontSize: 'clamp(16px, 4vw, 20px)' }}>
@@ -68,6 +84,7 @@ export function Banner({
           imageClassName='banner-card__image-el'
           hasFallbackBackground={false}
         />
+        <div className='banner-card__scrim' style={{ opacity: dim }} aria-hidden='true' />
       </div>
 
       {cta &&
