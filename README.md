@@ -19,7 +19,7 @@ always copy-pasteable.
 | **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [Approved spec ↓](#-approved-motion-specs--flame-pictogram) | ✅ approved 2026-08-31 |
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [Approved spec ↓](#-approved-motion-specs--feedback-sheet) | ✅ approved 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [Approved spec ↓](#-approved-motion-specs--gauge) | ✅ approved 2026-08-31 |
-| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [Approved spec ↓](#-approved-motion-specs--banner-stack) | ✅ phone · tablet · full width |
+| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [Approved spec ↓](#-approved-motion-specs--banner-stack) | ✅ phone + full (rev) · tablet pending |
 
 Each component's tab has its own **Export** buttons — `copy Framer Motion` and
 `copy JSON tokens` — that produce exactly the spec locked in below.
@@ -566,9 +566,9 @@ opacity over the content, and `color-mix(in srgb, borderColor, #000 40%)` for th
 border so it dims by the same amount. Every card's border is a **solid**
 `2 px #FFFFFF`.
 
-`stackDarken` + border are shared across all three viewport configs. `frontRotate`
-and `stackScaleStep` are **not** — tablet + full keep `frontRotate 2` /
-`stackScaleStep 0.05` (their approved values; phone revised these on 2026-09-01).
+`stackDarken` + border are shared across all three viewport configs; everything
+else (including `frontRotate` and `stackScaleStep`) is tuned per viewport — see
+the diff tables below.
 
 **What's distinctive about the phone tune:** commit needs a **deliberate drag**
 (`140 px`) or a flick (`450 px/s`) — no accidental swipes on a small screen. The
@@ -581,19 +581,18 @@ card is **thrown hard and fast** (`flyOutDistance 300`, `flyOutDuration 0.16 s`,
 
 ### Full width
 
-Only the **size-driven values** change from phone — plus `frontRotate` and
-`stackScaleStep`, which stayed at their earlier approved values when phone was
-revised:
+7 overrides on the phone base — a longer commit drag, a big fly-out for the wide
+frame, and a much wider fan with a touch less tilt:
 
 | | phone | full |
 |---|---|---|
 | `swipeOffsetPx` | 140 | **200** |
 | `flyOutDistance` | 300 | **800** |
-| `stackGapX` | 28 | **30** |
+| `stackGapX` | 28 | **52** |
 | `stackGapY` | 2 | **0** |
-| `stackScaleStep` | 0.1 | **0.05** |
-| `stackRotateStep` | 3 | **1.5** |
-| `frontRotate` | −2 | **2** |
+| `stackScaleStep` | 0.1 | **0.095** |
+| `stackRotateStep` | 3 | **2.5** |
+| `frontRotate` | −2 | **−1** |
 
 ```json
 {
@@ -607,12 +606,12 @@ revised:
   "flyOutDuration": 0.16,
   "flyOutEase": "circOut",
   "stackCount": 3,
-  "stackGapX": 30,
+  "stackGapX": 52,
   "stackGapY": 0,
-  "stackScaleStep": 0.05,
+  "stackScaleStep": 0.095,
   "stackOpacityStep": 0,
-  "stackRotateStep": 1.5,
-  "frontRotate": 2,
+  "stackRotateStep": 2.5,
+  "frontRotate": -1,
   "stackDarken": 0.4,
   "borderColor": "#FFFFFF",
   "borderWidth": 2,
@@ -642,19 +641,19 @@ revised:
 ### Tablet
 
 Between phone and full (note `flyOutEase` is `easeInOut` here, not the `circOut`
-phone/full use). `stackScaleStep` / `frontRotate` also stayed put when phone was
-revised:
+phone/full use). `stackScaleStep` / `frontRotate` are still at their earlier
+approved values — **pending a fresh tablet config** from Malcolm:
 
 | | phone | **tablet** | full |
 |---|---|---|---|
 | `swipeOffsetPx` | 140 | **150** | 200 |
 | `flyOutDistance` | 300 | **500** | 800 |
 | `flyOutEase` | circOut | **easeInOut** | circOut |
-| `stackGapX` | 28 | **25** | 30 |
+| `stackGapX` | 28 | **25** | 52 |
 | `stackGapY` | 2 | **1** | 0 |
-| `stackScaleStep` | 0.1 | **0.05** | 0.05 |
-| `stackRotateStep` | 3 | **2** | 1.5 |
-| `frontRotate` | −2 | **2** | 2 |
+| `stackScaleStep` | 0.1 | **0.05** | 0.095 |
+| `stackRotateStep` | 3 | **2** | 2.5 |
+| `frontRotate` | −2 | **2** | −1 |
 
 `BANNER_CONFIG_TABLET` in `src/components/BannerStack.tsx`.
 
@@ -744,4 +743,4 @@ Stage buttons: `↻ Replay` (reset to first card + re-enter) and `Next ▸` (adv
 | Flame Pictogram | [src/components/FlamePictogram.tsx](src/components/FlamePictogram.tsx) | `FLAME_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Feedback Sheet | [src/components/FeedbackSheet.tsx](src/components/FeedbackSheet.tsx) | `SHEET_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
 | Gauge | [src/components/Gauge.tsx](src/components/Gauge.tsx) | `GAUGE_DEFAULT_CONFIG` | ✅ approved 2026-08-31 |
-| Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_{PHONE,TABLET,FULL}` | ✅ 3 viewports 2026-09-01 |
+| Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_{PHONE,TABLET,FULL}` | ✅ phone+full rev · tablet pending |

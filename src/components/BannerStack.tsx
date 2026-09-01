@@ -147,20 +147,19 @@ export const BANNER_CONFIG_TABLET: BannerStackMotionConfig = {
 }
 
 /**
- * Approved — **full-width** viewport (2026-09-01). Same motion as phone; only the
- * size-driven values differ: a longer commit drag, a much bigger fly-out (wide
- * frame), a wider and flatter fan.
+ * Approved — **full-width** viewport (2026-09-01). Same motion timing as phone;
+ * a longer commit drag, a much bigger fly-out (wide frame), and a wider fan with
+ * less tilt.
  */
 export const BANNER_CONFIG_FULL: BannerStackMotionConfig = {
   ...BANNER_CONFIG_PHONE,
   swipeOffsetPx: 200,
   flyOutDistance: 800,
-  stackGapX: 30,
+  stackGapX: 52,
   stackGapY: 0,
-  stackRotateStep: 1.5,
-  // pinned to their approved values — the phone base changed these on 2026-09-01
-  stackScaleStep: 0.05,
-  frontRotate: 2,
+  stackScaleStep: 0.095,
+  stackRotateStep: 2.5,
+  frontRotate: -1,
 }
 
 function mergeConfig(partial?: Partial<BannerStackMotionConfig>): BannerStackMotionConfig {
