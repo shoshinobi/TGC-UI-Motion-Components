@@ -24,6 +24,8 @@ function savedSettings(): Record<string, number | string | boolean> | null {
     for (const k of Object.keys(D)) {
       if (k in obj) out[k] = obj[k] as number | string | boolean
     }
+    // gravity moved from px/s² to m/s² — convert a legacy slot's big number down
+    if (typeof out.gravity === 'number' && out.gravity > 45) out.gravity = out.gravity / 143
     return out
   } catch {
     return null
@@ -49,29 +51,32 @@ export function RainBench() {
   const [v, set] = useControls('Rain', () => ({
     emission: folder({
       mode: { value: D.mode, options: ['burst', 'stream'] },
-      count: { value: D.count, min: 1, max: 400, step: 1, label: 'count / pool (@ ref width)' },
+      count: { value: D.count, min: 1, max: 400, step: 1, label: 'count / pool' },
       burstWindow: { value: D.burstWindow, min: 0, max: 4, step: 0.05, label: 'burst window (s)' },
-      spawnRate: { value: D.spawnRate, min: 1, max: 200, step: 1, label: 'stream rate (/s)' },
-      streamDuration: { value: D.streamDuration, min: 0, max: 30, step: 0.5, label: 'stream length (s, 0=∞)' },
-      spawnWidth: { value: D.spawnWidth, min: 0, max: 1, step: 0.01, label: 'spawn band (× width)' },
-      spawnHeight: { value: D.spawnHeight, min: 0, max: 800, step: 10, label: 'spawn height (px above)' },
+      spawnRate: { value: D.spawnRate, min: 1, max: 200, step: 1, label: 'stream /s' },
+      streamDuration: { value: D.streamDuration, min: 0, max: 30, step: 0.5, label: 'stream secs (0=∞)' },
+      spawnWidth: { value: D.spawnWidth, min: 0, max: 1, step: 0.01, label: 'spawn band' },
+      spawnHeight: { value: D.spawnHeight, min: 0, max: 800, step: 10, label: 'spawn above (px)' },
     }),
-    responsive: folder({
-      autoScale: { value: D.autoScale, label: 'scale with width' },
-      referenceWidth: { value: D.referenceWidth, min: 320, max: 1920, step: 10, label: 'reference width (px)' },
-      countScale: { value: D.countScale, min: 0, max: 1, step: 0.05, label: 'count tracks width' },
-      sizeScale: { value: D.sizeScale, min: 0, max: 1, step: 0.05, label: 'size tracks width' },
-      minScale: { value: D.minScale, min: 0.1, max: 1, step: 0.05, label: 'scale clamp min' },
-      maxScale: { value: D.maxScale, min: 1, max: 4, step: 0.1, label: 'scale clamp max' },
-    }),
+    responsive: folder(
+      {
+        autoScale: { value: D.autoScale, label: 'scale w/ width' },
+        referenceWidth: { value: D.referenceWidth, min: 320, max: 1920, step: 10, label: 'ref width (px)' },
+        countScale: { value: D.countScale, min: 0, max: 1, step: 0.05, label: 'count vs width' },
+        sizeScale: { value: D.sizeScale, min: 0, max: 1, step: 0.05, label: 'size vs width' },
+        minScale: { value: D.minScale, min: 0.1, max: 1, step: 0.05, label: 'clamp min' },
+        maxScale: { value: D.maxScale, min: 1, max: 4, step: 0.1, label: 'clamp max' },
+      },
+      { collapsed: true },
+    ),
     physics: folder({
-      gravity: { value: D.gravity, min: 0, max: 5000, step: 20, label: 'gravity (px/s²)' },
+      gravity: { value: D.gravity, min: 0, max: 40, step: 0.1, label: 'gravity (m/s²)' },
       velocityYMin: { value: D.velocityYMin, min: 0, max: 1500, step: 10, label: 'start vy min' },
       velocityYMax: { value: D.velocityYMax, min: 0, max: 2000, step: 10, label: 'start vy max' },
-      velocityXSpread: { value: D.velocityXSpread, min: 0, max: 800, step: 10, label: 'start vx spread (±)' },
-      airDrag: { value: D.airDrag, min: 0, max: 4, step: 0.05, label: 'air drag (1/s)' },
-      terminalVelocity: { value: D.terminalVelocity, min: 0, max: 3000, step: 20, label: 'terminal vel (0=none)' },
-      wind: { value: D.wind, min: -2000, max: 2000, step: 20, label: 'wind (px/s²)' },
+      velocityXSpread: { value: D.velocityXSpread, min: 0, max: 800, step: 10, label: 'start vx ±' },
+      airDrag: { value: D.airDrag, min: 0, max: 4, step: 0.05, label: 'air drag' },
+      terminalVelocity: { value: D.terminalVelocity, min: 0, max: 3000, step: 20, label: 'terminal vel' },
+      wind: { value: D.wind, min: -2000, max: 2000, step: 20, label: 'wind' },
       sway: folder(
         {
           swayAmplitude: { value: D.swayAmplitude, min: 0, max: 120, step: 1, label: 'amplitude (px)' },
@@ -81,42 +86,54 @@ export function RainBench() {
       ),
       spin: folder(
         {
-          spinMin: { value: D.spinMin, min: 0, max: 720, step: 5, label: 'spawn spin min (°/s)' },
-          spinMax: { value: D.spinMax, min: 0, max: 1440, step: 5, label: 'spawn spin max (°/s)' },
-          spinDrag: { value: D.spinDrag, min: 0, max: 4, step: 0.05, label: 'spin drag (1/s)' },
-          airborneSpin: { value: D.airborneSpin, options: ['keep', 'killOnContact', 'off'], label: 'airborne spin' },
-          contactSpin: { value: D.contactSpin, min: 0, max: 1, step: 0.02, label: '↳ tumble from contacts' },
+          spinMin: { value: D.spinMin, min: 0, max: 720, step: 5, label: 'spawn min °/s' },
+          spinMax: { value: D.spinMax, min: 0, max: 1440, step: 5, label: 'spawn max °/s' },
+          spinDrag: { value: D.spinDrag, min: 0, max: 4, step: 0.05, label: 'drag' },
+          airborneSpin: { value: D.airborneSpin, options: ['keep', 'killOnContact', 'off'], label: 'airborne' },
+          contactSpin: { value: D.contactSpin, min: 0, max: 1, step: 0.02, label: 'from contacts' },
         },
         { collapsed: true },
       ),
     }),
     floor: folder({
       floor: { value: D.floor, options: ['fallThrough', 'bounce'] },
-      floorInset: { value: D.floorInset, min: -300, max: 400, step: 2, label: 'floor inset (px, − = below edge)' },
-      restitution: { value: D.restitution, min: 0, max: 1, step: 0.01, label: '↳ bounce restitution' },
-      floorFriction: { value: D.floorFriction, min: 0, max: 1, step: 0.01, label: '↳ bounce friction' },
-      restThreshold: { value: D.restThreshold, min: 5, max: 400, step: 5, label: '↳ settle below (px/s)' },
-      fadeOut: { value: D.fadeOut, min: 0, max: 2, step: 0.05, label: '↳ fallThrough fade-out (s)' },
-      dumpStagger: { value: D.dumpStagger, min: 0, max: 0.6, step: 0.01, label: 'dump cascade delay (s)' },
+      floorInset: { value: D.floorInset, min: -300, max: 400, step: 2, label: 'inset (px, −=below)' },
+      restitution: { value: D.restitution, min: 0, max: 1, step: 0.01, label: 'bounce' },
+      floorFriction: { value: D.floorFriction, min: 0, max: 1, step: 0.01, label: 'friction' },
+      restThreshold: { value: D.restThreshold, min: 5, max: 400, step: 5, label: 'settle < px/s' },
+      fadeOut: { value: D.fadeOut, min: 0, max: 2, step: 0.05, label: 'fade-out (s)' },
+      dumpStagger: { value: D.dumpStagger, min: 0, max: 0.6, step: 0.01, label: 'dump stagger (s)' },
     }),
+    walls: folder(
+      {
+        walls: { value: D.walls, label: 'side colliders' },
+        wallInset: { value: D.wallInset, min: -200, max: 300, step: 2, label: 'inset (px, −=outside)' },
+        wallRestitution: { value: D.wallRestitution, min: 0, max: 1, step: 0.01, label: 'bounce' },
+        wallFriction: { value: D.wallFriction, min: 0, max: 1, step: 0.01, label: 'friction' },
+      },
+      { collapsed: true },
+    ),
     collision: folder({
-      collide: { value: D.collide, label: 'particles collide + stack' },
-      collideRadius: { value: D.collideRadius, min: 0.2, max: 1.2, step: 0.02, label: 'hit radius (× half-size)' },
-      collideRestitution: { value: D.collideRestitution, min: 0, max: 1, step: 0.02, label: 'bounciness' },
-      collideFriction: { value: D.collideFriction, min: 0, max: 1, step: 0.02, label: 'grip between bars' },
-      pileFriction: { value: D.pileFriction, min: 0, max: 1, step: 0.02, label: 'pile friction (lock ↑)' },
-      collideIterations: { value: D.collideIterations, min: 1, max: 6, step: 1, label: 'solver iterations' },
-      collideWake: { value: D.collideWake, min: 0, max: 1200, step: 20, label: 'wake on hit (px/s, 0=never)' },
+      collide: { value: D.collide, label: 'collide + stack' },
+      collideRadius: { value: D.collideRadius, min: 0.2, max: 1.2, step: 0.02, label: 'hit radius' },
+      collideRestitution: { value: D.collideRestitution, min: 0, max: 1, step: 0.02, label: 'bounce' },
+      collideFriction: { value: D.collideFriction, min: 0, max: 1, step: 0.02, label: 'bar grip' },
+      pileFriction: { value: D.pileFriction, min: 0, max: 1, step: 0.02, label: 'pile friction' },
+      collideIterations: { value: D.collideIterations, min: 1, max: 6, step: 1, label: 'iterations' },
+      collideWake: { value: D.collideWake, min: 0, max: 1200, step: 20, label: 'wake px/s (0=off)' },
     }),
-    appearance: folder({
-      asset: { value: D.asset, options: ['both', 'gbar', 'tinyBar'] },
-      particleSize: { value: D.particleSize, min: 8, max: 160, step: 1, label: 'size (px)' },
-      scaleMin: { value: D.scaleMin, min: 0.1, max: 2, step: 0.05, label: 'scale min' },
-      scaleMax: { value: D.scaleMax, min: 0.1, max: 3, step: 0.05, label: 'scale max' },
-      bigFallFaster: { value: D.bigFallFaster, min: 0, max: 1, step: 0.05, label: 'big = faster' },
-      fadeIn: { value: D.fadeIn, min: 0, max: 1, step: 0.02, label: 'fade in (s)' },
-      opacity: { value: D.opacity, min: 0, max: 1, step: 0.02, label: 'opacity' },
-    }),
+    appearance: folder(
+      {
+        asset: { value: D.asset, options: ['both', 'gbar', 'tinyBar'] },
+        particleSize: { value: D.particleSize, min: 8, max: 160, step: 1, label: 'size (px)' },
+        scaleMin: { value: D.scaleMin, min: 0.1, max: 2, step: 0.05, label: 'scale min' },
+        scaleMax: { value: D.scaleMax, min: 0.1, max: 3, step: 0.05, label: 'scale max' },
+        bigFallFaster: { value: D.bigFallFaster, min: 0, max: 1, step: 0.05, label: 'big=faster' },
+        fadeIn: { value: D.fadeIn, min: 0, max: 1, step: 0.02, label: 'fade in (s)' },
+        opacity: { value: D.opacity, min: 0, max: 1, step: 0.02, label: 'opacity' },
+      },
+      { collapsed: true },
+    ),
   }))
 
   // On mount, restore an in-progress tune saved with "★ save settings" (if any).
@@ -131,58 +148,12 @@ export function RainBench() {
     }
   }, [set])
 
+  // Leva flattens folder values, so the panel is 1:1 with the flat config —
+  // pull every key straight through by name.
   const values = v as unknown as Record<string, string | number | boolean>
-
-  const config: ParticleRainConfig = {
-    mode: values.mode as ParticleRainConfig['mode'],
-    count: values.count as number,
-    burstWindow: values.burstWindow as number,
-    spawnRate: values.spawnRate as number,
-    streamDuration: values.streamDuration as number,
-    spawnWidth: values.spawnWidth as number,
-    spawnHeight: values.spawnHeight as number,
-    gravity: values.gravity as number,
-    velocityYMin: values.velocityYMin as number,
-    velocityYMax: values.velocityYMax as number,
-    velocityXSpread: values.velocityXSpread as number,
-    airDrag: values.airDrag as number,
-    terminalVelocity: values.terminalVelocity as number,
-    wind: values.wind as number,
-    swayAmplitude: values.swayAmplitude as number,
-    swayFrequency: values.swayFrequency as number,
-    spinMin: values.spinMin as number,
-    spinMax: values.spinMax as number,
-    spinDrag: values.spinDrag as number,
-    airborneSpin: values.airborneSpin as ParticleRainConfig['airborneSpin'],
-    contactSpin: values.contactSpin as number,
-    floor: values.floor as ParticleRainConfig['floor'],
-    floorInset: values.floorInset as number,
-    restitution: values.restitution as number,
-    floorFriction: values.floorFriction as number,
-    restThreshold: values.restThreshold as number,
-    fadeOut: values.fadeOut as number,
-    dumpStagger: values.dumpStagger as number,
-    collide: values.collide as boolean,
-    collideRadius: values.collideRadius as number,
-    collideRestitution: values.collideRestitution as number,
-    collideFriction: values.collideFriction as number,
-    pileFriction: values.pileFriction as number,
-    collideIterations: values.collideIterations as number,
-    collideWake: values.collideWake as number,
-    asset: values.asset as ParticleRainConfig['asset'],
-    particleSize: values.particleSize as number,
-    scaleMin: values.scaleMin as number,
-    scaleMax: values.scaleMax as number,
-    bigFallFaster: values.bigFallFaster as number,
-    fadeIn: values.fadeIn as number,
-    opacity: values.opacity as number,
-    autoScale: values.autoScale as boolean,
-    referenceWidth: values.referenceWidth as number,
-    countScale: values.countScale as number,
-    sizeScale: values.sizeScale as number,
-    minScale: values.minScale as number,
-    maxScale: values.maxScale as number,
-  }
+  const config = Object.fromEntries(
+    Object.keys(D).map((k) => [k, values[k]]),
+  ) as unknown as ParticleRainConfig
 
   const loop = buildParticleLoopSpec(config)
   const json = buildParticleJsonSpec(config)

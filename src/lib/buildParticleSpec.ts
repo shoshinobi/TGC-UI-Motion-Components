@@ -26,6 +26,7 @@ export function buildParticleLoopSpec(c: ParticleRainConfig): string {
 const CONFIG = ${JSON.stringify(c, null, 2)}
 
 const SPRITE_RASTER = 384   // longest edge (× DPR) the sprites are rasterised to, once
+const PX_PER_METER = 143    // gravity is set in m/s²; multiply by this for px/s²
 
 export function createParticleRain(canvas, urls) {
   const ctx = canvas.getContext('2d')
@@ -33,6 +34,7 @@ export function createParticleRain(canvas, urls) {
   const TAU = Math.PI * 2, DEG = Math.PI / 180
   const rand = (a, b) => a + Math.random() * (b - a)
   let dumping = false   // "pull the floor out" — see the returned dump()
+  let quietFor = 0      // seconds the system has been at rest (auto-sleep)
 
   // --- sprites: rasterise each URL once to an offscreen canvas ---
   const sprites = { gbar: null, tinyBar: null }
@@ -129,7 +131,7 @@ export function createParticleRain(canvas, urls) {
             let d = Math.sqrt(d2)
             if (d < 1e-4) { dx = a.id % 2 ? -0.5 : 0.5; dy = 0.5; d = Math.hypot(dx, dy) }
             const nx = dx / d, ny = dy / d
-            const corr = Math.max(rr - d - 0.5, 0)   // positional slop
+            const corr = Math.max(rr - d - 0.5, 0) * 0.9   // slop + 0.9 factor → less stack jitter
             // support flags — before the immovable-pair early-out (settled-on-settled
             // support is what makes a dump collapse bottom-up, not as a block)
             if (a.settled && !b.settled && ny < -0.35) b.support = true
@@ -186,7 +188,7 @@ export function createParticleRain(canvas, urls) {
       p.grounded = p.support   // collision resolves support a frame late
       p.support = false
       if (p.settled) continue   // settled particles don't integrate; dump release is decided in pass 3
-      if (!p.grounded || dumping) p.vy += c.gravity * p.speedMul * dt
+      if (!p.grounded || dumping) p.vy += c.gravity * PX_PER_METER * p.speedMul * dt
       p.vx += c.wind * dt
       const damp = Math.exp(-c.airDrag * dt)
       p.vx *= damp; p.vy *= damp
@@ -195,7 +197,10 @@ export function createParticleRain(canvas, urls) {
       p.spin *= Math.exp(-c.spinDrag * dt); p.angle += p.spin * dt
     }
 
-    collide(es)
+    // auto-sleep: skip the solver once every particle is dead or settled
+    let anyActive = false
+    for (const p of parts) if (!p.dead && p.active && !p.settled) { anyActive = true; break }
+    if (anyActive) collide(es)
 
     for (const p of parts) {
       if (p.dead || !p.active) continue
@@ -242,6 +247,20 @@ export function createParticleRain(canvas, urls) {
             } else p.restFor = 0
           } else p.restFor = 0
         } else if (p.y + h >= floorY) p.pastFloorFor += dt
+
+        // side walls — clamp x, reflect vx, shave vy + spin (same as the floor)
+        if (c.walls) {
+          const lx = c.wallInset, rx = size.w - c.wallInset
+          if (p.x - h < lx) {
+            p.x = lx + h
+            if (p.vx < 0) p.vx = -p.vx * c.wallRestitution
+            p.vy *= 1 - c.wallFriction; p.spin *= 1 - c.wallFriction
+          } else if (p.x + h > rx) {
+            p.x = rx - h
+            if (p.vx > 0) p.vx = -p.vx * c.wallRestitution
+            p.vy *= 1 - c.wallFriction; p.spin *= 1 - c.wallFriction
+          }
+        }
       }
       const fin = c.fadeIn > 0 ? Math.min(1, p.age / c.fadeIn) : 1
       const fout = !dumping && c.floor === 'fallThrough' && c.fadeOut > 0 && p.pastFloorFor > 0
@@ -250,6 +269,24 @@ export function createParticleRain(canvas, urls) {
       const bottomEdge = dumping ? size.h : Math.max(size.h, floorY)
       if (p.y - h > bottomEdge + 4 || (!dumping && c.floor === 'fallThrough' && fout <= 0)) p.dead = true
     }
+
+    // auto-sleep — freeze everything once it's all barely moving and nothing's
+    // pending, so a finished pile holds still (solver above is then skipped)
+    if (!dumping && anyActive) {
+      let maxMotion = 0, pending = false
+      for (const p of parts) {
+        if (p.dead) continue
+        if (!p.active) { pending = true; continue }
+        if (p.settled) continue
+        maxMotion = Math.max(maxMotion, Math.hypot(p.vx, p.vy) + Math.abs(p.spin) * 18)
+      }
+      if (maxMotion < 8 && !pending) {
+        quietFor += dt
+        if (quietFor > 0.4) for (const p of parts) {
+          if (!p.dead && p.active && !p.settled) { p.settled = true; p.vx = p.vy = p.spin = 0 }
+        }
+      } else quietFor = 0
+    } else quietFor = 0
   }
 
   const draw = (es) => {
@@ -320,7 +357,10 @@ export function buildParticleJsonSpec(c: ParticleRainConfig): string {
         spawnHeightPx: c.spawnHeight,
       },
       physics: {
-        gravityPxS2: c.gravity,
+        gravityMs2: c.gravity,
+        pixelsPerMeter: 143,
+        gravityPxS2: c.gravity * 143,
+        gravityNote: 'gravity is set in m/s² (9.8 = Earth); the engine ×143 to get px/s²',
         initialVelocityY: [c.velocityYMin, c.velocityYMax],
         initialVelocityXSpread: c.velocityXSpread,
         airDragPerSec: c.airDrag,
@@ -356,9 +396,19 @@ export function buildParticleJsonSpec(c: ParticleRainConfig): string {
               settleBelowPxS: c.restThreshold,
             }
           : { mode: 'fallThrough', lineInsetPx: c.floorInset, fadeOutSec: c.fadeOut },
+      walls: c.walls
+        ? {
+            enabled: true,
+            insetPx: c.wallInset,
+            insetNote: 'each wall is this far inside the frame edge; negative = outside the visible edge',
+            restitution: c.wallRestitution,
+            friction: c.wallFriction,
+            frictionNote: 'vertical + spin speed lost sliding along a wall',
+          }
+        : { enabled: false },
       collision: c.collide
         ? {
-            model: 'circle approximation, spatial hash + position/impulse resolution (0.5px positional slop)',
+            model: 'circle approximation, spatial hash + position/impulse resolution (0.5px slop, 0.9 correction factor)',
             hitRadius: c.collideRadius,
             hitRadiusNote: '× the particle half-size — bars aren’t round, so < 1',
             restitution: c.collideRestitution,
@@ -367,7 +417,9 @@ export function buildParticleJsonSpec(c: ParticleRainConfig): string {
             pileFriction: c.pileFriction,
             pileFrictionNote: 'per-frame horizontal + spin damping on any supported particle (floor or pile) — the pile-lock knob',
             solverIterations: c.collideIterations,
+            solverIterationsNote: 'raise to 3–4 for very deep / high-count piles',
             wakeAbovePxS: c.collideWake,
+            autoSleep: 'once every particle is barely moving and none are pending, they are all force-settled and the solver is skipped — a finished pile of any size holds perfectly still. A new particle or a dump() wakes it.',
             note: 'settled particles are immovable until a relative impact exceeds wakeAbovePxS (0 = never). A supported particle stops receiving gravity and its residual motion eases out (critical glide + speed-scaled sway fade) so it comes to rest without a visible snap; it locks in ~0.15s once nearly still.',
           }
         : { model: 'none — settled particles form a flat single-layer heap' },

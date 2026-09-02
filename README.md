@@ -19,7 +19,7 @@ deep-link with `?c=`.
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [↓](#feedback-sheet) | ✅ 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [↓](#gauge) | ✅ 2026-08-31 |
 | **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [↓](#banner-stack) | ✅ phone · tablet · full — 2026-09-01 |
-| **Particle Rain** | [`?c=rain`](https://tgc-ui-motion-components.vercel.app/?c=rain) | [↓](#particle-rain) | 🔧 tuning — starting config only |
+| **Particle Rain** | [`?c=rain`](https://tgc-ui-motion-components.vercel.app/?c=rain) | [↓](#particle-rain) | 🔧 approach locked (burst + floor + walls), tuning `count` |
 
 ## Run
 
@@ -603,30 +603,73 @@ in. **copy JSON tokens** is the same framework-neutral.
 
 # Particle Rain
 
-> 🔧 **Not signed off yet** — the config below is a reasonable starting point,
-> not an approved spec. We're still tuning it on the bench.
+> 🔧 **Approach locked, numbers still tuning.** The setup below — burst mode,
+> floor + side walls, the physics in [Current config](#current-config) — is what
+> we're going with. The exact values (especially `count`) get dialled in once we
+> see the rain against the real reward reveal. Everything's live-tweakable on the
+> bench; send a `copy config` back when it looks right.
 
-The images in `src/assets/` (`gbar.svg`, `tinyBar.svg`) rain down from the top of
-the screen — for a reward / payout moment. Two emission modes, selectable:
-**burst** (all `count` released over `burstWindow` s — `0` = one frame) and
-**stream** (`spawnRate` particles/s for `streamDuration` s, `0` = forever).
+The gold bars in `src/assets/` (`gbar.svg`, `tinyBar.svg`) burst from the top of
+the screen, fall under gravity, bounce once and **pile up on the floor** — for
+the reward / payout reveal. Side walls keep the pile off the screen edges. When
+the reveal screen closes, one call **pulls the floor out** and the whole pile
+spills off the bottom.
 
-**Sprites: SVG, rasterised once.** The SVGs are drawn to an offscreen canvas at a
-fixed high resolution (384 px longest edge × DPR) at startup, then that bitmap is
-blitted per particle. You get vector-crisp bars at any on-screen size the
-responsive sizing produces — the old 73 px PNGs went soft when scaled up — with
-**no per-frame SVG re-rasterisation** (a real canvas perf trap). `createParticleRain`
-takes the sprite URLs and does this for you. The `.png` copies are unused now.
+## The reveal-screen flow
 
-**Responsive — automatic, no breakpoints.** With `autoScale` on, the system reads
-the live canvas width every frame and scales `count` and `particleSize` against
-`referenceWidth`, so the downpour keeps the same **density** and proportions on a
-390 px phone as on a 1440 px desktop. `spawnWidth` is already a fraction of width,
-so the spawn band tracks too. Physics (gravity, velocity, spin, drag, bounce)
-stay **identical at every size** — a gold bar falls the same way regardless of
-frame width; there's just more or fewer of them. You ship one config, not three.
+1. **On the reveal** — create the system (`createParticleRain(canvas, urls)`, or
+   mount `<ParticleRain>`). All `count` bars drop in over `burstWindow` (~0.75 s),
+   fall, bounce, and stack into a pile on the floor between the side walls. Once
+   it settles the whole thing **auto-sleeps** and sits perfectly still — no CPU,
+   no drift.
+2. **`count` is your quantity dial.** Set it to *roughly* track how much gold the
+   reveal showed — not one bar per unit, just enough that a big payout visibly
+   drops more bars than a small one. `burst` mode, so `count` = the exact number
+   that falls (before the responsive width-scale, below). Pick a number now, we
+   retune after seeing it live.
+3. **Leaving the screen** — call `dump()` (React: bump the `dumpSignal` prop).
+   The floor is removed and the pile collapses from the bottom up, tumbling and
+   draining off the bottom edge. It's one-way — unmount or re-create the system
+   for the next reveal.
 
-Each frame the engine computes one width factor and applies it:
+## Chosen configuration
+
+| | setting |
+|---|---|
+| mode | **`burst`** |
+| floor | **on** (`bounce`) — bars bounce once and settle |
+| side walls | **on** (`walls: true`) — pile stays off the edges |
+| everything else | the values in [Current config](#current-config) — treat as approved |
+
+**What you'll actually adjust:**
+
+| param | why |
+|---|---|
+| `count` | match the gold quantity (see flow step 2). Default is **50** (at `referenceWidth` 570); scale it up/down with the payout |
+| `spawnWidth` | on wide screens, drop to **~0.4–0.6** so the gold falls in a central column instead of spanning the whole frame |
+| `wallInset` | if you narrow `spawnWidth`, bring the walls in to hug that column. **It's a fixed px value**, not a fraction — so if you use it, test phone → desktop and consider scaling it with width yourself |
+
+Leave the physics (gravity, bounce, friction, collision, spin, sway) at the
+Current-config values unless the reveal calls for a different feel.
+
+## Responsive — automatic, but sanity-check the walls
+
+`autoScale` (on) reads the live canvas width every frame and scales `count` and
+`particleSize` against `referenceWidth`, so the downpour keeps the same
+**density** on a 390 px phone as on a 1440 px desktop. `spawnWidth` is a fraction
+of width, so the spawn band tracks automatically. The physics never change with
+width — a bar falls and stacks identically at every size; there are just more or
+fewer of them. **One config, no breakpoints.**
+
+The one thing to test across sizes: the **side walls**. They sit at
+`wallInset` px from each edge — the *position* updates with the canvas width
+(they're always `wallInset` from the current edge), but the inset is a fixed
+pixel amount, so it eats a bigger fraction of a narrow screen. At the default
+`wallInset: 0` they're exactly on the edges and this is a non-issue; only matters
+if you inset them.
+
+**The width-scale maths.** Each frame the engine computes one factor and applies
+it to `count` and `particleSize`:
 
 ```
 raw    = canvasWidth / referenceWidth
@@ -638,18 +681,14 @@ effectiveSize  = particleSize · factor_with_sizeScale
 | param | what it does |
 |---|---|
 | `autoScale` | master switch — `false` = `count` / `particleSize` used literally at every width |
-| `referenceWidth` | the width (px) at which `count` / `particleSize` come out exactly as set (factor = 1). Default `900` |
+| `referenceWidth` | the width (px) at which `count` / `particleSize` come out exactly as set (factor = 1). Default `570` — tuned so the phone frame is close to 1:1 |
 | `countScale` | how hard `count` follows width, 0–1. `1` = linear (constant density — same bars-per-px on any screen); `0` = count never changes; `0.5` = wider screens get somewhat denser |
-| `sizeScale` | same, for `particleSize`. `1` = a bar is the same fraction of the frame everywhere; `0` = always `particleSize` px; default `0.4` = grows gently |
+| `sizeScale` | same, for `particleSize`. `1` = a bar is the same fraction of the frame everywhere; `0` = always `particleSize` px; default `0.3` = grows gently |
 | `minScale` / `maxScale` | hard clamp on the factor (both count and size) so a tiny phone or an ultrawide doesn't over/under-do it. Defaults `0.35` / `2.2` |
 
-Worked example (`referenceWidth 900`, `count 80`, `countScale 1`, `particleSize 44`, `sizeScale 0.4`): a 390 px phone → **34 bars @ 34 px**; 720 px tablet → **64 @ 40 px**; 1400 px full → **125 @ 54 px**.
+Worked example with the current defaults (`referenceWidth 570`, `count 50`, `countScale 0.55`, `particleSize 60`, `sizeScale 0.3`): a 390 px phone → **~41 bars @ 54 px**; 720 px tablet → **~57 @ 65 px**; 1400 px full → **~90 @ 86 px**. The `countScale 0.55` means a wide desktop gets more bars but not proportionally more — the payout still reads as "a lot" without burying the frame.
 
-Physics (gravity, velocity, spin, drag, bounce, collision) stay **identical at
-every size** — a gold bar falls and stacks the same way regardless of frame
-width; there are just more or fewer of them. You ship one config, not three.
-
-## How to build it — you don't need Pixi.js
+## How the engine works — you don't need Pixi.js
 
 At these counts (50–150) a single **canvas-2D `requestAnimationFrame` loop** is
 the right tool: real, tunable physics (gravity, initial velocity, air drag,
@@ -672,6 +711,12 @@ the floor on a slow frame); DPR-aware canvas sizing via `ResizeObserver` (which
 also drives the responsive re-scale); burst mode pre-creates the pool with
 staggered `releaseAt` times, stream mode spawns against an accumulator and
 recycles dead slots.
+
+**Sprites: SVG, rasterised once.** The SVGs are drawn to an offscreen canvas at a
+fixed high resolution (384 px longest edge × DPR) at startup, then that bitmap is
+blitted per particle — vector-crisp bars at any size, with **no per-frame SVG
+re-rasterisation** (a real canvas perf trap). `createParticleRain` takes the
+sprite URLs and does this for you. The `.png` copies are unused now.
 
 **Stacking (`collide`).** Each particle is a circle (radius = `collideRadius` ×
 its half-size — bars aren't round, so keep it under 1). Every frame, a spatial
@@ -700,9 +745,32 @@ being frozen mid-motion. The sway flutter also scales with speed, so the
 side-to-side drift fades to nothing as the particle slows instead of vanishing
 in one frame.
 
+**Jitter / drift at high counts.** Position-based collision resolution on a deep
+stack has the corrections fight each other frame to frame, which shows up as a
+big pile slowly shimmering or creeping. Three things keep it still:
+
+1. **Auto-sleep** (built in, no knob). Once every particle is barely moving and
+   none are still waiting to be released, they're all force-settled and the
+   collision solver is **skipped entirely** — a finished pile of any size holds
+   perfectly still because nothing is touching it. A new particle, or a
+   `dump()`, wakes it.
+2. **Partial correction.** Each pass resolves 90 % of an overlap (plus a 0.5 px
+   slop), so stacked corrections don't oscillate.
+3. If you're pushing `count` into the many-hundreds and the pile still churns
+   *before* it sleeps: keep **`collideIterations`** high (default `6`), lean on
+   **`pileFriction`** (default is maxed at `1`), and drop **`collideRestitution`**
+   — bouncy particle-particle hits in a dense pile never settle.
+
 It's a circle approximation, not a rigid-body engine, so piles read as "tossed in
 a heap," not perfectly interlocked — right for this, and still zero-dependency.
 Turn `collide` off for the old flat single-layer heap.
+
+**Side walls (`walls`, optional).** Left and right colliders at the frame edges,
+given the same clamp / reflect / friction treatment as the floor: particles
+bounce off them and — with `collide` on — pile against them into a bounded column
+instead of spreading to the edges and clipping. `wallInset` moves each wall in
+from (or, negative, past) the frame edge; `wallRestitution` is the bounce,
+`wallFriction` is how much a bar sliding down a wall is slowed.
 
 ## Clearing the screen — `rain.dump()`
 
@@ -722,18 +790,22 @@ It's one-way: to run the effect again, re-create the system (bench:
 **↻ Drop again**). In React the trigger is a `dumpSignal` prop you bump; the
 standalone loop returns `{ stop, dump }`.
 
-## Parameters
+## Full parameter reference
+
+Most of these are locked at the [Current config](#current-config) values — see
+[What you'll actually adjust](#chosen-configuration) for the short list you touch.
+This is the complete set for when you need it.
 
 | Group | Parameter | What it does |
 |---|---|---|
-| **emission** | `mode` | `burst` (one drop) or `stream` (continuous) |
-| | `count` | burst: total particles · stream: max alive at once — **at `referenceWidth`; scales with actual width** |
+| **emission** | `mode` | `burst` (one drop — **what we use**) or `stream` (continuous) |
+| | `count` | burst: total bars that fall · stream: max alive at once. **The gold-quantity dial.** This is the count at `referenceWidth`; it scales with actual width |
 | | `burstWindow` | s to release a full burst over (`0` = all on frame 1) |
 | | `spawnRate` / `streamDuration` | stream: particles/s, and how long the emitter runs (`0` = ∞) |
 | | `spawnWidth` | 0–1 of stage width — the centred band they drop from |
 | | `spawnHeight` | px above the top edge they start within (staggers entry) |
-| **physics** | `gravity` | downward acceleration, px/s² |
-| | `velocityYMin` / `velocityYMax` | initial downward speed at spawn (`0/0` = pure drop) |
+| **physics** | `gravity` | downward acceleration in **m/s²** — `9.8` Earth, `1.6` Moon, `24.8` Jupiter. The engine ×143 (a fixed px-per-metre scale) to get px/s²; every other speed below stays in px/s |
+| | `velocityYMin` / `velocityYMax` | initial downward speed at spawn, px/s (`0/0` = pure drop) |
 | | `velocityXSpread` | ± initial horizontal speed — lateral scatter |
 | | `airDrag` | exponential velocity damping, 1/s (`0` = vacuum) |
 | | `terminalVelocity` | hard fall-speed cap, px/s (`0` = none) |
@@ -741,7 +813,7 @@ standalone loop returns `{ stop, dump }`.
 | | `swayAmplitude` / `swayFrequency` | leaf-like horizontal flutter while falling (px, Hz) |
 | | `spinMin` / `spinMax` / `spinDrag` | airborne tumble at spawn (deg/s, random direction) + damping |
 | | `airborneSpin` | `keep` = spawn spin persists (decays via `spinDrag`) · `killOnContact` = zeroed the **first** time a particle touches anything, then it only rotates from what it hits · `off` = no airborne spin at all |
-| | `contactSpin` | 0–1 — fraction of each sliding contact (floor skid, bar-on-bar rub) turned into spin. This is the "rotation from physics/collisions" — pair it with `airborneSpin: killOnContact` (or `off`) for physics-only tumble |
+| | `contactSpin` | 0–1 — fraction of each sliding contact (floor skid, bar-on-bar rub) turned into spin. `> 0` = bars keep tumbling from what they hit; `0` (the current default) = with `airborneSpin: killOnContact` they spin in the air then **freeze their rotation on first touch** |
 | **floor** | `floor` | `fallThrough` (exit + despawn) or `bounce` |
 | | `floorInset` | px the floor line sits above the bottom edge — **negative = below the visible edge**, so a `bounce` pile settles partly off-frame (bars sink past the border) |
 | | `restitution` | bounce: vertical speed kept per bounce, 0–1 |
@@ -749,12 +821,16 @@ standalone loop returns `{ stop, dump }`.
 | | `restThreshold` | bounce: speed below which a supported particle settles (stops), px/s |
 | | `fadeOut` | fallThrough: s a particle fades over after passing the floor line |
 | | `dumpStagger` | `dump()` only — s each pile layer waits after losing support before it lets go. Spreads the collapse into a bottom-up cascade; `0` = fast cascade, higher = slow crumble |
+| **walls** (optional) | `walls` | on = left + right colliders at the frame edges — particles bounce off and pile against them, same treatment as the floor |
+| | `wallInset` | px each wall sits **inside** the frame edge — negative = outside the visible edge |
+| | `wallRestitution` | fraction of horizontal speed kept when a particle hits a wall, 0–1 |
+| | `wallFriction` | vertical + spin speed a particle loses sliding along a wall, 0–1 |
 | **collision** | `collide` | on = particles collide + **stack into a pile** (bounce mode); off = flat heap |
 | | `collideRadius` | collision-circle radius as a fraction of the particle half-size (`< 1` — bars aren't round) |
 | | `collideRestitution` | bounciness of particle-particle hits, 0–1 |
 | | `collideFriction` | tangential grip on **every** contact (resting ones too) — bars catch on each other, 0–1 |
 | | `pileFriction` | per-frame horizontal + spin + downward damping on any **supported** particle — **the pile-lock knob**: raise it if the pile keeps spreading, 0–1 |
-| | `collideIterations` | position-solver passes per frame (2–3 = firm stacks) |
+| | `collideIterations` | position-solver passes per frame — higher = firmer, less springy stacks (current default `6`); drop it if you need the CPU back at very high counts |
 | | `collideWake` | relative impact speed (px/s) that un-settles a rammed pile particle (`0` = pile never disturbed — the default) |
 | **appearance** | `asset` | `both` / `gbar` / `tinyBar` |
 | | `particleSize` | on-screen size (longest edge) of a scale-1 particle, px — **at `referenceWidth`; scales with actual width** |
@@ -766,70 +842,76 @@ standalone loop returns `{ stop, dump }`.
 | | `countScale` / `sizeScale` | 0–1 — how strongly each tracks width (`1` = linear) |
 | | `minScale` / `maxScale` | clamp on the width-scale factor |
 
-## Current starting config
+## Current config
+
+The approved starting point — `PARTICLE_DEFAULT_CONFIG` in
+`src/components/ParticleRain.tsx`, and what `createParticleRain` bakes in. `count`
+and (on wide screens) `spawnWidth` are yours to set; the rest holds until we see
+it live.
 
 ```json
 {
   "mode": "burst",
-  "count": 80,
-  "burstWindow": 0.6,
+  "count": 50,
+  "burstWindow": 0.75,
   "spawnRate": 30,
   "streamDuration": 0,
   "spawnWidth": 1,
   "spawnHeight": 200,
-  "gravity": 1400,
-  "velocityYMin": 100,
-  "velocityYMax": 320,
-  "velocityXSpread": 120,
-  "airDrag": 0.4,
+  "gravity": 12,
+  "velocityYMin": 80,
+  "velocityYMax": 400,
+  "velocityXSpread": 140,
+  "airDrag": 0.3,
   "terminalVelocity": 1200,
   "wind": 0,
-  "swayAmplitude": 14,
-  "swayFrequency": 1.1,
-  "spinMin": 60,
-  "spinMax": 320,
-  "spinDrag": 0.3,
-  "airborneSpin": "keep",
-  "contactSpin": 0.3,
+  "swayAmplitude": 0,
+  "swayFrequency": 0,
+  "spinMin": 200,
+  "spinMax": 500,
+  "spinDrag": 0.75,
+  "airborneSpin": "killOnContact",
+  "contactSpin": 0,
   "floor": "bounce",
-  "floorInset": 0,
-  "restitution": 0.35,
-  "floorFriction": 0.3,
-  "restThreshold": 60,
-  "fadeOut": 0.3,
-  "dumpStagger": 0.08,
+  "floorInset": -16,
+  "restitution": 0.55,
+  "floorFriction": 0.55,
+  "restThreshold": 5,
+  "fadeOut": 0,
+  "dumpStagger": 0.2,
+  "walls": true,
+  "wallInset": -24,
+  "wallRestitution": 0.5,
+  "wallFriction": 0.15,
   "collide": true,
-  "collideRadius": 0.6,
-  "collideRestitution": 0.15,
-  "collideFriction": 0.5,
-  "pileFriction": 0.55,
-  "collideIterations": 2,
+  "collideRadius": 0.64,
+  "collideRestitution": 0.55,
+  "collideFriction": 0.76,
+  "pileFriction": 1,
+  "collideIterations": 6,
   "collideWake": 0,
   "asset": "both",
-  "particleSize": 44,
-  "scaleMin": 0.7,
-  "scaleMax": 1.15,
-  "bigFallFaster": 0.3,
+  "particleSize": 60,
+  "scaleMin": 0.8,
+  "scaleMax": 1.6,
+  "bigFallFaster": 1,
   "fadeIn": 0.15,
   "opacity": 1,
   "autoScale": true,
-  "referenceWidth": 900,
-  "countScale": 1,
-  "sizeScale": 0.4,
+  "referenceWidth": 570,
+  "countScale": 0.55,
+  "sizeScale": 0.3,
   "minScale": 0.35,
   "maxScale": 2.2
 }
 ```
 
-`PARTICLE_DEFAULT_CONFIG` in `src/components/ParticleRain.tsx`. **copy config**
-on the bench emits this exact shape — send a tuned one back to lock in.
-
-On the bench, **Stage → viewport** (phone ≈ 390 / tablet ≈ 720 / full) frames the
-canvas so you can watch the auto-scale at each width; `?c=rain&vp=phone`
+**Tuning on the bench.** **Stage → viewport** (phone ≈ 390 / tablet ≈ 720 / full)
+frames the canvas so you can watch the auto-scale at each width; `?c=rain&vp=phone`
 deep-links a viewport. **Export → ★ save settings** stashes the current panel in
-`localStorage` so an in-progress tune survives a reload before it's baked into
-`PARTICLE_DEFAULT_CONFIG`; **reset to code default** clears that and restores the
-committed values.
+`localStorage` so an in-progress tune survives a reload; **copy config** emits the
+JSON above with your changes — send that back to lock it in; **reset to code
+default** restores the committed values.
 
 ---
 
@@ -890,15 +972,19 @@ parameters — send that back to bake in permanently.
 
 **Particle Rain**
 
+Folders collapsed by default: **responsive**, **walls**, **appearance**, and the
+physics sub-folders **sway** / **spin**. Labels are trimmed to fit the panel.
+
 | Group | Controls |
 |---|---|
 | Stage | **viewport (phone / tablet / full)**, background (dark / light / ember), paused |
-| emission | mode (burst / stream), count / pool (@ ref width), burst window (s), stream rate (/s), stream length (s), spawn band (× width), spawn height (px above) |
-| responsive | scale with width, reference width (px), count tracks width, size tracks width, scale clamp min / max |
-| physics | gravity, start vy min / max, start vx spread (±), air drag, terminal vel, wind; **sway** (amplitude / frequency), **spin** (spawn min / max / drag, airborne spin: keep / killOnContact / off, tumble from contacts) |
-| floor | floor (fallThrough / bounce), floor inset (px, − = below edge), restitution, friction, settle below (px/s), fallThrough fade-out (s), **dump cascade delay (s)** |
-| collision | particles collide + stack, hit radius (× half-size), bounciness, grip between bars, **pile friction (lock ↑)**, solver iterations, wake on hit (px/s) |
-| appearance | asset (both / gbar / tinyBar), size (px), scale min / max, big = faster, fade in (s), opacity |
+| emission | mode (burst / stream), count / pool, burst window, stream /s, stream secs, spawn band, spawn above |
+| responsive | scale w/ width, ref width, count vs width, size vs width, clamp min / max |
+| physics | **gravity (m/s²)**, start vy min / max, start vx ±, air drag, terminal vel, wind; **sway** (amplitude / frequency), **spin** (spawn min / max °/s, drag, airborne: keep / killOnContact / off, from contacts) |
+| floor | floor (fallThrough / bounce), inset, restitution, **friction**, settle threshold, fade-out, **dump stagger** |
+| walls | **side colliders** (on/off), inset, bounce, **friction** |
+| collision | collide + stack, hit radius, bounce, bar grip, **pile friction**, iterations, wake |
+| appearance | asset (both / gbar / tinyBar), size, scale min / max, big=faster, fade in, opacity |
 | Export | **★ save settings** (localStorage, survives reload) · reset to code default · drop again · **⤓ pull the floor out** · copy canvas loop · copy JSON tokens · copy config |
 
 Stage buttons: **↻ Drop again** (re-run from scratch) and **⤓ Pull the floor

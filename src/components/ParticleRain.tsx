@@ -11,6 +11,9 @@ import tinyBarUrl from '@/assets/tinyBar.svg'
  * overlay (or ports to Pixi if they ever need thousands of sprites; at the
  * 50–150 counts here, 2D canvas is plenty).
  *
+ * Units: `gravity` is in **m/s²** (9.8 = Earth) — the engine multiplies by a
+ * fixed pixels-per-metre scale. Every other speed/distance is in px (or px/s).
+ *
  * Sprites: the SVGs are **rasterised once** to an offscreen canvas at a fixed
  * high resolution, then blitted per particle — vector-crisp at any on-screen
  * size the responsive sizing produces, with no per-frame SVG re-rasterisation.
@@ -32,7 +35,13 @@ import tinyBarUrl from '@/assets/tinyBar.svg'
  * A supported particle stops getting gravity, and its last bit of motion eases
  * out with a critical glide + a speed-scaled sway fade, so it comes to rest
  * smoothly rather than snapping. Settled particles are immovable until a hit
- * exceeds `collideWake` (0 = never).
+ * exceeds `collideWake` (0 = never). Once the whole system goes quiet the solver
+ * is skipped entirely (auto-sleep), so a finished pile never drifts, however
+ * many particles are in it.
+ *
+ * Walls (`walls`, optional): left + right colliders at the frame edges, the same
+ * clamp/reflect/friction treatment as the floor — particles bounce off and pile
+ * against them.
  *
  * Spin: `spinMin`/`spinMax` set the airborne tumble; `airborneSpin` chooses
  * whether it `keep`s, is killed on first contact (`killOnContact`), or is `off`
@@ -66,7 +75,8 @@ export type ParticleRainConfig = {
   spawnHeight: number
 
   // --- physics ---
-  /** downward acceleration, px/s² */
+  /** downward acceleration in **m/s²** (9.8 = Earth). Multiplied by the engine's
+   *  fixed pixels-per-metre scale to get px/s². Other speeds below are px/s. */
   gravity: number
   /** initial downward speed at spawn, px/s (randomised between min/max) */
   velocityYMin: number
@@ -109,6 +119,16 @@ export type ParticleRainConfig = {
    *  loses support before it lets go — spreads the collapse into a cascade from
    *  the bottom up instead of the whole pile dropping at once. 0 = instant cascade */
   dumpStagger: number
+
+  // --- side walls (optional — left + right colliders, same idea as the floor) ---
+  /** on = particles bounce off / pile against the left and right frame edges */
+  walls: boolean
+  /** px each wall sits inside the frame edge — negative = outside the visible edge */
+  wallInset: number
+  /** fraction of horizontal speed kept when a particle hits a wall, 0–1 */
+  wallRestitution: number
+  /** vertical + spin speed a particle loses sliding along a wall, 0–1 */
+  wallFriction: number
 
   // --- collision (particle-particle stacking) ---
   /** off = settled particles form a flat single-layer heap. on = they collide + pile up. */
@@ -155,56 +175,61 @@ export type ParticleRainConfig = {
 
 export const PARTICLE_DEFAULT_CONFIG: ParticleRainConfig = {
   mode: 'burst',
-  count: 80,
-  burstWindow: 0.6,
+  count: 50,
+  burstWindow: 0.75,
   spawnRate: 30,
   streamDuration: 0,
   spawnWidth: 1,
   spawnHeight: 200,
 
-  gravity: 1400,
-  velocityYMin: 100,
-  velocityYMax: 320,
-  velocityXSpread: 120,
-  airDrag: 0.4,
+  gravity: 12,
+  velocityYMin: 80,
+  velocityYMax: 400,
+  velocityXSpread: 140,
+  airDrag: 0.3,
   terminalVelocity: 1200,
   wind: 0,
-  swayAmplitude: 14,
-  swayFrequency: 1.1,
-  spinMin: 60,
-  spinMax: 320,
-  spinDrag: 0.3,
-  airborneSpin: 'keep',
-  contactSpin: 0.3,
+  swayAmplitude: 0,
+  swayFrequency: 0,
+  spinMin: 200,
+  spinMax: 500,
+  spinDrag: 0.75,
+  airborneSpin: 'killOnContact',
+  contactSpin: 0,
 
   floor: 'bounce',
-  floorInset: 0,
-  restitution: 0.35,
-  floorFriction: 0.3,
-  restThreshold: 60,
-  fadeOut: 0.3,
-  dumpStagger: 0.08,
+  floorInset: -16,
+  restitution: 0.55,
+  floorFriction: 0.55,
+  restThreshold: 5,
+  fadeOut: 0,
+  dumpStagger: 0.2,
+
+  walls: true,
+  wallInset: -24,
+  wallRestitution: 0.5,
+  wallFriction: 0.15,
 
   collide: true,
-  collideRadius: 0.6,
-  collideRestitution: 0.15,
-  collideFriction: 0.5,
-  pileFriction: 0.55,
-  collideIterations: 2,
+  collideRadius: 0.64,
+  collideRestitution: 0.55,
+  collideFriction: 0.76,
+  pileFriction: 1,
+  collideIterations: 6,
   collideWake: 0,
 
   asset: 'both',
-  particleSize: 44,
-  scaleMin: 0.7,
-  scaleMax: 1.15,
-  bigFallFaster: 0.3,
+  particleSize: 60,
+  scaleMin: 0.8,
+  scaleMax: 1.6,
+  bigFallFaster: 1,
   fadeIn: 0.15,
   opacity: 1,
 
   autoScale: true,
-  referenceWidth: 900,
-  countScale: 1,
-  sizeScale: 0.4,
+  referenceWidth: 570,
+  countScale: 0.55,
+  sizeScale: 0.3,
   minScale: 0.35,
   maxScale: 2.2,
 }
@@ -212,6 +237,10 @@ export const PARTICLE_DEFAULT_CONFIG: ParticleRainConfig = {
 const TAU = Math.PI * 2
 const DEG = Math.PI / 180
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
+
+/** The engine's world scale: `gravity` is set in m/s² and multiplied by this to
+ *  get px/s². 143 keeps the default 9.8 m/s² at the long-standing ~1400 px/s². */
+const PX_PER_METER = 143
 
 /** Longest edge (× DPR) the SVGs are rasterised to once, up front. */
 const SPRITE_RASTER = 384
@@ -344,6 +373,7 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
     const particles: Particle[] = []
     let simTime = 0
     let spawnAcc = 0
+    let quietFor = 0 // seconds the whole system has been at rest (→ auto-sleep)
     let nextId = 0
 
     const pickSprite = (asset: ParticleRainConfig['asset']): SpriteKey =>
@@ -453,7 +483,10 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
                 }
                 const nx = dx / d
                 const ny = dy / d
-                const corr = Math.max(rr - d - 0.5, 0) // positional slop — see below
+                // positional slop (0.5px) + a 0.9 correction factor — resolving
+                // only most of the overlap per pass keeps deep stacks from
+                // fighting themselves frame to frame (less jitter at high counts)
+                const corr = Math.max(rr - d - 0.5, 0) * 0.9
 
                 // Support flags — computed before the immovable-pair early-out,
                 // because settled-on-settled support is what makes a dump
@@ -557,7 +590,7 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         // A particle that was resting last frame doesn't get re-accelerated
         // downward — that steady drip of vy is what made it jitter and then snap
         // when it finally settled. (During a dump, everything loose falls.)
-        if (!p.grounded || dumping) p.vy += cfg.gravity * p.speedMul * dt
+        if (!p.grounded || dumping) p.vy += cfg.gravity * PX_PER_METER * p.speedMul * dt
         p.vx += cfg.wind * dt
         const damp = Math.exp(-cfg.airDrag * dt)
         p.vx *= damp
@@ -569,8 +602,19 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         p.angle += p.spin * dt
       }
 
+      // Is anything still in motion? If the whole system has gone quiet (every
+      // particle either dead or settled), skip the collision solver entirely —
+      // that's what stops a big finished pile from being nudged around forever.
+      let anyActive = false
+      for (const p of particles) {
+        if (!p.dead && p.active && !p.settled) {
+          anyActive = true
+          break
+        }
+      }
+
       // pass 2 — particle-particle collision (sets support flags)
-      resolveCollisions(cfg, effSize)
+      if (anyActive) resolveCollisions(cfg, effSize)
 
       // pass 3 — dump release, floor contact, settle, fade, despawn
       for (const p of particles) {
@@ -639,6 +683,24 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
           } else if (p.y + half >= floorY) {
             p.pastFloorFor += dt
           }
+
+          // Side walls — same idea as the floor: clamp x, reflect the inbound
+          // horizontal speed, and shave vertical + spin speed off the slide.
+          if (cfg.walls) {
+            const leftX = cfg.wallInset
+            const rightX = size.w - cfg.wallInset
+            if (p.x - half < leftX) {
+              p.x = leftX + half
+              if (p.vx < 0) p.vx = -p.vx * cfg.wallRestitution
+              p.vy *= 1 - cfg.wallFriction
+              p.spin *= 1 - cfg.wallFriction
+            } else if (p.x + half > rightX) {
+              p.x = rightX - half
+              if (p.vx > 0) p.vx = -p.vx * cfg.wallRestitution
+              p.vy *= 1 - cfg.wallFriction
+              p.spin *= 1 - cfg.wallFriction
+            }
+          }
         }
 
         const fadeInK = cfg.fadeIn > 0 ? Math.min(1, p.age / cfg.fadeIn) : 1
@@ -652,6 +714,42 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         const bottomEdge = dumping ? size.h : Math.max(size.h, floorY)
         const goneBelow = p.y - half > bottomEdge + 4
         if (goneBelow || (!dumping && cfg.floor === 'fallThrough' && fadeOutK <= 0)) p.dead = true
+      }
+
+      // Auto-sleep — once every active particle is barely moving and none are
+      // still waiting to be released, freeze them all. A finished pile then
+      // holds perfectly still because the solver above is skipped (`anyActive`
+      // goes false). A new particle, or a dump, brings it back to life.
+      if (!dumping && anyActive) {
+        let maxMotion = 0
+        let pending = false
+        for (const p of particles) {
+          if (p.dead) continue
+          if (!p.active) {
+            pending = true
+            continue
+          }
+          if (p.settled) continue
+          const m = Math.hypot(p.vx, p.vy) + Math.abs(p.spin) * 18
+          if (m > maxMotion) maxMotion = m
+        }
+        if (maxMotion < 8 && !pending) {
+          quietFor += dt
+          if (quietFor > 0.4) {
+            for (const p of particles) {
+              if (!p.dead && p.active && !p.settled) {
+                p.settled = true
+                p.vx = 0
+                p.vy = 0
+                p.spin = 0
+              }
+            }
+          }
+        } else {
+          quietFor = 0
+        }
+      } else {
+        quietFor = 0
       }
     }
 
