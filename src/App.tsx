@@ -5,6 +5,7 @@ import { SheetBench } from '@/benches/SheetBench'
 import { GaugeBench } from '@/benches/GaugeBench'
 import { BannerBench } from '@/benches/BannerBench'
 import { RainBench } from '@/benches/RainBench'
+import { StatsHud } from '@/components/StatsHud'
 
 const COMPONENTS = ['Flame Pictogram', 'Feedback Sheet', 'Gauge', 'Banner Stack', 'Particle Rain'] as const
 
@@ -70,6 +71,8 @@ export function App() {
       ) : (
         <FlameBench key='flame' />
       )}
+
+      <StatsHud />
     </div>
   )
 }

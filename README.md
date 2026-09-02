@@ -645,7 +645,7 @@ spills off the bottom.
 
 | param | why |
 |---|---|
-| `count` | match the gold quantity (see flow step 2). Default is **50** (at `referenceWidth` 570); scale it up/down with the payout |
+| `count` | match the gold quantity (see flow step 2). Default is **56** (at `referenceWidth` 570); scale it up/down with the payout |
 | `spawnWidth` | on wide screens, drop to **~0.4–0.6** so the gold falls in a central column instead of spanning the whole frame |
 | `wallInset` | if you narrow `spawnWidth`, bring the walls in to hug that column. **It's a fixed px value**, not a fraction — so if you use it, test phone → desktop and consider scaling it with width yourself |
 
@@ -686,7 +686,7 @@ effectiveSize  = particleSize · factor_with_sizeScale
 | `sizeScale` | same, for `particleSize`. `1` = a bar is the same fraction of the frame everywhere; `0` = always `particleSize` px; default `0.3` = grows gently |
 | `minScale` / `maxScale` | hard clamp on the factor (both count and size) so a tiny phone or an ultrawide doesn't over/under-do it. Defaults `0.35` / `2.2` |
 
-Worked example with the current defaults (`referenceWidth 570`, `count 50`, `countScale 0.55`, `particleSize 60`, `sizeScale 0.3`): a 390 px phone → **~41 bars @ 54 px**; 720 px tablet → **~57 @ 65 px**; 1400 px full → **~90 @ 86 px**. The `countScale 0.55` means a wide desktop gets more bars but not proportionally more — the payout still reads as "a lot" without burying the frame.
+Worked example with the current defaults (`referenceWidth 570`, `count 56`, `countScale 0.55`, `particleSize 80`, `sizeScale 0.3`): a 390 px phone → **~46 bars @ 72 px**; 720 px tablet → **~64 @ 86 px**; 1400 px full → **~101 @ 115 px**. The `countScale 0.55` means a wide desktop gets more bars but not proportionally more — the payout still reads as "a lot" without burying the frame.
 
 ## How the engine works — you don't need Pixi.js
 
@@ -852,18 +852,18 @@ it live.
 ```json
 {
   "mode": "burst",
-  "count": 50,
+  "count": 56,
   "burstWindow": 0.75,
   "spawnRate": 30,
   "streamDuration": 0,
   "spawnWidth": 1,
   "spawnHeight": 200,
-  "gravity": 12,
-  "velocityYMin": 80,
-  "velocityYMax": 400,
-  "velocityXSpread": 140,
-  "airDrag": 0.3,
-  "terminalVelocity": 1200,
+  "gravity": 14,
+  "velocityYMin": 600,
+  "velocityYMax": 1200,
+  "velocityXSpread": 500,
+  "airDrag": 1,
+  "terminalVelocity": 1540,
   "wind": 0,
   "swayAmplitude": 0,
   "swayFrequency": 0,
@@ -891,7 +891,7 @@ it live.
   "collideIterations": 6,
   "collideWake": 0,
   "asset": "both",
-  "particleSize": 60,
+  "particleSize": 80,
   "scaleMin": 0.8,
   "scaleMax": 1.6,
   "bigFallFaster": 1,
@@ -918,7 +918,12 @@ default** restores the committed values.
 ## Panel reference (bench operators)
 
 Pick the component from the `component` dropdown at the top of the Leva panel.
-`↻ Replay` sits on the stage.
+`↻ Replay` sits on the stage, just below the Stats HUD (FPS / heap / bundle size,
+top-left). The dock's spec cards start collapsed — click a header to expand.
+
+> **Full control-by-control reference:** [`docs/leva-controls.md`](docs/leva-controls.md)
+> — every slider, select and toggle in every bench, what it changes, and when
+> you'd reach for it. The tables below are the quick index.
 
 **Flame Pictogram**
 

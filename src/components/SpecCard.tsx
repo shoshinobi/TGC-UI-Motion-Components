@@ -24,13 +24,53 @@ export function useLiveCopy<T extends Record<string, string>>(payload: T): (key:
   return (key) => () => copyText(ref.current[key])
 }
 
-/** One scrollable, copyable code panel in the bottom dock. */
+/** Spec cards start collapsed; only an explicit '0' keeps one open across reloads. */
+function readCollapsed(key: string): boolean {
+  try {
+    return localStorage.getItem(key) !== '0'
+  } catch {
+    return true
+  }
+}
+function writeFlag(key: string, on: boolean) {
+  try {
+    localStorage.setItem(key, on ? '1' : '0')
+  } catch {
+    /* storage blocked — fine */
+  }
+}
+
+/** One copyable code panel in the bottom dock — collapsible, state persisted. */
 export function SpecCard({ title, text }: { title: string; text: string }) {
   const [copied, setCopied] = useState(false)
+  const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  const flagKey = `tgc-bench:spec:${slug}`
+  const [collapsed, setCollapsed] = useState(() => readCollapsed(flagKey))
+
+  const toggle = () =>
+    setCollapsed((c) => {
+      writeFlag(flagKey, !c)
+      return !c
+    })
+
+  const lines = text ? text.split('\n').length : 0
+
   return (
-    <div className='spec'>
+    <div className='spec' data-collapsed={collapsed}>
       <div className='spec-head'>
-        <span>{title}</span>
+        <button
+          type='button'
+          className='spec-head__toggle'
+          onClick={toggle}
+          aria-expanded={!collapsed}
+          title={collapsed ? 'Expand' : 'Collapse'}
+        >
+          <span className='spec-head__chevron' aria-hidden='true'>
+            ▾
+          </span>
+          <span>{title}</span>
+          {collapsed && lines > 0 && <span className='spec-head__count'>{lines} lines</span>}
+        </button>
         <button
           className='copy-btn'
           data-copied={copied}
@@ -47,7 +87,7 @@ export function SpecCard({ title, text }: { title: string; text: string }) {
           {copied ? 'copied' : 'copy'}
         </button>
       </div>
-      <pre>{text}</pre>
+      {!collapsed && <pre>{text}</pre>}
     </div>
   )
 }

@@ -55,7 +55,8 @@ body {
 
 .stage-replay {
   position: absolute;
-  top: 12px;
+  /* sit just below the Stats HUD (top-left); it publishes its own height */
+  top: calc(12px + var(--stats-hud-h, 0px) + 8px);
   left: 12px;
   z-index: 5;
   display: inline-flex;
@@ -139,10 +140,11 @@ body {
   flex: 0 0 auto;
   background: #111113;
   border-top: 1px solid #26262a;
-  padding: 14px clamp(12px, 3vw, 20px);
+  padding: 12px clamp(12px, 3vw, 20px);
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
-  gap: 12px;
+  align-items: start; /* a collapsed card stays short, doesn't stretch to its neighbour */
+  gap: 10px;
   max-height: 46vh;
   overflow: auto;
 }
@@ -162,17 +164,56 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 6px 8px 6px 6px;
   border-bottom: 1px solid #26262a;
   font-size: 12px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #a1a1aa;
 }
-.spec-head span {
+.spec[data-collapsed='true'] .spec-head {
+  border-bottom: 0;
+}
+.spec-head__toggle {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+.spec-head__toggle:hover {
+  background: #1c1c1f;
+  color: #e4e4e7;
+}
+.spec-head__toggle > span:not(.spec-head__chevron):not(.spec-head__count) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.spec-head__chevron {
+  flex: 0 0 auto;
+  font-size: 10px;
+  transition: transform 0.15s ease;
+}
+.spec[data-collapsed='true'] .spec-head__chevron {
+  transform: rotate(-90deg);
+}
+.spec-head__count {
+  flex: 0 0 auto;
+  color: #71717a;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 11px;
 }
 .spec pre {
   margin: 0;
@@ -204,6 +245,90 @@ body {
 .copy-btn[data-copied='true'] {
   color: #4ade80;
   border-color: #22c55e;
+}
+
+/* ---------- Stats HUD (fixed, top-left, above the replay button) ---------- */
+
+.stats-hud {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 20;
+  min-width: 132px;
+  border: 1px solid #2b2b30;
+  border-radius: 8px;
+  background: #0d0d0fe0;
+  backdrop-filter: blur(6px);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+  color: #d4d4d8;
+  overflow: hidden;
+  box-shadow: 0 8px 24px -12px rgba(0, 0, 0, 0.7);
+}
+.stats-hud__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 8px;
+  border: 0;
+  border-bottom: 1px solid #26262a;
+  background: #17171a;
+  color: #a1a1aa;
+  font: inherit;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.stats-hud__bar:hover {
+  color: #e4e4e7;
+}
+.stats-hud dl {
+  margin: 0;
+  padding: 6px 8px;
+  display: grid;
+  gap: 2px;
+}
+.stats-hud dl > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.stats-hud dt {
+  color: #71717a;
+}
+.stats-hud dd {
+  margin: 0;
+  color: #e4e4e7;
+  font-variant-numeric: tabular-nums;
+}
+.stats-hud dd[data-warn='true'] {
+  color: #fbbf24;
+}
+.stats-hud__sub dd {
+  color: #71717a;
+  font-size: 10px;
+}
+
+.stats-hud--pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: #17171ae0;
+  color: #a1a1aa;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.stats-hud--pill:hover {
+  color: #e4e4e7;
+}
+.stats-hud--pill span[data-warn='true'] {
+  color: #fbbf24;
 }
 
 /* ===================== FeedbackSheet bench ===================== */
@@ -673,8 +798,15 @@ body {
 }
 
 .stage-replay--alt {
+  top: 12px; /* right-side button clears the top-left HUD, stays at the top */
   left: auto;
   right: 12px;
+}
+/* Keep the right-side stage button out from under the docked Leva panel. */
+@media (min-width: 720px) {
+  .shell[data-panel='expanded'] .stage-replay--alt {
+    right: 370px;
+  }
 }
 
 /* ---------- Particle Rain ---------- */
