@@ -302,7 +302,7 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   streakLoopInterval: 0.15,
 
   warp: true,
-  warpCount: 42,
+  warpCount: 32,
   warpSpeed: 3000,
   warpSpeedVar: 0.25,
   warpLength: 255,
