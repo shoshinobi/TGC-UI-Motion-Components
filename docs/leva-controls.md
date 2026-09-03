@@ -335,11 +335,189 @@ integration flow.
 
 ---
 
-## Not in Leva
+## Gem Reveal
+
+The looping `gem.lottie` rises from below and hovers, tinted via its `gemColor`
+slot. See [the README section](../README.md#gem-reveal). Colour / hover / effects
+update live; the entry re-runs on **↻ Replay reveal**.
+
+It plays as a **two-phase, developer-triggered sequence**:
+
+- **reveal** — the gem rises and hovers; warp streaks + the jet stream run in the
+  background; gem streaks loop; the grade auto-cycles; the Lottie loop runs at
+  `reveal loop speed ×`. Optionally a white flash fires as it settles in
+  (`white flash → flash on entering the loop`).
+- **locked** — the **🔒 Lock grade** stage button (or the `phase` prop) fires the
+  transition: a coupled punch + white flash, the grade snaps to the `grade`
+  dropdown, gem + warp streaks fade off, the jet retracts (its own timing), the
+  loop speed eases to `locked loop speed ×`, and the folded grade button springs
+  in below the gem. **↻ Replay reveal** returns to phase 1.
+
+### colour / token
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `grade` | Holy Grail · Mythic · Illustrious · Storied · Renowned · Notable | Which grade colour is on the gem — written into the Lottie `gemColor` slot. | Showing a given grade. |
+| `grade colours →` | 6 colour pickers | The hex for each grade (`#ffbf00` … `#da6821` by default). Editable, saved with the config. | Dialling in the exact grade palette — send it back to lock in. |
+| `auto-cycle grades` | toggle | Step through the six grades automatically. | A "rolling" reveal that lands on a grade. |
+| `start interval (s)` | 0.05–4 | The first gap between colour changes. | |
+| `speed-up ramp` | 0–1 | How hard the interval shortens after each change (`0` = constant rate). | The cycle accelerating to a blur then stopping. |
+| `min interval (s)` | 0.03–1 | Floor the accelerating interval can't drop below. | |
+| `white-flash between` | toggle | Fire the white flash on every grade change. | Extra impact on the cycle. |
+
+### playback
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `reveal loop speed ×` | 0.1–4 | Lottie playback rate during the reveal loop (`1` = authored). Defaults to `2` — a fast shimmer while the grade cycles. | The energy of the reveal. |
+| `locked loop speed ×` | 0.1–4 | Playback rate once the grade is locked. The loop eases from `reveal` → this across the lock transition (see **lock transition → speed revert**). | A calm settled gem. |
+
+### entry
+
+| Control | Range | What it changes | Use it for |
+|---|---|---|---|
+| `from below (px)` | 0–1200 | How far below centre the gem starts. | Distance of the pop-up. |
+| `from scale` | 0–1 | Scale the gem starts at (springs to `rest scale`). | A gem that grows in vs one that's already full-size. |
+| `delay (s)` | 0–2 | Pause before the pop begins. | Timing against other reveal elements. |
+| `spring stiffness` | 20–900 | Pop tightness (higher = snappier). | |
+| `spring damping` | 2–60 | Overshoot (lower = more bounce past centre). | An overshoot-and-settle landing. |
+| `spring mass` | 0.2–4 | Inertia (higher = slower, heavier). | |
+
+### hover
+
+| Control | Range | What it changes | Use it for |
+|---|---|---|---|
+| `sine hover` | toggle | The gentle drift once the gem has arrived. | |
+| `amp X` / `amp Y` | 0–80 px | Sine amplitude horizontally / vertically. | How much it floats. |
+| `freq X` / `freq Y` | 0–2 Hz | Sine oscillations per second. Different X/Y frequencies make a lazy figure-8. | |
+| `rotate sway (°)` | 0–20 | Peak gentle rotation. | A gem that lists as it hovers. |
+| `randomness` | 0–1 | Drifts the sine phases each frame so the hover never quite repeats. | Organic float vs a mechanical loop. |
+
+### scale + punch
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `rest scale` | 0.2–3 | Resting gem size (applied instantly). | Overall size. |
+| `punch to ×` | 0.5–**12** | Where the **✦ punch scale** trigger springs the scale to (then it relaxes back). | A hit / emphasis pulse — now up to a huge slam. |
+| `punch stiffness` | 40–1200 | Punch spring tightness. | |
+| `punch damping` | 2–60 | Punch overshoot. | |
+| `apex colour flash` | `off` / `current grade` / a grade | At the **peak** of the punch, briefly flash the gem that colour (via the flash overlay) and fire the gem-streak burst. | A colour pop at the top of the slam. |
+| `↳ flash (s)` | 0.05–1 | Length of the apex flash. | |
+
+**Punch and white flash are one event** — a ✦ punch always fires the white flash, and a ⚡ white flash always kicks the punch scale. Tune them together.
+
+### white flash
+
+The **⚡ white flash** button / `flashSignal` prop, the **✦ punch scale** trigger (coupled), or between grades in the auto-cycle. Whites the gem out, kicks the punch, fires the streak burst, spikes the glow.
+
+| Control | Range | What it changes | Use it for |
+|---|---|---|---|
+| `hold full (s)` | 0–0.6 | How long the gem stays solid white before it starts fading back. | A hard freeze-frame flash vs an instant pop. |
+| `decay (s)` | 0.05–2 | How long the white takes to fade off. | |
+| `blur / bloom (px)` | 0–60 | CSS blur on the flash overlay (on an unclipped wrapper, so the white blooms *past* the gem silhouette). Also applies to the punch's apex flash. | A soft blown-out bloom vs a crisp white cut-out. |
+| `glow spike ×` | 0–3 | How hard the glow blooms during the flash. | A blown-out impact. |
+| `emit gem streaks` | toggle | Fire the radial streak burst with the flash. | |
+| `flash on entering the loop` | toggle | Fire a white flash as the gem finishes its entry and settles into the reveal loop. **Ambient** — flash + glow spike (+ streaks), *no punch*. | A "charge-up" pop as the loop begins. |
+| `↳ delay after arrival (s)` | 0–2 | Beat between the gem arriving and that flash. | |
+
+### glow
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `glow` | toggle | A soft **radial halo wash** (reach + brightness) plus a **CSS-blurred core diamond** that keeps the gem's silhouette (canvas, `lighter` blend) — no hard fill, so it never leaves a solid shape behind the gem. | |
+| `colour (tier / hex)` | `tier` or `#RRGGBB` | `tier` matches the current grade; or pin a colour. | A glow that's always gold, say. |
+| `intensity` | 0–6 | Overall brightness multiplier for the whole glow (halo + core). Was hard to see before — push it up. | A faint ambient sheen vs a blazing aura. |
+| `reach (× gem)` | 0.5–4 | How far the halo spreads past the gem, as a multiple of the gem silhouette. | Keeping the glow tight to the gem vs filling the frame. |
+| `blur (px)` | 0–200 | Softness of the core diamond (and adds to the halo radius). | A crisp diamond glow vs a diffuse cloud. |
+| `core passes` | 1–4 | How many times the core diamond is stacked — higher = a brighter, more saturated core that reads as the gem shape. | |
+| `pulse (Hz)` | 0–4 | Breathe the glow. `0` = steady. | A gem that throbs. |
+
+### gem streaks (radial starburst)
+
+The `GEM_streaks` shape — thin rects radiating from the gem centre, expanding and fading.
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `radial streak burst` | toggle | The effect on/off. | |
+| `count` | 2–24 | How many spokes (8 = the reference SVG). | A tight cross vs a dense sunburst. |
+| `speed (px/s)` | 40–2000 | Initial outward speed. | |
+| `deceleration` | 0–1 | `0` = they fly out at constant speed · `1` = they snap to a near-instant stop. | A soft drift vs a sharp pop-and-hold. |
+| `delay after land (s)` | 0–1.5 | Wait after the gem arrives before the reveal burst fires. | Landing the burst on a beat. |
+| `length (px)` / `width (px)` | 4–120 / 1–20 | The rect dimensions. | |
+| `opacity` | 0.05–1 | Starting opacity (fades to 0 over `life`). | |
+| `life (s)` | 0.1–2 | Fade duration. | |
+| `colour (tier / hex)` | `tier` or hex (default white) | | |
+| `fire on reveal` | toggle | Burst once when the gem lands. | |
+| `fire on punch apex` | toggle | Burst at the peak of a ✦ punch. | |
+| `loop during reveal` | toggle | Keep re-firing bursts on an interval through the reveal loop (on by default). | The pulsing "charging" look before the lock. |
+| `↳ interval (s)` | 0.15–3 | Gap between the reveal-loop bursts. | |
+
+*(Also fires on the white flash and on the lock's coupled punch/flash, and on the **✷ emit streaks** button. In-flight bursts fade with the lock transition.)*
+
+### warp streaks (upward-flight lines)
+
+Vertical speed lines streaming down past the gem — relative motion reads as the gem flying up. **On at full through the reveal loop** (ramps up over ~0.3s), then fades 1 → 0 across the lock transition (**lock transition → streak/warp fade**).
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `upward-flight lines` | toggle | The effect on/off (on by default). | |
+| `count` | 0–160 | How many streaks fill the frame. | Sparse motion lines vs a dense warp field. |
+| `speed (px/s)` | 100–3000 | Base downward speed. | |
+| `↳ speed variation` | 0–1 | Per-streak speed spread. | A layered, parallax feel. |
+| `length (px)` / `width (px)` | 10–400 / 0.5–12 | The streak element size. | Long thin warp lines vs short dashes. |
+| `colour (tier / hex)` | `tier` or hex (default white) | | |
+| `↳ colour variation` | 0–1 | Per-streak hue jitter (± this × 60°). | A prismatic warp. |
+| `opacity` | 0.02–1 | Base opacity. | |
+| `↳ opacity variation` | 0–1 | Per-streak opacity spread. | Depth. |
+
+### jet
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `jet stream` | toggle | Gradient tail(s) streaming down from the gem. | A "launched from below" look. |
+| `tracks` | 1 or 2 | One centred track, or two parallel tracks. | A twin-exhaust look. |
+| `track width (px)` | 4–240 | Width of each track at the gem. | |
+| `spacing (2-track)` | 0–200 | Gap between the two tracks (ignored for 1 track). | |
+| `length (px)` | 0–800 | How far the tail reaches. | |
+| `taper` | 0–1 | How much each track narrows toward its end (`1` = to a point). | A jet flame vs a wide beam. |
+| `opacity at gem` / `opacity at tail` | 0–1 each | The tail's **gradient opacity** — strong at the gem, fading down (or set both for a flat band). | |
+| `fade delay after lock (s)` | 0–4 | The jet stays fully on through the whole reveal loop; this is the beat **after the grade is locked** before it starts retracting. | Letting the jet linger past the lock then retract. |
+| `fade duration (s)` | 0–4 | Over this long the stream **retracts from the tail toward the head** — the head stays pinned to the gem the whole time, the far end disappears first. | The jet drawing back into the gem as it settles. |
+| `colour (tier / hex)` | `tier` or hex | | |
+
+### lock transition
+
+What happens when the reveal moves to **locked** (the **🔒 Lock grade** button / `phase` prop).
+
+| Control | Range | What it changes | Use it for |
+|---|---|---|---|
+| `punch/flash delay (s)` | 0–2 | Beat between the lock trigger and the coupled punch + white flash firing. | Letting the cycle stop before the impact hits. |
+| `speed revert delay (s)` | 0–3 | Beat after the lock before the loop-speed wind-down *starts*. | Holding the fast loop through the punch, then winding down. |
+| `speed revert (s)` | 0–5 | How long the Lottie loop then takes to ease `reveal loop speed ×` → `locked loop speed ×`. | A slow wind-down vs a quick settle. |
+| `↳ ease` | `linear` / `easeIn` / `easeOut` / `easeInOut` | Curve of the speed wind-down. | |
+| `streak/warp fade (s)` | 0–4 | How long the gem streaks + warp streaks take to fade to nothing (the jet has its own timing — see **jet**). | Holding the sparkle a beat longer, or cutting it fast. |
+| `↳ ease` | `linear` / `easeIn` / `easeOut` / `easeInOut` | Curve of the fade. | |
+
+### grade button
+
+The Banner design's **folded button**, centred just below the gem, labelled with the grade tier name. Springs in after the lock.
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `folded button on lock` | toggle | Show it at all (on by default). | |
+| `label (blank = tier name)` | text | Override the label; blank uses the locked grade's name (e.g. "HOLY GRAIL"). | A custom CTA instead of the tier name. |
+| `offset X (px)` | −200–200 | Horizontal nudge from centre. | |
+| `offset Y — overlap (px)` | −120–160 | Gap from the gem's bottom point to the button's top edge. **Negative overlaps** the gem. | How much it tucks under the gem. |
+| `delay after lock (s)` | 0–2 | Beat before it starts springing in. | Landing it after the punch settles. |
+| `from scale` / `from rotate (°)` | 0–1.5 / −45–45 | Where the scale + rotation spring in from. | A pop-and-straighten vs a straight grow. |
+| `settled rotate (°)` | −20–20 | Resting tilt. | A jaunty angle. |
+| `settled scale` | 0.3–2.5 | Resting size. | |
+| `spring stiffness / damping / mass` | 40–1200 / 2–60 / 0.2–4 | The scale + rotate spring (same for both). | Snappy vs loose entrance. |
 
 | Where | Control | What it does |
 |---|---|---|
 | Top-left of the stage | **Stats HUD** | FPS (rolling), JS heap (Chrome only), and the bench bundle size. Click the header to collapse it to a pill. |
 | Below the Stats HUD | **↻ Replay / Drop again** | Re-runs the animation. |
-| Top-right of the stage | **Next ▸** *(Banner)* / **⤓ Pull the floor out** *(Rain)* | Advance the stack without dragging / trigger the dump. |
+| Top-right of the stage | **Next ▸** *(Banner)* · **⤓ Pull the floor out** *(Rain)* · **🔒 Lock grade** + **⚡ White flash** *(Gem, stacked)* | Advance the stack / dump the pile / run the gem's lock transition or fire the coupled punch+flash. **🔒 Lock grade** disables once locked; **↻ Replay reveal** returns to phase 1. |
+| Gem Export folder | **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** | Same lock trigger as the stage button, plus the individual punch / flash / streak triggers. |
 | Bottom dock | **spec cards** | The `copy` panels start **collapsed**; click a card header to expand it. The `copy` button works either way. |

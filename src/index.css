@@ -80,6 +80,10 @@ body {
 .stage-replay:active {
   transform: scale(0.96);
 }
+.stage-replay:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 .stage[data-bg='dark'] {
   background: #0b0b0d;
 }
@@ -802,9 +806,15 @@ body {
   left: auto;
   right: 12px;
 }
-/* Keep the right-side stage button out from under the docked Leva panel. */
+.stage-replay--alt2 {
+  top: 54px; /* stacked directly beneath the white-flash button */
+  left: auto;
+  right: 12px;
+}
+/* Keep the right-side stage buttons out from under the docked Leva panel. */
 @media (min-width: 720px) {
-  .shell[data-panel='expanded'] .stage-replay--alt {
+  .shell[data-panel='expanded'] .stage-replay--alt,
+  .shell[data-panel='expanded'] .stage-replay--alt2 {
     right: 370px;
   }
 }
@@ -839,4 +849,72 @@ body {
   display: block;
   width: 100%;
   height: 100%;
+}
+
+/* ---------- Gem Reveal ---------- */
+
+.gem-stage-inner {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 420px;
+  position: relative;
+  display: flex;
+}
+.gem-reveal {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.gem-reveal__fx {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gem-reveal__gem {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 256px;
+  height: 256px;
+  margin: -128px 0 0 -128px;
+  will-change: transform;
+}
+.gem-reveal__lottie {
+  width: 100%;
+  height: 100%;
+}
+.gem-reveal__lottie svg {
+  display: block;
+}
+/* white / tier flash — a solid diamond covering the gem shape (hides all facet
+   detail), opacity driven per frame. The wrapper carries the CSS blur so the
+   bloom spreads past the clip-path edge (clip-path would otherwise re-crop it). */
+.gem-reveal__flash-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  will-change: filter;
+}
+.gem-reveal__flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: #fff;
+  clip-path: polygon(50% 7%, 87% 50%, 50% 93%, 13% 50%);
+  will-change: opacity;
+}
+
+/* folded grade button — sits just below the gem after the lock; the rAF loop
+   drives transform + opacity. Reuses the Banner `.banner-fold-btn` look. */
+.gem-reveal__btn {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center top;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+  z-index: 3;
 }
