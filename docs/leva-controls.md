@@ -398,10 +398,16 @@ It plays as a **two-phase, developer-triggered sequence**:
 | Control | Range / options | What it changes | Use it for |
 |---|---|---|---|
 | `rest scale` | 0.2–3 | Resting gem size (applied instantly). | Overall size. |
-| `punch to ×` | 0.5–**12** | Where the **✦ punch scale** trigger springs the scale to (then it relaxes back). | A hit / emphasis pulse — now up to a huge slam. |
-| `punch stiffness` | 40–1200 | Punch spring tightness. | |
-| `punch damping` | 2–60 | Punch overshoot. | |
-| `apex colour flash` | `off` / `current grade` / a grade | At the **peak** of the punch, briefly flash the gem that colour (via the flash overlay) and fire the gem-streak burst. | A colour pop at the top of the slam. |
+| `punch to ×` | 0.5–**12** | Peak scale the **✦ punch scale** trigger drives to. | A hit / emphasis pulse — up to a huge slam. |
+| `punch model` | `spring` / `tween` | **spring** = one ballistic kick that overshoots toward `punch to ×` and relaxes back (uses the two *spring:* rows). **tween** = keyframed: ramp up, hold at full, ease back (uses the five *tween:* rows). | A loose bouncy hit vs a precisely-timed hold. |
+| `spring: stiffness` | 40–1200 | Spring tightness. | *(spring model)* |
+| `spring: damping` | 2–60 | Overshoot — lower = more bounce past the peak. | *(spring model)* |
+| `tween: in (s)` | 0.01–2 | Time to ramp `rest scale` → `punch to ×`. | How fast it slams up. |
+| `tween: in ease` | `linear` / `easeIn` / `easeOut` / `easeInOut` | Curve of the ramp-up. | `easeOut` = a fast punch that decelerates into the peak. |
+| `tween: hold at full (s)` | 0–2 | How long it sits at `punch to ×` before easing back. | A held "frozen at max" beat. |
+| `tween: out (s)` | 0.01–3 | Time to ease `punch to ×` → `rest scale`. | A slow melt back vs a quick snap. |
+| `tween: out ease` | `linear` / `easeIn` / `easeOut` / `easeInOut` | Curve of the return. | `easeOut` = decelerate into rest. |
+| `apex colour flash` | `off` / `current grade` / a grade | At the **top** of the punch (peak scale / start of the hold), briefly flash the gem that colour and fire the gem-streak burst. | A colour pop at the top of the slam. |
 | `↳ flash (s)` | 0.05–1 | Length of the apex flash. | |
 
 **Punch and white flash are one event** — a ✦ punch always fires the white flash, and a ⚡ white flash always kicks the punch scale. Tune them together.

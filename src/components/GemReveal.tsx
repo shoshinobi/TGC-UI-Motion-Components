@@ -78,8 +78,18 @@ export type GemRevealConfig = {
   // --- scale + punch ---
   scale: number
   punchTo: number
+  /** `spring` = ballistic kick + relax (punchStiffness/Damping); `tween` = keyframed in / hold / out */
+  punchMode: 'spring' | 'tween'
   punchStiffness: number
   punchDamping: number
+  /** tween: seconds to ramp scale → punchTo */
+  punchInDuration: number
+  punchInEase: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+  /** tween: seconds held at punchTo */
+  punchHold: number
+  /** tween: seconds to ease back punchTo → scale */
+  punchOutDuration: number
+  punchOutEase: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
   /** colour flash at the peak of a punch: off / the current grade / a fixed grade */
   punchFlash: 'off' | 'current' | GemGrade
   punchFlashDuration: number
@@ -206,7 +216,7 @@ export type GemRevealConfig = {
 }
 
 export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
-  tier: 'holyGrail',
+  tier: 'renowned',
   gcHolyGrail: '#ffbf00',
   gcMythic: '#974edb',
   gcIllustrious: '#035bdb',
@@ -219,10 +229,10 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   cycleMinInterval: 0.5,
   cycleFlash: false,
 
-  loopSpeed: 0.5,
-  revealLoopSpeed: 2,
+  loopSpeed: 0.8,
+  revealLoopSpeed: 2.4,
 
-  entryDistance: 760,
+  entryDistance: 1200,
   entryScale: 0,
   entryDelay: 0,
   entryStiffness: 380,
@@ -235,17 +245,23 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   hoverFreqX: 0,
   hoverFreqY: 0.27,
   hoverRotate: 2,
-  hoverWander: 0.35,
+  hoverWander: 0.2,
 
-  scale: 1,
-  punchTo: 12,
+  scale: 0.88,
+  punchTo: 1.3,
+  punchMode: 'tween',
   punchStiffness: 310,
   punchDamping: 25,
+  punchInDuration: 0.1,
+  punchInEase: 'easeIn',
+  punchHold: 0.6,
+  punchOutDuration: 0.37,
+  punchOutEase: 'easeInOut',
   punchFlash: 'current',
-  punchFlashDuration: 0.48,
+  punchFlashDuration: 0.12,
 
-  flashHold: 0.22,
-  flashDuration: 0.76,
+  flashHold: 0.6,
+  flashDuration: 0.05,
   flashBlur: 50,
   flashGlow: 2.2,
   flashStreaks: true,
@@ -254,8 +270,8 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
 
   glow: true,
   glowColor: 'tier',
-  glowSize: 23,
-  glowIntensity: 0.6,
+  glowSize: 24,
+  glowIntensity: 1,
   glowReach: 1.8,
   glowStrength: 2,
   glowPulse: 1,
@@ -266,14 +282,14 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   streakDecel: 0.8,
   streakDelay: 0,
   streakLength: 32,
-  streakWidth: 6,
+  streakWidth: 8,
   streakOpacity: 0.9,
-  streakLife: 0.7,
+  streakLife: 0.8,
   streakColor: '#ffffff',
   streakOnReveal: false,
   streakOnPunch: true,
   streakLoop: false,
-  streakLoopInterval: 0.9,
+  streakLoopInterval: 0.15,
 
   warp: true,
   warpCount: 42,
@@ -288,22 +304,22 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
 
   jet: true,
   jetTracks: 2,
-  jetTrackWidth: 28,
-  jetSpacing: 24,
-  jetLength: 620,
+  jetTrackWidth: 24,
+  jetSpacing: 16,
+  jetLength: 450,
   jetTaper: 0,
   jetColor: 'tier',
-  jetOpacityStart: 0.6,
+  jetOpacityStart: 1,
   jetOpacityEnd: 0,
   jetFadeDelay: 0.65,
-  jetFadeDuration: 0.4,
+  jetFadeDuration: 0.25,
 
-  lockPunchDelay: 0,
-  lockSpeedDelay: 0,
+  lockPunchDelay: 0.12,
+  lockSpeedDelay: 0.28,
   lockSpeedDuration: 0.7,
-  lockSpeedEase: 'easeIn',
-  lockFadeDuration: 0.9,
-  lockFadeEase: 'easeIn',
+  lockSpeedEase: 'easeOut',
+  lockFadeDuration: 1,
+  lockFadeEase: 'easeOut',
 
   button: true,
   buttonLabelOverride: '',
@@ -476,6 +492,8 @@ export function GemReveal({
     let punchS = cfgRef.current.scale
     let punchV = 0
     let prevPunchV = 0
+    let punchClock = -1 // tween mode: seconds since the punch fired (-1 = idle)
+    let punchApexFired = false
     let seenPunch = punchN.current
     let seenFlash = flashN.current
     let seenStreak = streakN.current
@@ -629,20 +647,57 @@ export function GemReveal({
       if (punchTriggered) seenPunch = punchN.current
       if (flashTriggered) seenFlash = flashN.current
       if (punchTriggered || flashTriggered || lockTriggered) {
-        punchV += (cfg.punchTo - punchS) * 6
+        if (cfg.punchMode === 'tween') {
+          punchClock = 0
+          punchApexFired = false
+        } else {
+          punchV += (cfg.punchTo - punchS) * 6
+        }
         fireFlash(FLASH_WHITE, cfg.flashHold, cfg.flashDuration)
         if (cfg.flashStreaks) fireStreaks(resolve(cfg.streakColor, activeHex))
       }
-      prevPunchV = punchV
-      const pf = -cfg.punchStiffness * (punchS - cfg.scale) - cfg.punchDamping * punchV
-      punchV += pf * dt
-      punchS += punchV * dt
-      // apex: velocity crossed from + to − while scaled up
-      if (prevPunchV > 5 && punchV <= 5 && punchS > cfg.scale + 0.05) {
+
+      // effects at the top of the punch (streak burst + optional colour flash)
+      const firePunchApex = () => {
         if (cfg.streakOnPunch) fireStreaks(resolve(cfg.streakColor, activeHex))
         if (cfg.punchFlash !== 'off') {
           const col = cfg.punchFlash === 'current' ? activeHex : gradeColor(cfg, cfg.punchFlash)
           fireFlash(col, cfg.punchFlashDuration * 0.35, cfg.punchFlashDuration)
+        }
+      }
+
+      if (cfg.punchMode === 'tween') {
+        if (punchClock >= 0) {
+          if (!isPaused) punchClock += dt
+          const inD = Math.max(0.001, cfg.punchInDuration)
+          const hold = Math.max(0, cfg.punchHold)
+          const outD = Math.max(0.001, cfg.punchOutDuration)
+          if (!punchApexFired && punchClock >= inD) {
+            punchApexFired = true
+            firePunchApex()
+          }
+          if (punchClock < inD) {
+            punchS = lerp(cfg.scale, cfg.punchTo, EASING[cfg.punchInEase](punchClock / inD))
+          } else if (punchClock < inD + hold) {
+            punchS = cfg.punchTo
+          } else if (punchClock < inD + hold + outD) {
+            const k = (punchClock - inD - hold) / outD
+            punchS = lerp(cfg.punchTo, cfg.scale, EASING[cfg.punchOutEase](k))
+          } else {
+            punchS = cfg.scale
+            punchClock = -1
+          }
+        } else {
+          punchS = cfg.scale
+        }
+      } else {
+        prevPunchV = punchV
+        const pf = -cfg.punchStiffness * (punchS - cfg.scale) - cfg.punchDamping * punchV
+        punchV += pf * dt
+        punchS += punchV * dt
+        // apex: velocity crossed from + to − while scaled up
+        if (prevPunchV > 5 && punchV <= 5 && punchS > cfg.scale + 0.05) {
+          firePunchApex()
         }
       }
 

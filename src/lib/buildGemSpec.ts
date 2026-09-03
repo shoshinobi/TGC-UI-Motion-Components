@@ -103,12 +103,24 @@ export function buildGemJsonSpec(c: GemRevealConfig): string {
         rest: c.scale,
         punch: {
           to: c.punchTo,
-          spring: { stiffness: c.punchStiffness, damping: c.punchDamping },
+          mode: c.punchMode,
+          ...(c.punchMode === 'tween'
+            ? {
+                tween: {
+                  inSec: c.punchInDuration,
+                  inEase: c.punchInEase,
+                  holdSec: c.punchHold,
+                  outSec: c.punchOutDuration,
+                  outEase: c.punchOutEase,
+                  note: 'scale ramps rest → to over inSec, holds at `to` for holdSec, eases back over outSec',
+                },
+              }
+            : { spring: { stiffness: c.punchStiffness, damping: c.punchDamping, note: 'ballistic kick then relax to rest' } }),
           apexFlash:
             c.punchFlash === 'off'
               ? false
               : { colour: c.punchFlash === 'current' ? 'the current grade' : c.punchFlash, durationSec: c.punchFlashDuration },
-          note: 'trigger springs the scale to `punch.to`, relaxes back to `rest`; at the peak it can flash a colour + fire the streak burst',
+          note: 'at the top of the punch it can flash a colour + fire the streak burst',
           coupledWithWhiteFlash: true,
           couplingNote: 'a punch trigger always fires the white flash, and a white-flash trigger always fires the punch — the two are one impact event',
         },

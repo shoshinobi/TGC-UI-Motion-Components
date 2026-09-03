@@ -995,7 +995,7 @@ patch is the same.
 |---|---|---|
 | **entry** | `from below (px)` · `from scale` · `delay` · spring `stiffness / damping / mass` | Y and scale spring together from (below, small) → (centre, `rest scale`). |
 | **hover** | `sine hover` on/off · `amp X/Y` · `freq X/Y` · `rotate sway` · `randomness` | A sine drift, faded in as the entry scale-in finishes. `randomness` drifts the sine phase each frame so it never quite repeats. |
-| **scale** | `rest scale` (instant) · `punch to ×` (up to **12×**) + spring — the **✦ punch scale** button / `scaleSignal` prop | Punch springs the scale up, then relaxes back to rest. **`apex colour flash`** — `off` / the current grade / a fixed grade — briefly flashes the gem that colour at the peak of the punch, and fires the gem-streak burst. **Punch and the white flash are coupled** — either trigger fires both. |
+| **scale** | `rest scale` (instant) · `punch to ×` (up to **12×**) — the **✦ punch scale** button / `scaleSignal` prop. `punch model`: **spring** (ballistic kick + relax, `spring: stiffness/damping`) or **tween** (`tween: in (s)` + ease → `hold at full (s)` → `out (s)` + ease). | Punch drives the scale toward `punch to ×` and returns to rest. **`apex colour flash`** — `off` / current / a grade — flashes the gem that colour at the top of the punch and fires the gem-streak burst. **Punch and the white flash are coupled** — either trigger fires both. |
 
 ## Playback
 
@@ -1153,7 +1153,7 @@ auto-scale; `?c=rain&vp=phone` deep-links one.
 | playback | **reveal loop speed ×** · **locked loop speed ×** |
 | entry | from below (px) · from scale · delay · spring stiffness / damping / mass |
 | hover | sine hover · amp X/Y · freq X/Y · rotate sway · randomness |
-| scale + punch | rest scale · punch to × (≤ 12) · punch stiffness / damping · **apex colour flash** (off / current / grade) · flash (s) |
+| scale + punch | rest scale · punch to × (≤ 12) · **punch model** (spring / tween) · spring: stiffness / damping · tween: in (s) + ease / hold at full (s) / out (s) + ease · **apex colour flash** (off / current / grade) · flash (s) |
 | white flash | hold full (s) · decay (s) · **blur / bloom (px)** · glow spike × · emit gem streaks — *(coupled with ✦ punch scale + the lock)* · **flash on entering the loop + ↳ delay** *(ambient, no punch)* |
 | glow | on/off · colour (tier/hex) · **intensity (0–6)** · **reach (0.5–4× gem)** · blur (≤ 200) · core passes (1–4) · pulse (Hz) — *radial halo + blurred core diamond, no hard shape* |
 | gem streaks | on/off · count · speed · deceleration · delay after land · length / width · opacity · life · colour · fire on reveal / punch apex · **loop during reveal + ↳ interval (s)** |
