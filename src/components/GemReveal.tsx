@@ -915,15 +915,20 @@ export function GemReveal({
         halo.addColorStop(1, hexToRgba(ghex, 0))
         ctx.fillStyle = halo
         ctx.fillRect(cx - haloR, cy - haloR, haloR * 2, haloR * 2)
-        // core — a blurred diamond so the glow still reads as the gem's shape
-        ctx.filter = `blur(${Math.max(1, cfg.glowSize * pulse * 0.8).toFixed(1)}px)`
-        ctx.fillStyle = hexToRgba(ghex, clamp(0.28 * gain, 0, 1))
+        // core — a soft diamond that keeps the gem's silhouette. Drawn as an
+        // off-canvas shape whose *shadow* lands on screen: `ctx.shadowBlur` is
+        // supported everywhere, unlike `ctx.filter` blur (a no-op on iOS Safari
+        // < 18.4), which was leaving a hard-edged fill on mobile.
+        const OFF = 4000
+        ctx.shadowColor = hexToRgba(ghex, clamp(0.5 * gain, 0, 1))
+        ctx.shadowBlur = Math.max(1, cfg.glowSize * pulse)
+        ctx.shadowOffsetX = OFF
+        ctx.fillStyle = '#000'
         for (let i = 0; i < passes; i++) {
-          gemDiamond(cx, cy, dW * 1.06, dH * 1.06)
+          gemDiamond(cx - OFF, cy, dW * 1.02, dH * 1.02)
           ctx.fill()
         }
-        ctx.filter = 'none'
-        ctx.restore()
+        ctx.restore() // clears shadowColor / shadowBlur / shadowOffsetX
       }
 
       // ---- gem streaks (radial burst) ----
