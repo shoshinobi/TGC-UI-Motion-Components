@@ -926,16 +926,20 @@ default** restores the committed values.
 The looping **`gem.lottie`** (256 × 256, 60 fps) rises from the bottom of the
 screen and hovers in the centre, tinted to one of the six grades.
 
-## The sequence (reveal → locked)
+## The sequence (armed → reveal → locked)
 
-The component plays as a **two-phase state machine the developer drives** with the
-`phase` prop (`'reveal'` → `'locked'`). The final grade is whatever the `grade`
-prop / dropdown is set to when the lock fires.
+The component plays as a **three-phase state machine the developer drives** with
+the `phase` prop (`'armed'` → `'reveal'` → `'locked'`). The final grade is
+whatever the `grade` prop / dropdown is set to when the lock fires.
+
+**Phase 0 — armed:** the gem waits off-screen below; nothing plays or renders.
+The dev flips `phase` to `'reveal'` (bench: **🚀 Launch**) to start it.
 
 **Phase 1 — reveal loop:**
 
 - the gem springs up from below and hovers (`entry` + `hover`);
-- **warp streaks** run in the background (full intensity, ramp-up ~0.3 s);
+- **warp streaks** fade on a beat after the gem reaches centre
+  (`warp streaks → fade-on delay / fade-on (s)`);
 - the **jet stream** runs from the gem downward (stays fully on the whole loop);
 - **gem streaks** loop — a burst every `gem streaks → ↳ interval (s)`;
 - the grade **auto-cycles** through the six;
@@ -993,7 +997,7 @@ patch is the same.
 
 | what | control | notes |
 |---|---|---|
-| **entry** | `from below (px)` · `from scale` · `delay` · spring `stiffness / damping / mass` | Y and scale spring together from (below, small) → (centre, `rest scale`). |
+| **entry** | `from below (px)` · `from scale` · `delay` · spring `stiffness / damping / mass` | Y and scale spring together from (below, small) → (centre, `rest scale`) — held frozen until **🚀 Launch** (phase `armed` → `reveal`). |
 | **hover** | `sine hover` on/off · `amp X/Y` · `freq X/Y` · `rotate sway` · `randomness` | A sine drift, faded in as the entry scale-in finishes. `randomness` drifts the sine phase each frame so it never quite repeats. |
 | **scale** | `rest scale` (instant) · `punch to ×` (up to **12×**) — the **✦ punch scale** button / `scaleSignal` prop. `punch model`: **spring** (ballistic kick + relax, `spring: stiffness/damping`) or **tween** (`tween: in (s)` + ease → `hold at full (s)` → `out (s)` + ease). | Punch drives the scale toward `punch to ×` and returns to rest. **`apex colour flash`** — `off` / current / a grade — flashes the gem that colour at the top of the punch and fires the gem-streak burst. **Punch and the white flash are coupled** — either trigger fires both. |
 
@@ -1017,19 +1021,24 @@ and the cycle stops.
 The Banner design's **folded button** (`FoldableButton`), centred just below the
 gem and slightly overlapping it, labelled with the locked grade's tier name (or
 a `label` override). It springs in `grade button → delay after lock (s)` after
-the lock: scale + rotation spring (`from` → `settled`, shared `stiffness /
-damping / mass`), opacity over 0.15 s. `offset X / Y` place it — negative Y
-overlaps the gem. In the bench it's non-interactive (`pointer-events: none`); the
-dev wires the real button.
+the reveal: scale + rotation spring (`from` → `settled`, shared `stiffness /
+damping / mass`), opacity over 0.15 s. **`size (crisp)`** scales the real
+font/height/padding — use it to make the button large without the transform-scale
+blur; **`settled scale (pop)`** is a small transform on top for the entrance.
+`offset X / Y` place it — negative Y overlaps the gem. In the bench it's
+non-interactive (`pointer-events: none`); the dev wires the real button.
 
 ## White flash
 
 An impact event — the **⚡ white flash** button / `flashSignal` prop, the **✦
 punch scale** trigger (the two are coupled — either fires both), the **lock**
-(phase 1 → 2, after `punch/flash delay`), or between grades in the auto-cycle.
-There's also an **ambient** flash option as the gem enters the loop (`flash on
-entering the loop` — whiteout + glow spike + optional streaks, but **no punch**).
-On fire, all at once:
+(after the white blast + `punch/flash delay`), or between grades in the
+auto-cycle. There's also an **ambient** flash option as the gem enters the loop
+(`flash on entering the loop` — whiteout + glow spike + optional streaks, but
+**no punch**), and the lock's optional **white blast** (`lock transition → white
+blast before reveal`): the gem's colour swaps to pure white and the glow spikes,
+building over `↳ blast build (s)`, before the grade colour bursts in — a hard
+beat between the cycling grades and the locked one. On fire, all at once:
 
 - a **solid white diamond** covers the whole gem shape (clip-path overlay),
   hiding every facet, held for `hold full (s)` then decaying over `decay (s)`;
@@ -1048,7 +1057,7 @@ All drawn on one canvas **behind** the gem (plus the flash overlay on top). Each
 |---|---|
 | **glow** | A soft **radial halo wash** + a **CSS-blurred core diamond** that keeps the gem's silhouette (canvas, `lighter` blend). `intensity` (0–6, overall brightness) · `reach` (0.5–4× the gem, how far the halo spreads) · `blur (px)` (core softness) · `core passes` (1–4, core density) · `pulse (Hz)`. **No hard fill** — never a solid shape behind the gem. The halo is a gradient (no per-frame filter) so `reach` / `intensity` scale freely without a framerate hit. |
 | **gem streaks** | The radial **`GEM_streaks` starburst** — `count` thin rounded rects radiating from the gem centre, expanding at `speed (px/s)`, slowing per `deceleration` (0 = constant → 1 = snaps to a stop), fading over `life`. Fires on **reveal arrival**, **every `↳ interval (s)` through the reveal loop** (`loop during reveal`), **punch apex**, **white flash / lock**, and the **✷ emit streaks** trigger. In-flight bursts fade with the lock transition. |
-| **warp streaks** | Vertical speed lines streaming down past the gem (relative motion = gem flying up). `count` · `speed` + `speed variation` · `length` / `width` · `colour` + `colour variation` (hue jitter) · `opacity` + `opacity variation`. **On at full through the reveal loop**, fades 1 → 0 across the lock transition (`lock transition → streak/warp fade`). |
+| **warp streaks** | Vertical speed lines streaming down past the gem (relative motion = gem flying up). `count` · `speed` + `speed variation` · `length` / `width` · `colour` + `colour variation` (hue jitter) · `opacity` + `opacity variation`. **Off until the gem reaches centre**, then fades on after `fade-on delay (s)` over `fade-on (s)`; fades 1 → 0 across the lock transition (`lock transition → streak/warp fade`). |
 | **jet stream** | **1 or 2** tapering vertical gradient tracks from the gem downward (on by default). `track width` · `spacing` (2-track) · `length` · `taper`. **Gradient opacity** — `opacity at gem` → `opacity at tail`. **Stays fully on through the whole reveal loop**; only after the grade is **locked** does it retract — `fade delay after lock (s)` then over `fade duration (s)` the stream **pulls back from the tail toward the head**; the head stays pinned to the gem, the far end goes first. |
 
 ## Config
@@ -1149,6 +1158,7 @@ auto-scale; `?c=rain&vp=phone` deep-links one.
 
 | Group | Controls |
 |---|---|
+| Stage | background (dark / light / **ember**) · **ember colour** · **ember spread (%)** · paused |
 | colour / token | **grade** (6, = the final locked grade) · **grade colours** (6 pickers) · auto-cycle grades · start / min interval · speed-up ramp · white-flash between |
 | playback | **reveal loop speed ×** · **locked loop speed ×** |
 | entry | from below (px) · from scale · delay · spring stiffness / damping / mass |
@@ -1157,15 +1167,15 @@ auto-scale; `?c=rain&vp=phone` deep-links one.
 | white flash | hold full (s) · decay (s) · **blur / bloom (px)** · glow spike × · emit gem streaks — *(coupled with ✦ punch scale + the lock)* · **flash on entering the loop + ↳ delay** *(ambient, no punch)* |
 | glow | on/off · colour (tier/hex) · **intensity (0–6)** · **reach (0.5–4× gem)** · blur (≤ 200) · core passes (1–4) · pulse (Hz) — *radial halo + blurred core diamond, no hard shape* |
 | gem streaks | on/off · count · speed · deceleration · delay after land · length / width · opacity · life · colour · fire on reveal / punch apex · **loop during reveal + ↳ interval (s)** |
-| warp streaks | on/off *(on by default)* · count · speed + variation · length / width · colour + variation · opacity + variation — *full through reveal, fades on lock* |
+| warp streaks | on/off *(on by default)* · count · speed + variation · length / width · colour + variation · opacity + variation · **fade-on delay (s)** / **fade-on (s)** — *off until the gem reaches centre, fades on, then fades on lock* |
 | jet | on/off *(on by default)* · **tracks (1–2)** · track width · spacing · length · taper · opacity at gem / at tail · **fade delay after lock** / duration · colour — *on all reveal, retracts tail→head after lock* |
-| **lock transition** | punch/flash delay (s) · **speed revert delay (s)** · speed revert (s) + ease · streak/warp fade (s) + ease |
-| **grade button** | on/off · label override · offset X / Y (overlap) · delay after lock (s) · from scale / rotate · settled scale / rotate · spring stiffness / damping / mass |
-| Export | ★ save settings · reset to code default · **↻ replay reveal** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** · copy lottie-web wiring · copy JSON tokens · copy config |
+| **lock transition** | **white blast before reveal + ↳ blast build (s)** · punch/flash delay (s) · speed revert delay (s) · speed revert (s) + ease · streak/warp fade (s) + ease |
+| **grade button** | on/off · label override · offset X / Y (overlap) · delay after lock (s) · from scale / rotate · settled rotate · **size (crisp)** · **settled scale (pop)** · spring stiffness / damping / mass |
+| Export | ★ save settings · reset to code default · **↻ replay reveal** · **🚀 launch** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** · copy lottie-web wiring · copy JSON tokens · copy config |
 
 Colour / hover / effects update **live**; entry re-runs on **↻ Replay reveal**.
-Stage buttons (top-right, stacked): **🔒 Lock grade** (runs the reveal → locked
-transition) and **⚡ White flash** (coupled punch + flash). `★ save settings`
+Stage buttons (top-right, stacked): **🔒 Lock grade** (reveal → locked), **⚡
+White flash** (coupled punch + flash), **🚀 Launch** (armed → reveal). `★ save settings`
 persists the panel to `localStorage`. Full descriptions in
 [`docs/leva-controls.md`](docs/leva-controls.md).
 

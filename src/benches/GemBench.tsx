@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useControls, folder, button } from 'leva'
 import { GemReveal, GEM_DEFAULT_CONFIG, type GemRevealConfig } from '@/components/GemReveal'
 import { GEM_GRADES } from '@/lib/gemTiers'
@@ -35,15 +35,17 @@ export function GemBench() {
   const [punch, setPunch] = useState(0)
   const [flash, setFlash] = useState(0)
   const [streak, setStreak] = useState(0)
-  const [phase, setPhase] = useState<'reveal' | 'locked'>('reveal')
+  const [phase, setPhase] = useState<'armed' | 'reveal' | 'locked'>('armed')
 
   const replay = () => {
-    setPhase('reveal')
+    setPhase('armed')
     setNonce((k) => k + 1)
   }
 
   const stage = useControls('Stage', {
-    background: { value: 'dark', options: ['dark', 'light', 'ember'] },
+    background: { value: 'ember', options: ['dark', 'light', 'ember'] },
+    emberColor: { value: '#3a1512', label: 'ember colour' },
+    emberSpread: { value: 60, min: 10, max: 140, step: 2, label: 'ember spread (%)' },
     paused: false,
   })
 
@@ -157,6 +159,8 @@ export function GemBench() {
         warpColorVar: { value: D.warpColorVar, min: 0, max: 1, step: 0.05, label: '↳ colour variation' },
         warpOpacity: { value: D.warpOpacity, min: 0.02, max: 1, step: 0.02, label: 'opacity' },
         warpOpacityVar: { value: D.warpOpacityVar, min: 0, max: 1, step: 0.05, label: '↳ opacity variation' },
+        warpOnDelay: { value: D.warpOnDelay, min: 0, max: 3, step: 0.02, label: 'fade-on delay (after centre) (s)' },
+        warpOnDuration: { value: D.warpOnDuration, min: 0.05, max: 3, step: 0.05, label: 'fade-on (s)' },
       },
       { collapsed: true },
     ),
@@ -178,6 +182,8 @@ export function GemBench() {
     ),
     'lock transition': folder(
       {
+        lockWhiteBlast: { value: D.lockWhiteBlast, label: 'white blast before reveal' },
+        lockWhiteBlastDuration: { value: D.lockWhiteBlastDuration, min: 0, max: 1.5, step: 0.02, label: '↳ blast build (s)' },
         lockPunchDelay: { value: D.lockPunchDelay, min: 0, max: 2, step: 0.02, label: 'punch/flash delay (s)' },
         lockSpeedDelay: { value: D.lockSpeedDelay, min: 0, max: 3, step: 0.02, label: 'speed revert delay (s)' },
         lockSpeedDuration: { value: D.lockSpeedDuration, min: 0, max: 5, step: 0.05, label: 'speed revert (s)' },
@@ -197,7 +203,8 @@ export function GemBench() {
         buttonFromScale: { value: D.buttonFromScale, min: 0, max: 1.5, step: 0.05, label: 'from scale' },
         buttonFromRotate: { value: D.buttonFromRotate, min: -45, max: 45, step: 1, label: 'from rotate (°)' },
         buttonRotate: { value: D.buttonRotate, min: -20, max: 20, step: 0.5, label: 'settled rotate (°)' },
-        buttonScale: { value: D.buttonScale, min: 0.3, max: 2.5, step: 0.05, label: 'settled scale' },
+        buttonSize: { value: D.buttonSize, min: 0.5, max: 6, step: 0.1, label: 'size (crisp)' },
+        buttonScale: { value: D.buttonScale, min: 0.3, max: 2.5, step: 0.05, label: 'settled scale (pop)' },
         buttonStiffness: { value: D.buttonStiffness, min: 40, max: 1200, step: 10, label: 'spring stiffness' },
         buttonDamping: { value: D.buttonDamping, min: 2, max: 60, step: 1, label: 'spring damping' },
         buttonMass: { value: D.buttonMass, min: 0.2, max: 4, step: 0.1, label: 'spring mass' },
@@ -246,7 +253,8 @@ export function GemBench() {
       replay()
     }),
     'replay reveal': button(() => replay()),
-    '🔒 lock grade': button(() => setPhase('locked')),
+    '🚀 launch': button(() => setPhase((p) => (p === 'armed' ? 'reveal' : p))),
+    '🔒 lock grade': button(() => setPhase((p) => (p === 'reveal' ? 'locked' : p))),
     '✦ punch scale': button(() => setPunch((p) => p + 1)),
     '⚡ white flash': button(() => setFlash((f) => f + 1)),
     '✷ emit streaks': button(() => setStreak((s) => s + 1)),
@@ -259,7 +267,11 @@ export function GemBench() {
 
   return (
     <>
-      <div className='stage' data-bg={stage.background}>
+      <div
+        className='stage'
+        data-bg={stage.background}
+        style={{ '--ember': stage.emberColor, '--ember-spread': `${stage.emberSpread}%` } as CSSProperties}
+      >
         <button type='button' className='stage-replay' onClick={replay}>
           ↻ Replay reveal
         </button>
@@ -267,7 +279,7 @@ export function GemBench() {
           type='button'
           className='stage-replay stage-replay--alt'
           onClick={() => setPhase('locked')}
-          disabled={phase === 'locked'}
+          disabled={phase !== 'reveal'}
         >
           🔒 Lock grade
         </button>
@@ -277,6 +289,14 @@ export function GemBench() {
           onClick={() => setFlash((f) => f + 1)}
         >
           ⚡ White flash
+        </button>
+        <button
+          type='button'
+          className='stage-replay stage-replay--alt3'
+          onClick={() => setPhase('reveal')}
+          disabled={phase !== 'armed'}
+        >
+          🚀 Launch
         </button>
         <div className='gem-stage-inner'>
           <GemReveal

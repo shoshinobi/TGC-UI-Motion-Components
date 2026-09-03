@@ -146,7 +146,7 @@ export type GemRevealConfig = {
   /** seconds between reveal-loop bursts */
   streakLoopInterval: number
 
-  // --- warp streaks (upward-flight speed lines, gated by the gem's speed) ---
+  // --- warp streaks (upward-flight speed lines) ---
   warp: boolean
   warpCount: number
   /** base downward speed, px/s */
@@ -161,6 +161,10 @@ export type GemRevealConfig = {
   warpOpacity: number
   /** 0–1 per-streak opacity variation */
   warpOpacityVar: number
+  /** seconds after the gem reaches centre before the warp starts fading on */
+  warpOnDelay: number
+  /** seconds the warp takes to fade on */
+  warpOnDuration: number
 
   // --- jet stream ---
   jet: boolean
@@ -194,6 +198,10 @@ export type GemRevealConfig = {
   /** seconds for the gem + warp streaks to fade to nothing */
   lockFadeDuration: number
   lockFadeEase: 'linear' | 'easeIn' | 'easeOut' | 'easeInOut'
+  /** blow the gem to pure white + spike the glow for a beat before the grade snaps in */
+  lockWhiteBlast: boolean
+  /** seconds the white blast builds before the punch + grade reveal */
+  lockWhiteBlastDuration: number
 
   // --- grade button (folded button, on lock) ---
   button: boolean
@@ -208,15 +216,17 @@ export type GemRevealConfig = {
   buttonFromRotate: number
   /** settled tilt, ° */
   buttonRotate: number
-  /** settled scale */
+  /** settled scale — a transform on top of `buttonSize` (keep near 1 to stay crisp) */
   buttonScale: number
+  /** real size multiplier — scales the button's font/height/padding so it stays sharp when large */
+  buttonSize: number
   buttonStiffness: number
   buttonDamping: number
   buttonMass: number
 }
 
 export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
-  tier: 'renowned',
+  tier: 'illustrious',
   gcHolyGrail: '#ffbf00',
   gcMythic: '#974edb',
   gcIllustrious: '#035bdb',
@@ -261,9 +271,9 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   punchFlashDuration: 0.12,
 
   flashHold: 0.6,
-  flashDuration: 0.05,
-  flashBlur: 50,
-  flashGlow: 2.2,
+  flashDuration: 0.15,
+  flashBlur: 24,
+  flashGlow: 1.5,
   flashStreaks: true,
   revealFlash: false,
   revealFlashDelay: 0,
@@ -301,6 +311,8 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   warpColorVar: 1,
   warpOpacity: 0.36,
   warpOpacityVar: 1,
+  warpOnDelay: 0,
+  warpOnDuration: 0.15,
 
   jet: true,
   jetTracks: 2,
@@ -320,6 +332,8 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   lockSpeedEase: 'easeOut',
   lockFadeDuration: 1,
   lockFadeEase: 'easeOut',
+  lockWhiteBlast: true,
+  lockWhiteBlastDuration: 0.05,
 
   button: true,
   buttonLabelOverride: '',
@@ -330,6 +344,7 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   buttonFromRotate: -6,
   buttonRotate: 2,
   buttonScale: 1,
+  buttonSize: 1,
   buttonStiffness: 230,
   buttonDamping: 38,
   buttonMass: 2.7,
@@ -367,11 +382,12 @@ export type GemRevealProps = {
   /** change to replay the reveal from the start */
   runKey?: string | number
   /**
+   * `'armed'` — the gem waits below the screen; nothing plays until launch.
    * `'reveal'` — the gem rises + hovers, effects run, grade auto-cycles.
-   * `'locked'` — the dev has chosen the final grade: punch, snap to it, fade the
-   * effects, ease the loop speed back, spring the folded grade button in.
+   * `'locked'` — the dev has chosen the final grade: a white blast, punch, snap
+   * to it, fade the effects, ease the loop speed back, spring the button in.
    */
-  phase?: 'reveal' | 'locked'
+  phase?: 'armed' | 'reveal' | 'locked'
   /** bump to punch the scale */
   scaleSignal?: number
   /** bump to fire the white flash */
@@ -384,7 +400,7 @@ export function GemReveal({
   config,
   paused = false,
   runKey,
-  phase = 'reveal',
+  phase = 'armed',
   scaleSignal = 0,
   flashSignal = 0,
   streakSignal = 0,
@@ -501,9 +517,10 @@ export function GemReveal({
     let warpIntensity = 0
     let revealFlashAt = -1
     // phase machine
-    let seenPhase: 'reveal' | 'locked' = phaseRef.current
+    let seenPhase: 'armed' | 'reveal' | 'locked' = phaseRef.current
     let lockedAt = phaseRef.current === 'locked' ? 0 : -1
     let lockPunchFired = false
+    let blastActive = false
     let streakLoopNextAt = 0
     // folded grade button springs
     let btnScale = cfgRef.current.buttonFromScale
@@ -553,19 +570,31 @@ export function GemReveal({
       lastT = now
       const cfg = cfgRef.current
       const isPaused = pausedRef.current
-      if (!isPaused) simTime += dt
+      const phase = phaseRef.current
+      // 'armed' freezes the whole sequence — nothing plays until launch
+      const running = phase !== 'armed' && !isPaused
+      if (running) simTime += dt
 
       // ---- phase machine ----
-      const phase = phaseRef.current
-      if (phase === 'locked' && seenPhase === 'reveal') {
+      if (phase === 'locked' && seenPhase !== 'locked') {
         seenPhase = 'locked'
         lockedAt = simTime
+        if (cfg.lockWhiteBlast && cfg.lockWhiteBlastDuration > 0) {
+          blastActive = true
+          activeHex = FLASH_WHITE
+          loadGem(FLASH_WHITE, anim?.currentFrame ?? 0)
+        }
       }
       const locked = phase === 'locked' && lockedAt >= 0
-      // effects fade 1 → 0 across the lock transition
+      const blastDur = cfg.lockWhiteBlast ? cfg.lockWhiteBlastDuration : 0
+      // 0 → 1 as the white blast builds toward the reveal
+      const blastK = blastActive
+        ? clamp((simTime - lockedAt) / Math.max(0.05, cfg.lockWhiteBlastDuration), 0, 1)
+        : 0
+      // effects fade 1 → 0 across the lock transition (starts after the blast)
       const lockFade =
         locked && cfg.lockFadeDuration > 0
-          ? 1 - EASING[cfg.lockFadeEase](clamp((simTime - lockedAt) / cfg.lockFadeDuration, 0, 1))
+          ? 1 - EASING[cfg.lockFadeEase](clamp((simTime - lockedAt - blastDur) / cfg.lockFadeDuration, 0, 1))
           : locked
             ? 0
             : 1
@@ -584,7 +613,7 @@ export function GemReveal({
           cycleInterval = Math.max(cfg.cycleMinInterval, cycleInterval * (1 - cfg.cycleRamp * 0.25))
           cycleNextAt = simTime + cycleInterval
         }
-      } else if (gradeHexNow !== activeHex) {
+      } else if (!blastActive && gradeHexNow !== activeHex) {
         activeHex = gradeHexNow
         loadGem(activeHex, anim?.currentFrame ?? 0)
         cycleIdx = 0
@@ -596,7 +625,7 @@ export function GemReveal({
       if (!isPaused && anim) {
         let speed = cfg.revealLoopSpeed
         if (locked) {
-          const elapsed = simTime - lockedAt - cfg.lockSpeedDelay
+          const elapsed = simTime - lockedAt - blastDur - cfg.lockSpeedDelay
           if (elapsed >= 0) {
             const t = cfg.lockSpeedDuration > 0 ? clamp(elapsed / cfg.lockSpeedDuration, 0, 1) : 1
             speed = lerp(cfg.revealLoopSpeed, cfg.loopSpeed, EASING[cfg.lockSpeedEase](t))
@@ -609,8 +638,8 @@ export function GemReveal({
       }
 
       // ---- entry spring (Y + scale-in) ----
-      const revealing = simTime >= cfg.entryDelay
-      if (!isPaused && revealing) {
+      const revealing = phase !== 'armed' && simTime >= cfg.entryDelay
+      if (running && revealing) {
         const spring = (pos: number, vel: number, target: number) => {
           const F = -cfg.entryStiffness * (pos - target) - cfg.entryDamping * vel
           const nv = vel + (F / Math.max(0.05, cfg.entryMass)) * dt
@@ -620,7 +649,7 @@ export function GemReveal({
         ;[entryS, entrySv] = spring(entryS, entrySv, cfg.scale)
       }
       // reveal arrival — once the scale-in is essentially done
-      if (arrivedAt < 0 && entryS >= cfg.scale * 0.985 && Math.abs(entryVy) < 40) {
+      if (arrivedAt < 0 && phase !== 'armed' && entryS >= cfg.scale * 0.985 && Math.abs(entryVy) < 40) {
         arrivedAt = simTime
         streakLoopNextAt = simTime + Math.max(0.15, cfg.streakLoopInterval)
         if (cfg.streakOnReveal) {
@@ -638,15 +667,21 @@ export function GemReveal({
       // ---- punch spring + white flash (coupled: either trigger fires both) ----
       const punchTriggered = punchN.current !== seenPunch
       const flashTriggered = flashN.current !== seenFlash
-      // the lock does a coupled punch + flash once, after lockPunchDelay
+      // the lock does a coupled punch + flash once, after the white blast + lockPunchDelay
       let lockTriggered = false
-      if (locked && !lockPunchFired && simTime >= lockedAt + cfg.lockPunchDelay) {
+      if (locked && !lockPunchFired && simTime >= lockedAt + blastDur + cfg.lockPunchDelay) {
         lockPunchFired = true
         lockTriggered = true
       }
       if (punchTriggered) seenPunch = punchN.current
       if (flashTriggered) seenFlash = flashN.current
       if (punchTriggered || flashTriggered || lockTriggered) {
+        if (lockTriggered && blastActive) {
+          // blast done — reveal the locked grade colour under the flash
+          blastActive = false
+          activeHex = gradeColor(cfg, cfg.tier)
+          loadGem(activeHex, anim?.currentFrame ?? 0)
+        }
         if (cfg.punchMode === 'tween') {
           punchClock = 0
           punchApexFired = false
@@ -743,13 +778,22 @@ export function GemReveal({
         flashK = ft < overlay.hold ? 1 : Math.max(0, 1 - (ft - overlay.hold) / overlay.dur)
         if (flashK <= 0) overlay = null
       }
-      flashEl.style.opacity = flashK.toFixed(3)
-      flashEl.style.background = overlay?.color ?? FLASH_WHITE
+      // the white blast washes the gem white as it builds (eased-in), on top of any overlay
+      const whiteK = Math.max(overlay?.color === FLASH_WHITE ? flashK : 0, EASING.easeIn(blastK) * 0.9)
+      const overlayK = Math.max(flashK, EASING.easeIn(blastK) * 0.9)
+      flashEl.style.opacity = overlayK.toFixed(3)
+      flashEl.style.background = overlay && overlay.color !== FLASH_WHITE ? overlay.color : FLASH_WHITE
       // blur lives on the (unclipped) wrapper so it blooms past the diamond edge
-      flashWrap.style.filter = cfg.flashBlur > 0 && flashK > 0 ? `blur(${cfg.flashBlur}px)` : ''
+      flashWrap.style.filter = cfg.flashBlur > 0 && overlayK > 0 ? `blur(${cfg.flashBlur}px)` : ''
 
       // ================= effects canvas =================
       ctx.clearRect(0, 0, size.w, size.h)
+      // 'armed' — the gem waits off-screen, no effects until launch
+      if (phase === 'armed') {
+        btnEl.style.opacity = '0'
+        raf = requestAnimationFrame(tick)
+        return
+      }
       const cx = size.w / 2 + gx
       const cy = size.h / 2 + gy
       const gemPx = 210 * (gs / cfg.scale) * cfg.scale
@@ -768,9 +812,20 @@ export function GemReveal({
           })
         }
         if (warpStreaks.length > Math.round(cfg.warpCount)) warpStreaks.length = Math.round(cfg.warpCount)
-        // on in the background through the reveal loop, fades out across the lock
+        // fades on a beat after the gem reaches centre, then out across the lock
         if (!isPaused) {
-          warpIntensity = locked ? lockFade : Math.min(1, warpIntensity + dt / 0.3)
+          if (locked) {
+            warpIntensity = lockFade
+          } else if (arrivedAt < 0) {
+            warpIntensity = 0
+          } else {
+            const on = clamp(
+              (simTime - arrivedAt - cfg.warpOnDelay) / Math.max(0.01, cfg.warpOnDuration),
+              0,
+              1,
+            )
+            warpIntensity = EASING.easeInOut(on)
+          }
         }
         if (warpIntensity > 0.01) {
           const base = asHex(cfg.warpColor, activeHex)
@@ -845,7 +900,8 @@ export function GemReveal({
         glowPhase += dt * TAU * cfg.glowPulse
         const pulse = cfg.glowPulse > 0 ? 0.6 + 0.4 * (0.5 + 0.5 * Math.sin(glowPhase)) : 1
         const ghex = asHex(resolve(cfg.glowColor, activeHex), activeHex)
-        const spike = overlay?.color === FLASH_WHITE ? 1 + cfg.flashGlow * flashK : 1
+        // the white flash and the pre-lock blast both spike the glow
+        const spike = 1 + cfg.flashGlow * whiteK
         const gain = cfg.glowIntensity * pulse * spike
         const reach = clamp(cfg.glowReach, 0.5, 4)
         const passes = Math.round(clamp(cfg.glowStrength, 1, 4))
@@ -900,9 +956,9 @@ export function GemReveal({
         }
       }
 
-      // ---- folded grade button (springs in after lock) ----
-      const btnActive = cfg.button && locked && simTime >= lockedAt + cfg.buttonDelay
-      if (btnActive && !isPaused) {
+      // ---- folded grade button (springs in after the reveal) ----
+      const btnActive = cfg.button && locked && simTime >= lockedAt + blastDur + cfg.buttonDelay
+      if (btnActive && running) {
         const mass = Math.max(0.05, cfg.buttonMass)
         const fS = -cfg.buttonStiffness * (btnScale - cfg.buttonScale) - cfg.buttonDamping * btnScaleV
         btnScaleV += (fS / mass) * dt
@@ -913,9 +969,11 @@ export function GemReveal({
         btnOpacity = Math.min(1, btnOpacity + dt / 0.15)
       }
       if (cfg.button) {
+        const btnFs = 14 * Math.max(0.2, cfg.buttonSize)
         // sit just under the gem's bottom point; offsetY < 0 overlaps the gem
         const gemBottom = size.h / 2 + gemPx * 0.41
-        const btnCentreY = gemBottom + cfg.buttonOffsetY + 19 - size.h / 2
+        const btnCentreY = gemBottom + cfg.buttonOffsetY + btnFs * 1.35 - size.h / 2
+        btnEl.style.setProperty('--gem-btn-fs', `${btnFs.toFixed(2)}px`)
         btnEl.style.opacity = btnOpacity.toFixed(3)
         btnEl.style.transform = `translate(-50%, -50%) translate(${cfg.buttonOffsetX.toFixed(1)}px, ${btnCentreY.toFixed(1)}px) scale(${btnScale.toFixed(4)}) rotate(${btnRot.toFixed(2)}deg)`
       } else {

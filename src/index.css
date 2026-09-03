@@ -91,7 +91,12 @@ body {
   background: #f4f4f5;
 }
 .stage[data-bg='ember'] {
-  background: radial-gradient(60% 60% at 50% 100%, #3a1512 0%, #120a09 60%, #0b0b0d 100%);
+  /* `--ember` / `--ember-spread` are driven by the Gem bench Stage controls */
+  background: radial-gradient(
+    var(--ember-spread, 60%) var(--ember-spread, 60%) at 50% 100%,
+    var(--ember, #3a1512) 0%,
+    #0b0b0d 78%
+  );
 }
 
 /* margin:auto centres the block and keeps it fully scrollable when it
@@ -807,14 +812,20 @@ body {
   right: 12px;
 }
 .stage-replay--alt2 {
-  top: 54px; /* stacked directly beneath the white-flash button */
+  top: 54px; /* stacked directly beneath the lock button */
+  left: auto;
+  right: 12px;
+}
+.stage-replay--alt3 {
+  top: 96px; /* stacked beneath the white-flash button */
   left: auto;
   right: 12px;
 }
 /* Keep the right-side stage buttons out from under the docked Leva panel. */
 @media (min-width: 720px) {
   .shell[data-panel='expanded'] .stage-replay--alt,
-  .shell[data-panel='expanded'] .stage-replay--alt2 {
+  .shell[data-panel='expanded'] .stage-replay--alt2,
+  .shell[data-panel='expanded'] .stage-replay--alt3 {
     right: 370px;
   }
 }
@@ -917,4 +928,37 @@ body {
   pointer-events: none;
   will-change: transform, opacity;
   z-index: 3;
+}
+/* `--gem-btn-fs` (set per frame from `buttonSize`) scales the *real* dimensions
+   so the button stays crisp when large — the transform scale is just the pop. */
+.gem-reveal__btn .banner-fold-btn {
+  height: calc(var(--gem-btn-fs, 14px) * 2.7);
+  padding: 0 calc(var(--gem-btn-fs, 14px) * 1.3);
+  border-radius: calc(var(--gem-btn-fs, 14px) * 0.78);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--gem-btn-fs, 14px) * 0.86) 0,
+    100% calc(var(--gem-btn-fs, 14px) * 0.86),
+    100% 100%,
+    0 100%
+  );
+}
+.gem-reveal__btn .banner-fold-btn::before {
+  inset: calc(var(--gem-btn-fs, 14px) * 0.21);
+  border-width: max(2px, calc(var(--gem-btn-fs, 14px) * 0.14));
+  border-radius: calc(var(--gem-btn-fs, 14px) * 0.57);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--gem-btn-fs, 14px) * 0.64) 0,
+    100% calc(var(--gem-btn-fs, 14px) * 0.64),
+    100% 100%,
+    0 100%
+  );
+}
+.gem-reveal__btn .banner-fold-btn__patch {
+  width: calc(var(--gem-btn-fs, 14px) * 0.86);
+  height: calc(var(--gem-btn-fs, 14px) * 0.86);
+}
+.gem-reveal__btn .banner-fold-btn__label {
+  font-size: var(--gem-btn-fs, 14px);
 }

@@ -19,7 +19,9 @@ changes what you see so you can dial in numbers to hand back.
 
 | Control | Type | What it does |
 |---|---|---|
-| `background` | select `dark` / `light` / `ember` | Stage backdrop only — never exported. `ember` is a dark-red radial gradient for checking glow and contrast. |
+| `background` | select `dark` / `light` / `ember` | Stage backdrop only — never exported. `ember` is a radial gradient rising from the bottom edge (default a dark-red glow) for checking how the gem reads against a tinted backdrop. |
+| `ember colour` *(Gem)* | colour | The hot colour of the `ember` gradient. Pick anything to test the gem against different background tones. |
+| `ember spread (%)` *(Gem)* | 10–140 | How far the ember gradient reaches — small = a tight glow at the bottom, large = the colour fills most of the frame (near-flat wash). |
 | `paused` | toggle | Freezes the animation / simulation in place. |
 | `viewport` | select `phone` / `tablet` / `full` | *(Feedback Sheet, Banner Stack, Particle Rain)* Frames the preview at a device width (≈390 / ≈640–720 / full). For Particle Rain it also feeds the responsive auto-scale, so you see real per-size counts. |
 
@@ -341,17 +343,20 @@ The looping `gem.lottie` rises from below and hovers, tinted via its `gemColor`
 slot. See [the README section](../README.md#gem-reveal). Colour / hover / effects
 update live; the entry re-runs on **↻ Replay reveal**.
 
-It plays as a **two-phase, developer-triggered sequence**:
+It plays as a **three-phase, developer-triggered sequence** (the `phase` prop):
 
+- **armed** — the gem waits off-screen; nothing plays or renders. The **🚀
+  Launch** stage button starts it.
 - **reveal** — the gem rises and hovers; warp streaks + the jet stream run in the
   background; gem streaks loop; the grade auto-cycles; the Lottie loop runs at
   `reveal loop speed ×`. Optionally a white flash fires as it settles in
   (`white flash → flash on entering the loop`).
 - **locked** — the **🔒 Lock grade** stage button (or the `phase` prop) fires the
-  transition: a coupled punch + white flash, the grade snaps to the `grade`
-  dropdown, gem + warp streaks fade off, the jet retracts (its own timing), the
-  loop speed eases to `locked loop speed ×`, and the folded grade button springs
-  in below the gem. **↻ Replay reveal** returns to phase 1.
+  transition: an optional **white blast** (the gem flares pure white for a beat),
+  then a coupled punch + white flash, the grade snaps to the `grade` dropdown,
+  gem + warp streaks fade off, the jet retracts, the loop speed eases to `locked
+  loop speed ×`, and the folded grade button springs in below the gem. **↻
+  Replay reveal** returns to phase 1 (armed).
 
 ### colour / token
 
@@ -462,7 +467,7 @@ The `GEM_streaks` shape — thin rects radiating from the gem centre, expanding 
 
 ### warp streaks (upward-flight lines)
 
-Vertical speed lines streaming down past the gem — relative motion reads as the gem flying up. **On at full through the reveal loop** (ramps up over ~0.3s), then fades 1 → 0 across the lock transition (**lock transition → streak/warp fade**).
+Vertical speed lines streaming down past the gem — relative motion reads as the gem flying up. **Off until the gem reaches centre**, then fades on a beat later; fades 1 → 0 across the lock transition (**lock transition → streak/warp fade**).
 
 | Control | Range / options | What it changes | Use it for |
 |---|---|---|---|
@@ -475,6 +480,8 @@ Vertical speed lines streaming down past the gem — relative motion reads as th
 | `↳ colour variation` | 0–1 | Per-streak hue jitter (± this × 60°). | A prismatic warp. |
 | `opacity` | 0.02–1 | Base opacity. | |
 | `↳ opacity variation` | 0–1 | Per-streak opacity spread. | Depth. |
+| `fade-on delay (after centre) (s)` | 0–3 | Beat between the gem reaching centre and the warp starting to appear. | Letting the gem settle before the speed lines kick in. |
+| `fade-on (s)` | 0.05–3 | How long the warp takes to fade on (easeInOut). | A gentle build vs a snap. |
 
 ### jet
 
@@ -493,12 +500,14 @@ Vertical speed lines streaming down past the gem — relative motion reads as th
 
 ### lock transition
 
-What happens when the reveal moves to **locked** (the **🔒 Lock grade** button / `phase` prop).
+What happens when the reveal moves to **locked** (the **🔒 Lock grade** button / `phase` prop). Everything below `blast build` is timed from the *end* of the blast.
 
 | Control | Range | What it changes | Use it for |
 |---|---|---|---|
-| `punch/flash delay (s)` | 0–2 | Beat between the lock trigger and the coupled punch + white flash firing. | Letting the cycle stop before the impact hits. |
-| `speed revert delay (s)` | 0–3 | Beat after the lock before the loop-speed wind-down *starts*. | Holding the fast loop through the punch, then winding down. |
+| `white blast before reveal` | toggle | On lock, swap the gem to **pure white** and spike the glow, building for `↳ blast build (s)`, *then* the grade colour bursts in under the flash. | A hard "transformation" beat between the cycling grades and the locked one. |
+| `↳ blast build (s)` | 0–1.5 | How long the white blast builds before the punch + grade reveal. | A quick strobe vs a held charge-up. |
+| `punch/flash delay (s)` | 0–2 | Beat between the blast ending and the coupled punch + white flash firing. | |
+| `speed revert delay (s)` | 0–3 | Beat after the blast before the loop-speed wind-down *starts*. | Holding the fast loop through the punch, then winding down. |
 | `speed revert (s)` | 0–5 | How long the Lottie loop then takes to ease `reveal loop speed ×` → `locked loop speed ×`. | A slow wind-down vs a quick settle. |
 | `↳ ease` | `linear` / `easeIn` / `easeOut` / `easeInOut` | Curve of the speed wind-down. | |
 | `streak/warp fade (s)` | 0–4 | How long the gem streaks + warp streaks take to fade to nothing (the jet has its own timing — see **jet**). | Holding the sparkle a beat longer, or cutting it fast. |
@@ -514,16 +523,17 @@ The Banner design's **folded button**, centred just below the gem, labelled with
 | `label (blank = tier name)` | text | Override the label; blank uses the locked grade's name (e.g. "HOLY GRAIL"). | A custom CTA instead of the tier name. |
 | `offset X (px)` | −200–200 | Horizontal nudge from centre. | |
 | `offset Y — overlap (px)` | −120–160 | Gap from the gem's bottom point to the button's top edge. **Negative overlaps** the gem. | How much it tucks under the gem. |
-| `delay after lock (s)` | 0–2 | Beat before it starts springing in. | Landing it after the punch settles. |
+| `delay after lock (s)` | 0–2 | Beat (from the end of the blast) before it starts springing in. | Landing it after the punch settles. |
 | `from scale` / `from rotate (°)` | 0–1.5 / −45–45 | Where the scale + rotation spring in from. | A pop-and-straighten vs a straight grow. |
 | `settled rotate (°)` | −20–20 | Resting tilt. | A jaunty angle. |
-| `settled scale` | 0.3–2.5 | Resting size. | |
+| `size (crisp)` | 0.5–6 | Scales the button's **real** font / height / padding, so it stays sharp at any size. Use this to make it big. | A large legible tier badge. |
+| `settled scale (pop)` | 0.3–2.5 | A transform scale *on top of* `size` — keep near 1 (transform scale blurs when large). | The resting point of the pop-in. |
 | `spring stiffness / damping / mass` | 40–1200 / 2–60 / 0.2–4 | The scale + rotate spring (same for both). | Snappy vs loose entrance. |
 
 | Where | Control | What it does |
 |---|---|---|
 | Top-left of the stage | **Stats HUD** | FPS (rolling), JS heap (Chrome only), and the bench bundle size. Click the header to collapse it to a pill. |
 | Below the Stats HUD | **↻ Replay / Drop again** | Re-runs the animation. |
-| Top-right of the stage | **Next ▸** *(Banner)* · **⤓ Pull the floor out** *(Rain)* · **🔒 Lock grade** + **⚡ White flash** *(Gem, stacked)* | Advance the stack / dump the pile / run the gem's lock transition or fire the coupled punch+flash. **🔒 Lock grade** disables once locked; **↻ Replay reveal** returns to phase 1. |
-| Gem Export folder | **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** | Same lock trigger as the stage button, plus the individual punch / flash / streak triggers. |
+| Top-right of the stage | **Next ▸** *(Banner)* · **⤓ Pull the floor out** *(Rain)* · **🔒 Lock grade** + **⚡ White flash** + **🚀 Launch** *(Gem, stacked)* | Advance the stack / dump the pile / run the gem's lock transition, fire the coupled punch+flash, or start the reveal. **🚀 Launch** (armed → reveal) and **🔒 Lock grade** (reveal → locked) each disable once past their phase; **↻ Replay reveal** returns to armed. |
+| Gem Export folder | **🚀 launch** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** | Same phase triggers as the stage buttons, plus the individual punch / flash / streak triggers. |
 | Bottom dock | **spec cards** | The `copy` panels start **collapsed**; click a card header to expand it. The `copy` button works either way. |

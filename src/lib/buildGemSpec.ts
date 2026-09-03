@@ -45,35 +45,46 @@ export function buildGemJsonSpec(c: GemRevealConfig): string {
         note: 'Lottie `setSpeed` — runs at `revealLoopSpeed` through the reveal loop, eases to `lockedLoopSpeed` across the lock transition (see `sequence.lockTransition.speed`)',
       },
       sequence: {
-        note: 'a two-phase, developer-driven state machine',
+        note: 'a three-phase, developer-driven state machine (the `phase` prop)',
         phases: {
+          armed: 'the gem waits off-screen below; nothing plays or renders until launch',
           reveal:
-            'gem rises + hovers; warp streaks on in the background; gem streaks loop; grade auto-cycles; loop speed = revealLoopSpeed',
+            'gem rises + hovers; jet on in the background; warp streaks fade on a beat after the gem reaches centre; gem streaks loop; grade auto-cycles; loop speed = revealLoopSpeed',
           locked:
-            'dev has chosen the final grade → punch + white flash, snap to that grade, fade the streaks + warp, ease the loop speed back, spring the folded grade button in',
+            'dev has chosen the final grade → white blast, punch + white flash, snap to that grade, fade the streaks + warp + jet, ease the loop speed back, spring the folded grade button in',
         },
-        trigger: 'the app moves the component from phase `reveal` to `locked` (with the chosen grade set)',
+        trigger:
+          'the app moves `phase` armed → reveal (launch) then reveal → locked (with the chosen grade set)',
         lockTransition: {
+          whiteBlast: c.lockWhiteBlast
+            ? {
+                buildSec: c.lockWhiteBlastDuration,
+                note: 'the gem colour swaps to pure white and the glow spikes, building over `buildSec`, then the grade colour bursts in under the flash — the rest of the transition timings below are measured from the end of the blast',
+              }
+            : false,
           punchDelaySec: c.lockPunchDelay,
-          punchNote: 'the coupled punch + white flash fire this long after the lock trigger',
+          punchNote: 'the coupled punch + white flash fire this long after the blast (or after the lock if no blast)',
           speed: {
             delaySec: c.lockSpeedDelay,
             durationSec: c.lockSpeedDuration,
             ease: c.lockSpeedEase,
-            note: 'currentSpeed eases revealLoopSpeed → lockedLoopSpeed, starting `delaySec` after the lock',
+            note: 'currentSpeed eases revealLoopSpeed → lockedLoopSpeed, starting `delaySec` after the blast',
           },
           fade: {
             durationSec: c.lockFadeDuration,
             ease: c.lockFadeEase,
-            note: 'gem streaks + warp streaks fade 1 → 0 over this; the jet has its own fade (see `jet.fadeOff`)',
+            note: 'gem streaks + warp streaks fade 1 → 0 over this (starts after the blast); the jet has its own fade (see `jet.fadeOff`)',
           },
         },
         gradeButton: c.button
           ? {
               label: c.buttonLabelOverride.trim() || 'the locked grade tier name',
+              sizeMultiplier: c.buttonSize,
+              sizeNote: 'scales the real font/height/padding (crisp when large); `settled.scale` is a transform on top for the pop',
               offsetPx: { x: c.buttonOffsetX, y: c.buttonOffsetY },
               offsetNote: 'y is the gap from the gem bottom point to the button top — negative overlaps the gem',
               delaySec: c.buttonDelay,
+              delayNote: 'measured from the end of the blast',
               from: { scale: c.buttonFromScale, rotateDeg: c.buttonFromRotate },
               settled: { scale: c.buttonScale, rotateDeg: c.buttonRotate },
               spring: { stiffness: c.buttonStiffness, damping: c.buttonDamping, mass: c.buttonMass },
@@ -187,8 +198,9 @@ export function buildGemJsonSpec(c: GemRevealConfig): string {
             colourVariationNote: '± this × 60° hue jitter per streak',
             opacity: c.warpOpacity,
             opacityVariation: c.warpOpacityVar,
+            fadeOn: { afterCentreSec: c.warpOnDelay, durationSec: c.warpOnDuration, ease: 'easeInOut' },
             intensityNote:
-              'on at full through the reveal loop (ramps up over ~0.3s); fades 1 → 0 across the lock transition (see `sequence.lockTransition.fade`)',
+              'starts at 0; `warpOnDelay` seconds after the gem reaches centre it fades on over `warpOnDuration`; then fades 1 → 0 across the lock transition (see `sequence.lockTransition.fade`)',
             impl: 'vertical rounded rects streaming downward past the gem, `lighter` blend',
           }
         : false,
@@ -252,31 +264,40 @@ function setGrade(grade) {
   anim.goToAndPlay(f, true)
 }
 
-// --- two-phase state machine: 'reveal' → 'locked' -------------------------
-// phase 'reveal': gem rises + hovers, warp + jet streams on, gem streaks loop
-//   every ${c.streakLoopInterval}s, grade auto-cycles, loop speed = ${c.revealLoopSpeed}.${
+// --- three-phase state machine: 'armed' → 'reveal' → 'locked' -------------
+// phase 'armed': gem waits off-screen; nothing runs. launch() starts it.
+// phase 'reveal': gem rises + hovers, jet on, warp streaks fade on ${c.warpOnDelay}s
+//   after the gem reaches centre (over ${c.warpOnDuration}s), gem streaks loop every
+//   ${c.streakLoopInterval}s, grade auto-cycles, loop speed = ${c.revealLoopSpeed}.${
   c.revealFlash
     ? `\n//   on arrival (+${c.revealFlashDelay}s): an ambient white flash as it settles into the loop`
     : ''
 }
-// lock(grade): the dev picked the final grade —
+// lock(grade): the dev picked the final grade —${
+  c.lockWhiteBlast
+    ? `\n//   0. blast: swap the gem to pure white + spike the glow, building over ${c.lockWhiteBlastDuration}s
+//      (steps below are timed from the end of the blast)`
+    : ''
+}
 //   1. after ${c.lockPunchDelay}s: punch the scale + fire the white flash (coupled) + streak burst
 //   2. setGrade(grade) — snap to it (masked by the flash)
 //   3. after ${c.lockSpeedDelay}s, ease currentSpeed ${c.revealLoopSpeed} → ${c.loopSpeed} over ${c.lockSpeedDuration}s (${c.lockSpeedEase})
 //   4. fade gem + warp streaks 1 → 0 over ${c.lockFadeDuration}s (${c.lockFadeEase}); the jet retracts over ${c.jetFadeDuration}s (starts +${c.jetFadeDelay}s)
 //   5. after ${c.buttonDelay}s: spring the folded grade button in (below the gem)
-let phase = 'reveal', lockedAt = -1
+let phase = 'armed', lockedAt = -1
 
+function launch() { if (phase === 'armed') phase = 'reveal' }
 function lock(grade) {
-  if (phase === 'locked') return
+  if (phase !== 'reveal') return
   phase = 'locked'; lockedAt = t
-  setGrade(grade)   // snap to the final grade (masked by the flash)
+  ${c.lockWhiteBlast ? "setGrade('#ffffff')   // white blast; setGrade(grade) again when it ends" : 'setGrade(grade)   // snap to the final grade (masked by the flash)'}
 }
 
 const ENTRY = { stiffness: ${c.entryStiffness}, damping: ${c.entryDamping}, mass: ${c.entryMass} }
 let y = ${c.entryDistance}, vy = 0, s = ${c.entryScale}, sv = 0, t = 0
 
 function frame(dt) {
+  if (phase === 'armed') return   // frozen until launch()
   t += dt
 
   // loop speed — reveal speed, easing to the locked speed after lock (+ delay)
