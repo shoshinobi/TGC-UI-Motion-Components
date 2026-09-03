@@ -10,6 +10,32 @@ const D = PARTICLE_DEFAULT_CONFIG
  *  without being baked into PARTICLE_DEFAULT_CONFIG yet. */
 const SLOT_KEY = 'tgc-bench:rain'
 
+/**
+ * Approved preset for the **daily gold bonus** reveal — a quick stream-through
+ * flow of bars (no pile-up), vs the default burst that stacks for chest reveals.
+ * A `▶ load` button in Export swaps it into the panel; the README documents the
+ * full resolved config.
+ */
+const DAILY_BONUS_CONFIG: ParticleRainConfig = {
+  ...D,
+  mode: 'stream',
+  count: 24,
+  burstWindow: 1.5,
+  spawnRate: 12,
+  streamDuration: 1.5,
+  spawnWidth: 0.5,
+  gravity: 24.4,
+  airDrag: 2,
+  terminalVelocity: 1160,
+  spinMin: 115,
+  spinMax: 330,
+  spinDrag: 0.45,
+  airborneSpin: 'keep',
+  contactSpin: 0.24,
+  floor: 'fallThrough',
+  particleSize: 90,
+}
+
 function flatDefaults() {
   return { ...D }
 }
@@ -178,6 +204,10 @@ export function RainBench() {
         /* ignore */
       }
       set(flatDefaults() as unknown as Parameters<typeof set>[0])
+      setNonce((k) => k + 1)
+    }),
+    '▶ load "daily gold bonus" preset': button(() => {
+      set({ ...DAILY_BONUS_CONFIG } as unknown as Parameters<typeof set>[0])
       setNonce((k) => k + 1)
     }),
     'drop again': button(() => setNonce((k) => k + 1)),

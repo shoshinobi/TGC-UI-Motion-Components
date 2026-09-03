@@ -843,12 +843,12 @@ This is the complete set for when you need it.
 | | `countScale` / `sizeScale` | 0–1 — how strongly each tracks width (`1` = linear) |
 | | `minScale` / `maxScale` | clamp on the width-scale factor |
 
-## Current config
+## Current config — chest-reveal burst
 
-The approved starting point — `PARTICLE_DEFAULT_CONFIG` in
-`src/components/ParticleRain.tsx`, and what `createParticleRain` bakes in. `count`
-and (on wide screens) `spawnWidth` are yours to set; the rest holds until we see
-it live.
+The approved config for the **gold-from-chest reveal**: a burst that bounces and
+**piles up**. `PARTICLE_DEFAULT_CONFIG` in `src/components/ParticleRain.tsx`, and
+what `createParticleRain` bakes in. `count` and (on wide screens) `spawnWidth`
+are yours to set; the rest holds until we see it live.
 
 ```json
 {
@@ -893,6 +893,96 @@ it live.
   "collideWake": 0,
   "asset": "both",
   "particleSize": 80,
+  "scaleMin": 0.8,
+  "scaleMax": 1.6,
+  "bigFallFaster": 1,
+  "fadeIn": 0.15,
+  "opacity": 1,
+  "autoScale": true,
+  "referenceWidth": 570,
+  "countScale": 0.55,
+  "sizeScale": 0.3,
+  "minScale": 0.35,
+  "maxScale": 2.2
+}
+```
+
+## Daily gold bonus — stream preset
+
+The approved config for the **daily gold bonus reveal**: a quick stream-through
+flow of bars that **fall past and off the bottom** — no pile, no dump needed. Use
+this instead of the burst above when the reveal is the light daily bonus rather
+than a chest payout.
+
+On the bench: **Export → ▶ load "daily gold bonus" preset** swaps it into the
+panel and re-drops. It's `DAILY_BONUS_CONFIG` in
+[`src/benches/RainBench.tsx`](src/benches/RainBench.tsx) — the same 52 keys, 16 of
+them changed from the burst config:
+
+| key | burst | daily bonus | effect |
+|---|---|---|---|
+| `mode` | `burst` | **`stream`** | continuous feed instead of one drop |
+| `count` | 56 | **24** | max bars alive at once (thin stream) |
+| `spawnRate` | 30 | **12** | bars/sec added |
+| `streamDuration` | 0 | **1.5** | stream runs 1.5 s then stops (0 = ∞) |
+| `burstWindow` | 0.75 | **1.5** | (unused in stream mode; carried for a clean switch back) |
+| `spawnWidth` | 1 | **0.5** | falls in a centre band, not the full width |
+| `floor` | `bounce` | **`fallThrough`** | bars exit the bottom, nothing piles |
+| `gravity` | 14 | **24.4** | heavier — they clear the frame fast |
+| `airDrag` | 1 | **2** | more terminal-ish, less streaky |
+| `terminalVelocity` | 1540 | **1160** | lower cap |
+| `spinMin` / `spinMax` | 200 / 500 | **115 / 330** | gentler tumble |
+| `spinDrag` | 0.75 | **0.45** | spin persists a little longer |
+| `airborneSpin` | `killOnContact` | **`keep`** | no contacts to speak of — keep spinning |
+| `contactSpin` | 0 | **0.24** | slight torque off the walls on the way down |
+| `particleSize` | 80 | **90** | a touch bigger — the stream is sparse, so each bar carries more |
+
+Everything else (`walls`, `wallInset`, `collide*`, `asset`, scale range,
+`autoScale` and the responsive block) is identical to the burst config.
+
+```json
+{
+  "mode": "stream",
+  "count": 24,
+  "burstWindow": 1.5,
+  "spawnRate": 12,
+  "streamDuration": 1.5,
+  "spawnWidth": 0.5,
+  "spawnHeight": 200,
+  "gravity": 24.4,
+  "velocityYMin": 600,
+  "velocityYMax": 1200,
+  "velocityXSpread": 500,
+  "airDrag": 2,
+  "terminalVelocity": 1160,
+  "wind": 0,
+  "swayAmplitude": 0,
+  "swayFrequency": 0,
+  "spinMin": 115,
+  "spinMax": 330,
+  "spinDrag": 0.45,
+  "airborneSpin": "keep",
+  "contactSpin": 0.24,
+  "floor": "fallThrough",
+  "floorInset": -16,
+  "restitution": 0.55,
+  "floorFriction": 0.55,
+  "restThreshold": 5,
+  "fadeOut": 0,
+  "dumpStagger": 0.2,
+  "walls": true,
+  "wallInset": -24,
+  "wallRestitution": 0.5,
+  "wallFriction": 0.15,
+  "collide": true,
+  "collideRadius": 0.64,
+  "collideRestitution": 0.55,
+  "collideFriction": 0.76,
+  "pileFriction": 1,
+  "collideIterations": 6,
+  "collideWake": 0,
+  "asset": "both",
+  "particleSize": 90,
   "scaleMin": 0.8,
   "scaleMax": 1.6,
   "bigFallFaster": 1,
@@ -1144,7 +1234,7 @@ physics sub-folders **sway** / **spin**. Labels are trimmed to fit the panel.
 | walls | **side colliders** (on/off), inset, bounce, **friction** |
 | collision | collide + stack, hit radius, bounce, bar grip, **pile friction**, iterations, wake |
 | appearance | asset (both / gbar / tinyBar), size, scale min / max, big=faster, fade in, opacity |
-| Export | **★ save settings** (localStorage, survives reload) · reset to code default · drop again · **⤓ pull the floor out** · copy canvas loop · copy JSON tokens · copy config |
+| Export | **★ save settings** (localStorage, survives reload) · reset to code default · **▶ load "daily gold bonus" preset** · drop again · **⤓ pull the floor out** · copy canvas loop · copy JSON tokens · copy config |
 
 Stage buttons: **↻ Drop again** (re-run from scratch) and **⤓ Pull the floor
 out** (clear the screen — see [above](#clearing-the-screen--raindump)).
