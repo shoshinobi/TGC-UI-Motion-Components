@@ -158,7 +158,7 @@ export function buildGemJsonSpec(c: GemRevealConfig): string {
             blurPx: c.glowSize,
             corePasses: Math.round(c.glowStrength),
             pulseHz: c.glowPulse,
-            impl: 'a radial-gradient halo wash (no filter — carries the reach + brightness) plus a blurred core diamond (blur ≈ 0.8·blurPx, ~1× the gem) stacked `corePasses` times for the silhouette — canvas `lighter` blend, no hard fill; the white flash spikes the gain',
+            impl: 'a radial-gradient halo wash (carries the reach + brightness) plus a soft core diamond via the off-canvas shadow trick (`shadowBlur` + `shadowOffsetX`, shape drawn off-screen so only its blurred shadow shows) stacked `corePasses` times — canvas `lighter` blend, no hard fill. `shadowBlur` not `ctx.filter`: the latter is a no-op on iOS Safari < 18.4. The white flash spikes the gain',
           }
         : false,
       gemStreaks: c.streaks
