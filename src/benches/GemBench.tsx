@@ -9,6 +9,12 @@ const D = GEM_DEFAULT_CONFIG
 const GRADE_OPTIONS = Object.fromEntries(GEM_GRADES.map((g) => [g.label, g.key]))
 const PUNCH_FLASH_OPTIONS = { off: 'off', 'current grade': 'current', ...GRADE_OPTIONS }
 const EASE_OPTIONS = ['linear', 'easeIn', 'easeOut', 'easeInOut']
+const MUSIC_OPTIONS = {
+  off: 'off',
+  random: 'random',
+  'Belt and Braces': 'belt-and-braces',
+  'Chasing Quails': 'chasing-quails',
+}
 
 /** "★ save settings" persists an in-progress tune before it's baked into the default. */
 const SLOT_KEY = 'tgc-bench:gem'
@@ -213,10 +219,15 @@ export function GemBench() {
     ),
     sound: folder(
       {
-        sound: { value: D.sound, label: 'sound on' },
-        volume: { value: D.volume, min: 0, max: 1, step: 0.05, label: 'master volume' },
+        sound: { value: D.sound, label: 'sound on (master)' },
+        volume: { value: D.volume, min: 0, max: 1, step: 0.05, label: 'SFX volume' },
         revealMode: { value: D.revealMode, options: ['endless', 'timed'], label: 'reveal loop' },
         revealDuration: { value: D.revealDuration, min: 1, max: 30, step: 0.5, label: '↳ timed: lock after (s)' },
+        musicTrack: { value: D.musicTrack, options: MUSIC_OPTIONS, label: 'soundtrack' },
+        musicVolume: { value: D.musicVolume, min: 0, max: 1, step: 0.05, label: '↳ volume' },
+        musicLoop: { value: D.musicLoop, label: '↳ loop' },
+        musicStart: { value: D.musicStart, options: ['launch', 'lock'], label: '↳ starts on' },
+        musicLockDelay: { value: D.musicLockDelay, min: 0, max: 10, step: 0.1, label: '↳ lock: delay (s)' },
       },
       { collapsed: true },
     ),
@@ -272,7 +283,14 @@ export function GemBench() {
     'copy config (for defaults)': button(copy('config')),
   })
 
-  const runKey = [nonce, config.entryDistance, config.entryScale, config.entryDelay].join('|')
+  const runKey = [
+    nonce,
+    config.entryDistance,
+    config.entryScale,
+    config.entryDelay,
+    config.musicTrack,
+    config.musicStart,
+  ].join('|')
 
   return (
     <>

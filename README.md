@@ -1010,7 +1010,8 @@ default** restores the committed values.
 
 > 🔧 **Exploring.** The full sequence works end to end — armed hold → launch →
 > reveal loop → lock → punch, grade snaps, effects fade, folded button drops in —
-> with the five `GemReveal_*.mp3` cues wired in and an optional timed auto-lock.
+> with the five `GemReveal_*` SFX cues + a selectable music bed wired in, and an
+> optional timed auto-lock.
 > The individual effect values and the transition timings are still being dialled;
 > nothing here is signed off.
 
@@ -1063,9 +1064,11 @@ dev.
 
 ## Audio
 
-Five files in `src/assets/mp3/`, wired to the phase machine. Plain
-`HTMLAudioElement` per clip — **playback needs a user gesture**, so launch is the
-first sound you'll hear.
+All in `src/assets/mp3/`, wired to the phase machine. Plain `HTMLAudioElement`
+per clip — **playback needs a user gesture**, so launch is the first sound
+you'll hear. The `sound` folder's **`sound on (master)`** gates everything.
+
+**SFX** — five cues, one shared **`SFX volume`**:
 
 | file | when | loop |
 |---|---|---|
@@ -1075,8 +1078,18 @@ first sound you'll hear.
 | `GemReveal_end.mp3` | on **lock** (reveal → locked) | — |
 | `GemReveal_punch.mp3` | every explicit **⚡ White flash / ✦ Punch scale** trigger (`flashSignal` / `scaleSignal`) — **not** the lock's internal punch, the auto-cycle flash, or the reveal-start flash | — |
 
-Controls: `sound` folder — `sound on` (master), `master volume` (one gain for
-all), and the `reveal loop` mode (`endless` / `timed` + duration) above.
+**Soundtrack** — a music bed with its **own volume**, separate from the SFX:
+
+| control | options | notes |
+|---|---|---|
+| `soundtrack` | `off` · `random` · `Belt and Braces` · `Chasing Quails` | `GemReveal_music-*.mp3`. `random` picks one of the two per reveal. |
+| `↳ volume` | 0–1 | Independent of `SFX volume`; ~0.5 by default so it sits under the cues. |
+| `↳ loop` | toggle | Tracks are ~2 min; loop or play once. |
+| `↳ starts on` | `launch` / `lock` | Intro bed from the launch, or an outro that comes in after the grade locks. |
+| `↳ lock: delay (s)` | 0–10 | `starts on = lock` only — beat after the lock before the track enters (lets `end` land). |
+
+Changing `soundtrack` or `starts on` replays the reveal (re-rolls `random`);
+volume / loop / delay update live.
 
 ## The Lottie + the colour token
 
@@ -1285,7 +1298,7 @@ auto-scale; `?c=rain&vp=phone` deep-links one.
 | jet | on/off *(on by default)* · **tracks (1–2)** · track width · spacing · length · taper · opacity at gem / at tail · **fade delay after lock** / duration · colour — *on all reveal, retracts tail→head after lock* |
 | **lock transition** | **white blast before reveal + ↳ blast build (s)** · punch/flash delay (s) · speed revert delay (s) · speed revert (s) + ease · streak/warp fade (s) + ease |
 | **grade button** | on/off · label override · offset X / Y (overlap) · delay after lock (s) · from scale / rotate · settled rotate · **size (crisp)** · **settled scale (pop)** · spring stiffness / damping / mass |
-| **sound** | `sound on` (master) · `master volume` · `reveal loop` (endless / **timed** + lock-after (s)) — *`GemReveal_*.mp3`; ambient + start + ticker on launch, end + ticker-stop on lock, punch on every flash/punch trigger* |
+| **sound** | `sound on (master)` · `SFX volume` · `reveal loop` (endless / **timed** + lock-after (s)) · **`soundtrack`** (off / random / Belt and Braces / Chasing Quails) + `↳ volume` / `↳ loop` / `↳ starts on` (launch / lock) / `↳ lock: delay (s)` — *SFX: ambient+start+ticker on launch, end+ticker-stop on lock, punch on every flash/punch trigger; soundtrack is a separate music bed* |
 | Export | ★ save settings · reset to code default · **↻ replay reveal** · **🚀 launch** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** · copy lottie-web wiring · copy JSON tokens · copy config |
 
 Colour / hover / effects update **live**; entry re-runs on **↻ Replay reveal**.

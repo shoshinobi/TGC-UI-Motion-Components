@@ -536,12 +536,17 @@ The `GemReveal_*.mp3` files. Playback needs a user gesture — **🚀 Launch** i
 
 | Control | Range / options | What it changes | Use it for |
 |---|---|---|---|
-| `sound on` | toggle | Master enable. Off pauses everything; on resumes the loops if you're mid-reveal. | Muting the bench. |
-| `master volume` | 0–1 | One gain for all five clips. | |
+| `sound on (master)` | toggle | Master enable — SFX **and** soundtrack. Off pauses everything; on resumes the loops if you're mid-reveal. | Muting the bench. |
+| `SFX volume` | 0–1 | One gain for the five `GemReveal_*` clips (not the soundtrack). | |
 | `reveal loop` | `endless` / `timed` | `endless` — the reveal runs until you press **🔒 Lock grade**. `timed` — it auto-locks after the duration below (ticker stops, `end` plays, grade locks — same as the button). | A fixed-length daily reveal vs a dev-paced one. |
 | `↳ timed: lock after (s)` | 1–30 | The reveal length in `timed` mode. | |
+| `soundtrack` | `off` / `random` / `Belt and Braces` / `Chasing Quails` | The music bed. `random` re-rolls one of the two each reveal (changing this or `starts on` replays). | Auditioning either track, or leaving it to chance. |
+| `↳ volume` | 0–1 | Soundtrack gain, **independent** of `SFX volume`. Sits under the SFX by default. | |
+| `↳ loop` | toggle | Loop the track (it's ~2 min) or let it play once. | |
+| `↳ starts on` | `launch` / `lock` | Begin the track with the launch, or after the grade locks. | An intro bed vs a "you won" outro. |
+| `↳ lock: delay (s)` | 0–10 | With `starts on = lock`: wait this long after the lock before the track comes in. | Letting `end` land first. |
 
-**Cues** (fixed, not in Leva): `ambientLoop` starts on launch and loops through to the end; `start` fires on launch; `ticker` loops from launch until the lock; `end` fires on the lock; `punch` fires on every **⚡ White flash** / **✦ Punch scale** trigger (not the lock's internal one, not the auto-cycle flash).
+**SFX cues** (fixed, not in Leva): `ambientLoop` starts on launch and loops through to the end; `start` fires on launch; `ticker` loops from launch until the lock; `end` fires on the lock; `punch` fires on every **⚡ White flash** / **✦ Punch scale** trigger (not the lock's internal one, not the auto-cycle flash).
 
 | Where | Control | What it does |
 |---|---|---|

@@ -8,6 +8,8 @@ import startUrl from '@/assets/mp3/GemReveal_start.mp3'
 import endUrl from '@/assets/mp3/GemReveal_end.mp3'
 import punchUrl from '@/assets/mp3/GemReveal_punch.mp3'
 import tickerUrl from '@/assets/mp3/GemReveal_ticker.mp3'
+import musicBeltUrl from '@/assets/mp3/GemReveal_music-belt-and-braces.mp3'
+import musicQuailsUrl from '@/assets/mp3/GemReveal_music-chasing-quails.mp3'
 import { FoldableButton } from '@/components/banner-stubs'
 import {
   FLASH_WHITE,
@@ -241,6 +243,17 @@ export type GemRevealConfig = {
   revealMode: 'endless' | 'timed'
   /** seconds the reveal loop runs before it auto-locks (`timed` mode) */
   revealDuration: number
+
+  // --- soundtrack (a full music bed, separate from the SFX above) ---
+  /** `off`, a named track, or `random` (re-rolled each reveal) */
+  musicTrack: 'off' | 'random' | 'belt-and-braces' | 'chasing-quails'
+  /** soundtrack volume, 0–1 — independent of the SFX `volume` */
+  musicVolume: number
+  musicLoop: boolean
+  /** start the soundtrack on launch, or after the grade locks */
+  musicStart: 'launch' | 'lock'
+  /** seconds after the lock before the soundtrack starts (`lock` mode) */
+  musicLockDelay: number
 }
 
 export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
@@ -371,7 +384,20 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   volume: 0.7,
   revealMode: 'endless',
   revealDuration: 6,
+
+  musicTrack: 'random',
+  musicVolume: 0.5,
+  musicLoop: true,
+  musicStart: 'launch',
+  musicLockDelay: 0.5,
 }
+
+/** the soundtrack options (url + display name) */
+export const GEM_MUSIC = {
+  'belt-and-braces': { url: musicBeltUrl, label: 'Belt and Braces' },
+  'chasing-quails': { url: musicQuailsUrl, label: 'Chasing Quails' },
+} as const
+type MusicKey = keyof typeof GEM_MUSIC
 
 const TAU = Math.PI * 2
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
@@ -475,11 +501,14 @@ export function GemReveal({
   }, [streakSignal])
 
   // ---------------------------------------------------------------- audio ----
-  // ambientLoop — constant (starts on launch). start — on launch. ticker —
-  // loops through the reveal, stops on lock. end — on lock. punch — on every
-  // white-flash / punch-scale trigger. All GemReveal_*.mp3.
+  // SFX: ambientLoop — constant (from launch). start — on launch. ticker — loops
+  // the reveal, stops on lock. end — on lock. punch — on every white-flash /
+  // punch-scale trigger. Plus a music bed (`musicTrack`) from launch or +delay
+  // after lock. All in src/assets/mp3/.
   type Clips = { ambient: HTMLAudioElement; start: HTMLAudioElement; end: HTMLAudioElement; punch: HTMLAudioElement; ticker: HTMLAudioElement }
   const clipsRef = useRef<Clips | null>(null)
+  const musicRef = useRef<HTMLAudioElement | null>(null)
+  const musicTimer = useRef(0)
   const audioPhase = useRef<GemRevealProps['phase']>(phase)
   const audioSeen = useRef({ flash: flashSignal, scale: scaleSignal })
 
@@ -498,16 +527,29 @@ export function GemReveal({
       ticker: mk(tickerUrl, true),
     }
     clipsRef.current = clips
+
+    // soundtrack — pick the track (or re-roll `random`) once per mount
+    const pick = cfgRef.current.musicTrack
+    let key: MusicKey | null = null
+    if (pick === 'belt-and-braces' || pick === 'chasing-quails') key = pick
+    else if (pick === 'random') key = Math.random() < 0.5 ? 'belt-and-braces' : 'chasing-quails'
+    const music = key ? mk(GEM_MUSIC[key].url, cfgRef.current.musicLoop) : null
+    musicRef.current = music
+
     return () => {
+      window.clearTimeout(musicTimer.current)
       for (const el of Object.values(clips)) {
         el.pause()
         el.src = ''
       }
+      music?.pause()
+      if (music) music.src = ''
       clipsRef.current = null
+      musicRef.current = null
     }
   }, [])
 
-  // master volume / mute
+  // SFX master volume / mute
   useEffect(() => {
     const clips = clipsRef.current
     if (!clips) return
@@ -524,28 +566,62 @@ export function GemReveal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [c.volume, c.sound])
 
+  // soundtrack volume / loop / mute
+  useEffect(() => {
+    const m = musicRef.current
+    if (!m) return
+    m.volume = Math.max(0, Math.min(1, c.musicVolume))
+    m.loop = c.musicLoop
+    if (!c.sound) {
+      m.pause()
+    } else if (
+      (audioPhase.current === 'reveal' && c.musicStart === 'launch') ||
+      audioPhase.current === 'locked'
+    ) {
+      m.play().catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.musicVolume, c.musicLoop, c.sound])
+
   // phase transitions → the sequence sounds
   useEffect(() => {
     const clips = clipsRef.current
+    const music = musicRef.current
     const prev = audioPhase.current
     audioPhase.current = phase
-    if (!clips || !c.sound || prev === phase) return
+    if (!clips || prev === phase) return
     const play = (el: HTMLAudioElement) => {
       el.currentTime = 0
       el.play().catch(() => {})
     }
+    window.clearTimeout(musicTimer.current)
     if (phase === 'reveal' && prev === 'armed') {
-      play(clips.ambient)
-      play(clips.start)
-      play(clips.ticker)
+      if (c.sound) {
+        play(clips.ambient)
+        play(clips.start)
+        play(clips.ticker)
+        if (music && c.musicStart === 'launch') play(music)
+      }
     } else if (phase === 'locked') {
-      clips.ticker.pause()
-      play(clips.end)
+      if (c.sound) {
+        clips.ticker.pause()
+        play(clips.end)
+      }
+      if (music && c.musicStart === 'lock') {
+        musicTimer.current = window.setTimeout(() => {
+          if (cfgRef.current.sound) {
+            music.currentTime = 0
+            music.play().catch(() => {})
+          }
+        }, Math.max(0, c.musicLockDelay * 1000))
+      }
     } else if (phase === 'armed') {
       for (const el of Object.values(clips)) {
         el.pause()
         el.currentTime = 0
       }
+      music?.pause()
+      if (music) music.currentTime = 0
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase])

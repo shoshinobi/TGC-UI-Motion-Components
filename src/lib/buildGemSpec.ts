@@ -102,15 +102,31 @@ export function buildGemJsonSpec(c: GemRevealConfig): string {
       },
       audio: c.sound
         ? {
-            masterVolume: c.volume,
-            files: 'GemReveal_{ambientLoop,start,end,punch,ticker}.mp3',
-            cues: {
-              ambientLoop: 'loop — starts on launch (phase → reveal), never stops (plays through locked)',
-              start: 'one-shot — on launch (phase → reveal)',
-              ticker: 'loop — starts on launch; stopped when `end` plays (phase → locked, or the timed auto-lock)',
-              end: 'one-shot — on lock (phase → locked)',
-              punch: 'one-shot — on every explicit white-flash / punch-scale trigger (flashSignal / scaleSignal). NOT on the lock’s internal punch, the auto-cycle flash, or the reveal-start flash',
+            sfx: {
+              masterVolume: c.volume,
+              files: 'GemReveal_{ambientLoop,start,end,punch,ticker}.mp3',
+              cues: {
+                ambientLoop: 'loop — starts on launch (phase → reveal), never stops (plays through locked)',
+                start: 'one-shot — on launch (phase → reveal)',
+                ticker: 'loop — starts on launch; stopped when `end` plays (phase → locked, or the timed auto-lock)',
+                end: 'one-shot — on lock (phase → locked)',
+                punch: 'one-shot — on every explicit white-flash / punch-scale trigger (flashSignal / scaleSignal). NOT on the lock’s internal punch, the auto-cycle flash, or the reveal-start flash',
+              },
             },
+            music:
+              c.musicTrack === 'off'
+                ? false
+                : {
+                    track:
+                      c.musicTrack === 'random'
+                        ? 'random of GemReveal_music-belt-and-braces.mp3 / GemReveal_music-chasing-quails.mp3 (re-rolled each reveal)'
+                        : `GemReveal_music-${c.musicTrack}.mp3`,
+                    volume: c.musicVolume,
+                    loop: c.musicLoop,
+                    startsOn: c.musicStart,
+                    lockDelaySec: c.musicStart === 'lock' ? c.musicLockDelay : undefined,
+                    note: 'a separate music bed with its own volume; `sound` off mutes it too',
+                  },
             note: 'plain HTMLAudioElement per clip; playback needs a user gesture — launch is the first one',
           }
         : false,
@@ -281,7 +297,7 @@ let anim = makeGem(hostEl, '${c.tier}', currentSpeed)
 ${
   c.sound
     ? `
-// --- audio (GemReveal_*.mp3), master volume ${c.volume} ---
+// --- SFX (GemReveal_*.mp3), volume ${c.volume} ---
 const mk = (name, loop) => Object.assign(new Audio(\`./mp3/GemReveal_\${name}.mp3\`), { loop, volume: ${c.volume} })
 const audio = {
   ambient: mk('ambientLoop', true),   // constant from launch
@@ -289,6 +305,14 @@ const audio = {
   ticker:  mk('ticker', true),        // launch → stops on lock
   end:     mk('end', false),          // on lock
   punch:   mk('punch', false),        // on every white-flash / punch-scale trigger
+}${
+  c.musicTrack === 'off'
+    ? ''
+    : `
+// --- soundtrack, volume ${c.musicVolume}, ${c.musicLoop ? 'loop' : 'once'}, starts on ${c.musicStart}${c.musicStart === 'lock' ? ` +${c.musicLockDelay}s` : ''} ---
+const MUSIC = ['music-belt-and-braces', 'music-chasing-quails']
+const musicName = ${c.musicTrack === 'random' ? 'MUSIC[Math.floor(Math.random() * MUSIC.length)]' : `'music-${c.musicTrack}'`}
+const music = Object.assign(new Audio(\`./mp3/GemReveal_\${musicName}.mp3\`), { loop: ${c.musicLoop}, volume: ${c.musicVolume} })`
 }
 `
     : ''
@@ -326,13 +350,19 @@ let phase = 'armed', lockedAt = -1
 function launch() {
   if (phase !== 'armed') return
   phase = 'reveal'
-  ${c.sound ? 'audio.ambient.play(); audio.start.currentTime = 0; audio.start.play(); audio.ticker.currentTime = 0; audio.ticker.play()' : '// audio off'}
+  ${c.sound ? 'audio.ambient.play(); audio.start.currentTime = 0; audio.start.play(); audio.ticker.currentTime = 0; audio.ticker.play()' : '// audio off'}${
+    c.musicTrack !== 'off' && c.musicStart === 'launch' ? '\n  music.play()' : ''
+  }
   ${c.revealMode === 'timed' ? `setTimeout(() => lock(chosenGrade), ${c.revealDuration * 1000})   // timed reveal` : ''}
 }
 function lock(grade) {
   if (phase !== 'reveal') return
   phase = 'locked'; lockedAt = t
-  ${c.sound ? 'audio.ticker.pause(); audio.end.currentTime = 0; audio.end.play()   // ambient keeps looping' : ''}
+  ${c.sound ? 'audio.ticker.pause(); audio.end.currentTime = 0; audio.end.play()   // ambient keeps looping' : ''}${
+    c.musicTrack !== 'off' && c.musicStart === 'lock'
+      ? `\n  setTimeout(() => music.play(), ${c.musicLockDelay * 1000})   // soundtrack after the lock`
+      : ''
+  }
   ${c.lockWhiteBlast ? "setGrade('#ffffff')   // white blast; setGrade(grade) again when it ends" : 'setGrade(grade)   // snap to the final grade (masked by the flash)'}
 }
 // punch sound: audio.punch.play() on every explicit white-flash / punch-scale
