@@ -211,6 +211,15 @@ export function GemBench() {
       },
       { collapsed: true },
     ),
+    sound: folder(
+      {
+        sound: { value: D.sound, label: 'sound on' },
+        volume: { value: D.volume, min: 0, max: 1, step: 0.05, label: 'master volume' },
+        revealMode: { value: D.revealMode, options: ['endless', 'timed'], label: 'reveal loop' },
+        revealDuration: { value: D.revealDuration, min: 1, max: 30, step: 0.5, label: '↳ timed: lock after (s)' },
+      },
+      { collapsed: true },
+    ),
   }))
 
   const restored = useRef(false)
@@ -308,6 +317,7 @@ export function GemBench() {
             scaleSignal={punch}
             flashSignal={flash}
             streakSignal={streak}
+            onAutoLock={() => setPhase((p) => (p === 'reveal' ? 'locked' : p))}
           />
         </div>
       </div>

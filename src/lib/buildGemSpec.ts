@@ -55,6 +55,14 @@ export function buildGemJsonSpec(c: GemRevealConfig): string {
         },
         trigger:
           'the app moves `phase` armed → reveal (launch) then reveal → locked (with the chosen grade set)',
+        revealLength:
+          c.revealMode === 'timed'
+            ? {
+                mode: 'timed',
+                lockAfterSec: c.revealDuration,
+                note: 'after `lockAfterSec` in the reveal phase, auto-lock (fire the same reveal → locked transition, the `end` sound, and stop the ticker). The component signals this via `onAutoLock`; the app calls its lock().',
+              }
+            : { mode: 'endless', note: 'the reveal loop runs until the app triggers lock' },
         lockTransition: {
           whiteBlast: c.lockWhiteBlast
             ? {
@@ -92,6 +100,20 @@ export function buildGemJsonSpec(c: GemRevealConfig): string {
             }
           : false,
       },
+      audio: c.sound
+        ? {
+            masterVolume: c.volume,
+            files: 'GemReveal_{ambientLoop,start,end,punch,ticker}.mp3',
+            cues: {
+              ambientLoop: 'loop — starts on launch (phase → reveal), never stops (plays through locked)',
+              start: 'one-shot — on launch (phase → reveal)',
+              ticker: 'loop — starts on launch; stopped when `end` plays (phase → locked, or the timed auto-lock)',
+              end: 'one-shot — on lock (phase → locked)',
+              punch: 'one-shot — on every explicit white-flash / punch-scale trigger (flashSignal / scaleSignal). NOT on the lock’s internal punch, the auto-cycle flash, or the reveal-start flash',
+            },
+            note: 'plain HTMLAudioElement per clip; playback needs a user gesture — launch is the first one',
+          }
+        : false,
       entry: {
         fromBelowPx: c.entryDistance,
         fromScale: c.entryScale,
@@ -256,6 +278,21 @@ function makeGem(host, grade, speed) {
 
 let currentSpeed = ${c.revealLoopSpeed}
 let anim = makeGem(hostEl, '${c.tier}', currentSpeed)
+${
+  c.sound
+    ? `
+// --- audio (GemReveal_*.mp3), master volume ${c.volume} ---
+const mk = (name, loop) => Object.assign(new Audio(\`./mp3/GemReveal_\${name}.mp3\`), { loop, volume: ${c.volume} })
+const audio = {
+  ambient: mk('ambientLoop', true),   // constant from launch
+  start:   mk('start', false),        // on launch
+  ticker:  mk('ticker', true),        // launch → stops on lock
+  end:     mk('end', false),          // on lock
+  punch:   mk('punch', false),        // on every white-flash / punch-scale trigger
+}
+`
+    : ''
+}
 
 function setGrade(grade) {
   const f = anim.currentFrame
@@ -286,12 +323,20 @@ function setGrade(grade) {
 //   5. after ${c.buttonDelay}s: spring the folded grade button in (below the gem)
 let phase = 'armed', lockedAt = -1
 
-function launch() { if (phase === 'armed') phase = 'reveal' }
+function launch() {
+  if (phase !== 'armed') return
+  phase = 'reveal'
+  ${c.sound ? 'audio.ambient.play(); audio.start.currentTime = 0; audio.start.play(); audio.ticker.currentTime = 0; audio.ticker.play()' : '// audio off'}
+  ${c.revealMode === 'timed' ? `setTimeout(() => lock(chosenGrade), ${c.revealDuration * 1000})   // timed reveal` : ''}
+}
 function lock(grade) {
   if (phase !== 'reveal') return
   phase = 'locked'; lockedAt = t
+  ${c.sound ? 'audio.ticker.pause(); audio.end.currentTime = 0; audio.end.play()   // ambient keeps looping' : ''}
   ${c.lockWhiteBlast ? "setGrade('#ffffff')   // white blast; setGrade(grade) again when it ends" : 'setGrade(grade)   // snap to the final grade (masked by the flash)'}
 }
+// punch sound: audio.punch.play() on every explicit white-flash / punch-scale
+// trigger — NOT from inside lock(), the auto-cycle flash, or the reveal flash.
 
 const ENTRY = { stiffness: ${c.entryStiffness}, damping: ${c.entryDamping}, mass: ${c.entryMass} }
 let y = ${c.entryDistance}, vy = 0, s = ${c.entryScale}, sv = 0, t = 0

@@ -3,6 +3,11 @@ import { useEffect, useRef } from 'react'
 import lottie from 'lottie-web/build/player/lottie_light'
 import type { AnimationItem } from 'lottie-web'
 import gemData from '@/assets/gem.json'
+import ambientUrl from '@/assets/mp3/GemReveal_ambientLoop.mp3'
+import startUrl from '@/assets/mp3/GemReveal_start.mp3'
+import endUrl from '@/assets/mp3/GemReveal_end.mp3'
+import punchUrl from '@/assets/mp3/GemReveal_punch.mp3'
+import tickerUrl from '@/assets/mp3/GemReveal_ticker.mp3'
 import { FoldableButton } from '@/components/banner-stubs'
 import {
   FLASH_WHITE,
@@ -223,6 +228,19 @@ export type GemRevealConfig = {
   buttonStiffness: number
   buttonDamping: number
   buttonMass: number
+
+  // --- audio (GemReveal_*.mp3) ---
+  sound: boolean
+  /** master volume, 0–1 */
+  volume: number
+  /**
+   * `endless` — the reveal loop runs until the dev triggers lock.
+   * `timed` — after `revealDuration` seconds the reveal auto-locks (ticker stops,
+   * lock fires, `end` plays), same as pressing lock.
+   */
+  revealMode: 'endless' | 'timed'
+  /** seconds the reveal loop runs before it auto-locks (`timed` mode) */
+  revealDuration: number
 }
 
 export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
@@ -348,6 +366,11 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   buttonStiffness: 230,
   buttonDamping: 38,
   buttonMass: 2.7,
+
+  sound: true,
+  volume: 0.7,
+  revealMode: 'endless',
+  revealDuration: 6,
 }
 
 const TAU = Math.PI * 2
@@ -394,6 +417,8 @@ export type GemRevealProps = {
   flashSignal?: number
   /** bump to fire the gem-streak burst */
   streakSignal?: number
+  /** called when `config.revealMode === 'timed'` and the reveal timer elapses — wire it to lock the grade */
+  onAutoLock?: () => void
 }
 
 export function GemReveal({
@@ -404,6 +429,7 @@ export function GemReveal({
   scaleSignal = 0,
   flashSignal = 0,
   streakSignal = 0,
+  onAutoLock,
 }: GemRevealProps) {
   const c: GemRevealConfig = { ...GEM_DEFAULT_CONFIG, ...config }
   const buttonLabel =
@@ -447,6 +473,106 @@ export function GemReveal({
       streakN.current++
     }
   }, [streakSignal])
+
+  // ---------------------------------------------------------------- audio ----
+  // ambientLoop — constant (starts on launch). start — on launch. ticker —
+  // loops through the reveal, stops on lock. end — on lock. punch — on every
+  // white-flash / punch-scale trigger. All GemReveal_*.mp3.
+  type Clips = { ambient: HTMLAudioElement; start: HTMLAudioElement; end: HTMLAudioElement; punch: HTMLAudioElement; ticker: HTMLAudioElement }
+  const clipsRef = useRef<Clips | null>(null)
+  const audioPhase = useRef<GemRevealProps['phase']>(phase)
+  const audioSeen = useRef({ flash: flashSignal, scale: scaleSignal })
+
+  useEffect(() => {
+    const mk = (src: string, loop: boolean) => {
+      const el = new Audio(src)
+      el.loop = loop
+      el.preload = 'auto'
+      return el
+    }
+    const clips: Clips = {
+      ambient: mk(ambientUrl, true),
+      start: mk(startUrl, false),
+      end: mk(endUrl, false),
+      punch: mk(punchUrl, false),
+      ticker: mk(tickerUrl, true),
+    }
+    clipsRef.current = clips
+    return () => {
+      for (const el of Object.values(clips)) {
+        el.pause()
+        el.src = ''
+      }
+      clipsRef.current = null
+    }
+  }, [])
+
+  // master volume / mute
+  useEffect(() => {
+    const clips = clipsRef.current
+    if (!clips) return
+    const vol = Math.max(0, Math.min(1, c.volume))
+    for (const el of Object.values(clips)) el.volume = vol
+    if (!c.sound) {
+      for (const el of Object.values(clips)) el.pause()
+    } else if (audioPhase.current === 'reveal') {
+      clips.ambient.play().catch(() => {})
+      clips.ticker.play().catch(() => {})
+    } else if (audioPhase.current === 'locked') {
+      clips.ambient.play().catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [c.volume, c.sound])
+
+  // phase transitions → the sequence sounds
+  useEffect(() => {
+    const clips = clipsRef.current
+    const prev = audioPhase.current
+    audioPhase.current = phase
+    if (!clips || !c.sound || prev === phase) return
+    const play = (el: HTMLAudioElement) => {
+      el.currentTime = 0
+      el.play().catch(() => {})
+    }
+    if (phase === 'reveal' && prev === 'armed') {
+      play(clips.ambient)
+      play(clips.start)
+      play(clips.ticker)
+    } else if (phase === 'locked') {
+      clips.ticker.pause()
+      play(clips.end)
+    } else if (phase === 'armed') {
+      for (const el of Object.values(clips)) {
+        el.pause()
+        el.currentTime = 0
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase])
+
+  // white-flash / punch-scale triggers → the punch hit
+  useEffect(() => {
+    const clips = clipsRef.current
+    if (!clips) return
+    const changed =
+      flashSignal !== audioSeen.current.flash || scaleSignal !== audioSeen.current.scale
+    audioSeen.current = { flash: flashSignal, scale: scaleSignal }
+    if (changed && c.sound) {
+      clips.punch.currentTime = 0
+      clips.punch.play().catch(() => {})
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashSignal, scaleSignal])
+
+  // timed reveal — auto-lock after `revealDuration` (the ticker stop + `end`
+  // sound ride along on the lock transition)
+  const onAutoLockRef = useRef(onAutoLock)
+  onAutoLockRef.current = onAutoLock
+  useEffect(() => {
+    if (phase !== 'reveal' || c.revealMode !== 'timed') return
+    const t = window.setTimeout(() => onAutoLockRef.current?.(), Math.max(100, c.revealDuration * 1000))
+    return () => window.clearTimeout(t)
+  }, [phase, c.revealMode, c.revealDuration])
 
   useEffect(() => {
     const wrap = wrapRef.current

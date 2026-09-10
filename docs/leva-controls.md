@@ -530,6 +530,19 @@ The Banner design's **folded button**, centred just below the gem, labelled with
 | `settled scale (pop)` | 0.3–2.5 | A transform scale *on top of* `size` — keep near 1 (transform scale blurs when large). | The resting point of the pop-in. |
 | `spring stiffness / damping / mass` | 40–1200 / 2–60 / 0.2–4 | The scale + rotate spring (same for both). | Snappy vs loose entrance. |
 
+### sound
+
+The `GemReveal_*.mp3` files. Playback needs a user gesture — **🚀 Launch** is the first one, so nothing is audible until you launch.
+
+| Control | Range / options | What it changes | Use it for |
+|---|---|---|---|
+| `sound on` | toggle | Master enable. Off pauses everything; on resumes the loops if you're mid-reveal. | Muting the bench. |
+| `master volume` | 0–1 | One gain for all five clips. | |
+| `reveal loop` | `endless` / `timed` | `endless` — the reveal runs until you press **🔒 Lock grade**. `timed` — it auto-locks after the duration below (ticker stops, `end` plays, grade locks — same as the button). | A fixed-length daily reveal vs a dev-paced one. |
+| `↳ timed: lock after (s)` | 1–30 | The reveal length in `timed` mode. | |
+
+**Cues** (fixed, not in Leva): `ambientLoop` starts on launch and loops through to the end; `start` fires on launch; `ticker` loops from launch until the lock; `end` fires on the lock; `punch` fires on every **⚡ White flash** / **✦ Punch scale** trigger (not the lock's internal one, not the auto-cycle flash).
+
 | Where | Control | What it does |
 |---|---|---|
 | Top-left of the stage | **Stats HUD** | FPS (rolling), JS heap (Chrome only), and the bench bundle size. Click the header to collapse it to a pill. |

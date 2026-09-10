@@ -1054,6 +1054,29 @@ The dev flips `phase` to `'reveal'` (bench: **🚀 Launch**) to start it.
 Setting `phase` back to `'reveal'` (the bench's **↻ Replay reveal**) restarts
 phase 1 from the top.
 
+**Timed reveal.** `sound → reveal loop` set to `timed` auto-locks the reveal
+after `↳ timed: lock after (s)` — the ticker stops, `end` plays, the grade locks,
+exactly as if the dev pressed lock. The component signals this through the
+`onAutoLock` prop (wire it to your `lock()`); `endless` (default) waits for the
+dev.
+
+## Audio
+
+Five files in `src/assets/mp3/`, wired to the phase machine. Plain
+`HTMLAudioElement` per clip — **playback needs a user gesture**, so launch is the
+first sound you'll hear.
+
+| file | when | loop |
+|---|---|---|
+| `GemReveal_ambientLoop.mp3` | starts on **launch**, plays through the whole reveal *and* locked | ✓ (constant) |
+| `GemReveal_start.mp3` | on **launch** (armed → reveal) | — |
+| `GemReveal_ticker.mp3` | starts on **launch**; **stops** when `end` plays (lock, or the timed auto-lock) | ✓ |
+| `GemReveal_end.mp3` | on **lock** (reveal → locked) | — |
+| `GemReveal_punch.mp3` | every explicit **⚡ White flash / ✦ Punch scale** trigger (`flashSignal` / `scaleSignal`) — **not** the lock's internal punch, the auto-cycle flash, or the reveal-start flash | — |
+
+Controls: `sound` folder — `sound on` (master), `master volume` (one gain for
+all), and the `reveal loop` mode (`endless` / `timed` + duration) above.
+
 ## The Lottie + the colour token
 
 `gem.lottie` is a dotLottie (`gem.json` is the animation inside it — `a/Main Scene.json`).
@@ -1261,6 +1284,7 @@ auto-scale; `?c=rain&vp=phone` deep-links one.
 | jet | on/off *(on by default)* · **tracks (1–2)** · track width · spacing · length · taper · opacity at gem / at tail · **fade delay after lock** / duration · colour — *on all reveal, retracts tail→head after lock* |
 | **lock transition** | **white blast before reveal + ↳ blast build (s)** · punch/flash delay (s) · speed revert delay (s) · speed revert (s) + ease · streak/warp fade (s) + ease |
 | **grade button** | on/off · label override · offset X / Y (overlap) · delay after lock (s) · from scale / rotate · settled rotate · **size (crisp)** · **settled scale (pop)** · spring stiffness / damping / mass |
+| **sound** | `sound on` (master) · `master volume` · `reveal loop` (endless / **timed** + lock-after (s)) — *`GemReveal_*.mp3`; ambient + start + ticker on launch, end + ticker-stop on lock, punch on every flash/punch trigger* |
 | Export | ★ save settings · reset to code default · **↻ replay reveal** · **🚀 launch** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** · copy lottie-web wiring · copy JSON tokens · copy config |
 
 Colour / hover / effects update **live**; entry re-runs on **↻ Replay reveal**.
