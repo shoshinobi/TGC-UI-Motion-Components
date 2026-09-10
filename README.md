@@ -19,8 +19,8 @@ deep-link with `?c=`.
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [↓](#feedback-sheet) | ✅ 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [↓](#gauge) | ✅ 2026-08-31 |
 | **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [↓](#banner-stack) | ✅ phone · tablet · full — 2026-09-01 |
-| **Particle Rain** | [`?c=rain`](https://tgc-ui-motion-components.vercel.app/?c=rain) | [↓](#particle-rain) | 🔧 approach locked (burst + floor + walls), tuning `count` |
-| **Gem Reveal** | [`?c=gem`](https://tgc-ui-motion-components.vercel.app/?c=gem) | [↓](#gem-reveal) | 🔧 exploring — core (pop-up + hover + 8 colour tokens) done, effects opt-in |
+| **Particle Rain** | [`?c=rain`](https://tgc-ui-motion-components.vercel.app/?c=rain) | [↓](#particle-rain) | 🔧 approach locked (burst + floor + walls); two presets — chest-reveal burst + [daily gold bonus stream](#daily-gold-bonus--stream-preset) |
+| **Gem Reveal** | [`?c=gem`](https://tgc-ui-motion-components.vercel.app/?c=gem) | [↓](#gem-reveal) | 🔧 exploring — full sequence (armed → reveal → locked), 6 grade tokens, effects + audio wired; values being dialled |
 
 ## Run
 
@@ -1008,8 +1008,9 @@ default** restores the committed values.
 
 # Gem Reveal
 
-> 🔧 **Exploring.** The reveal sequence works end to end — reveal loop → dev
-> triggers the lock → punch, grade snaps, effects fade, folded button drops in.
+> 🔧 **Exploring.** The full sequence works end to end — armed hold → launch →
+> reveal loop → lock → punch, grade snaps, effects fade, folded button drops in —
+> with the five `GemReveal_*.mp3` cues wired in and an optional timed auto-lock.
 > The individual effect values and the transition timings are still being dialled;
 > nothing here is signed off.
 
@@ -1301,5 +1302,5 @@ persists the panel to `localStorage`. Full descriptions in
 | Feedback Sheet | [src/components/FeedbackSheet.tsx](src/components/FeedbackSheet.tsx) | `SHEET_DEFAULT_CONFIG` |
 | Gauge | [src/components/Gauge.tsx](src/components/Gauge.tsx) | `GAUGE_DEFAULT_CONFIG` |
 | Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_{PHONE,TABLET,FULL}` |
-| Particle Rain | [src/components/ParticleRain.tsx](src/components/ParticleRain.tsx) | `PARTICLE_DEFAULT_CONFIG` |
-| Gem Reveal | [src/components/GemReveal.tsx](src/components/GemReveal.tsx) | `GEM_DEFAULT_CONFIG` (+ `src/lib/gemTiers.ts` for the grade colours) |
+| Particle Rain | [src/components/ParticleRain.tsx](src/components/ParticleRain.tsx) | `PARTICLE_DEFAULT_CONFIG` (+ `DAILY_BONUS_CONFIG` in [src/benches/RainBench.tsx](src/benches/RainBench.tsx)) |
+| Gem Reveal | [src/components/GemReveal.tsx](src/components/GemReveal.tsx) | `GEM_DEFAULT_CONFIG` (+ `src/lib/gemTiers.ts` grade colours, `src/lib/buildGemSpec.ts` spec, `src/assets/mp3/` audio) |
