@@ -1066,7 +1066,9 @@ dev.
 
 All in `src/assets/mp3/`, wired to the phase machine. Plain `HTMLAudioElement`
 per clip — **playback needs a user gesture**, so launch is the first sound
-you'll hear. The `sound` folder's **`sound on (master)`** gates everything.
+you'll hear. **Audio starts muted** — the 🔊 icon in the stage's bottom-left
+corner (or the `sound` folder's **`sound on (master)`**) toggles it, and gates
+both the SFX and the soundtrack.
 
 **SFX** — five cues, one shared **`SFX volume`**:
 
@@ -1303,8 +1305,9 @@ auto-scale; `?c=rain&vp=phone` deep-links one.
 
 Colour / hover / effects update **live**; entry re-runs on **↻ Replay reveal**.
 Stage buttons (top-right, stacked): **🔒 Lock grade** (reveal → locked), **⚡
-White flash** (coupled punch + flash), **🚀 Launch** (armed → reveal). `★ save settings`
-persists the panel to `localStorage`. Full descriptions in
+White flash** (coupled punch + flash), **🚀 Launch** (armed → reveal); the **🔊
+icon** bottom-left mutes/unmutes (starts muted). `★ save settings` persists the
+panel to `localStorage`. Full descriptions in
 [`docs/leva-controls.md`](docs/leva-controls.md).
 
 ## File map

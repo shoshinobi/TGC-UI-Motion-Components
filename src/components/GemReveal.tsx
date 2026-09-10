@@ -380,7 +380,7 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   buttonDamping: 38,
   buttonMass: 2.7,
 
-  sound: true,
+  sound: false,
   volume: 0.7,
   revealMode: 'endless',
   revealDuration: 6,

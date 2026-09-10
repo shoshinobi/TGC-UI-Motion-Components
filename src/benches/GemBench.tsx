@@ -325,6 +325,41 @@ export function GemBench() {
         >
           🚀 Launch
         </button>
+        <button
+          type='button'
+          className='stage-audio'
+          data-on={config.sound}
+          aria-pressed={config.sound}
+          title={config.sound ? 'Mute audio' : 'Unmute audio'}
+          onClick={() => set({ sound: !config.sound } as Parameters<typeof set>[0])}
+        >
+          <svg viewBox='0 0 24 24' width='20' height='20' aria-hidden='true'>
+            <path
+              d='M4 9v6h4l5 4V5L8 9H4z'
+              fill='currentColor'
+              stroke='currentColor'
+              strokeWidth='1.5'
+              strokeLinejoin='round'
+            />
+            {config.sound ? (
+              <path
+                d='M16 8.5a4.5 4.5 0 0 1 0 7M18.5 6a8 8 0 0 1 0 12'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='1.8'
+                strokeLinecap='round'
+              />
+            ) : (
+              <path
+                d='M16.5 9.5l5 5m0-5l-5 5'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='1.8'
+                strokeLinecap='round'
+              />
+            )}
+          </svg>
+        </button>
         <div className='gem-stage-inner'>
           <GemReveal
             key={runKey}
