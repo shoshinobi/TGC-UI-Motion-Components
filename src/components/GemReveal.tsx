@@ -343,7 +343,7 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   warpOpacity: 0.36,
   warpOpacityVar: 1,
   warpOnDelay: 0,
-  warpOnDuration: 0.15,
+  warpOnDuration: 0.2,
 
   jet: true,
   jetTracks: 2,
@@ -380,16 +380,16 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   buttonDamping: 38,
   buttonMass: 2.7,
 
-  sound: false,
-  volume: 0.7,
-  revealMode: 'endless',
-  revealDuration: 6,
+  sound: false, // bench starts muted (deliberate — the 🔊 toggle unmutes)
+  volume: 0.85,
+  revealMode: 'timed',
+  revealDuration: 8,
 
-  musicTrack: 'random',
-  musicVolume: 0.5,
+  musicTrack: 'belt-and-braces',
+  musicVolume: 0.15,
   musicLoop: true,
-  musicStart: 'launch',
-  musicLockDelay: 0.5,
+  musicStart: 'lock',
+  musicLockDelay: 3.2,
 }
 
 /** the soundtrack options (url + display name) */
