@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { motion, type SVGMotionProps, type Easing } from 'motion/react'
 import type { Props } from '@/lib/types'
 import { cn } from '@/lib/utils/cn'
+import { springSettleTime } from '@/lib/spring'
 
 /**
  * Live-tunable motion config for the preview. When `motionConfig` is omitted the
@@ -49,6 +50,47 @@ export const FLAME_DEFAULT_CONFIG: FlameMotionConfig = {
 }
 
 /**
+ * Optional "ignite" entrance — a staggered, bottom-anchored scale-in for the
+ * three layers (outer → middle → inner), used for a daily-streak moment. Not
+ * part of the approved idle-loop spec above; opt in with `entranceSignal`.
+ * Each layer grows to full **height** first (`scaleY`), then — once that
+ * spring settles — widens from `fromScaleX` out to full **width** (`scaleX`).
+ * The ordinary flicker loop keeps running underneath the whole time.
+ */
+export type FlameEntranceConfig = {
+  /** seconds between each layer's entrance start */
+  layerStagger: number
+  /** scaleX a layer starts at, before its height has finished growing */
+  fromScaleX: number
+  yStiffness: number
+  yDamping: number
+  yMass: number
+  xStiffness: number
+  xDamping: number
+  xMass: number
+  /** colour each layer starts as when it ignites, before tweening to `color` */
+  flashColor: string
+  /** seconds each layer holds `flashColor` before it starts tweening away */
+  flashHold: number
+  /** seconds the tween from `flashColor` to `color` takes */
+  flashDuration: number
+}
+
+export const FLAME_ENTRANCE_DEFAULT: FlameEntranceConfig = {
+  layerStagger: 0.08,
+  fromScaleX: 0.35,
+  yStiffness: 420,
+  yDamping: 40,
+  yMass: 1,
+  xStiffness: 420,
+  xDamping: 34,
+  xMass: 1,
+  flashColor: '#FFFFFF',
+  flashHold: 0.15,
+  flashDuration: 0.22,
+}
+
+/**
  * The three nested flame shapes, outer → inner. Each gradient runs from the
  * shape's own top (opaque) to the bottom of the icon (transparent).
  */
@@ -79,15 +121,38 @@ function FlameGradient({ id, y }: { id: string; y: readonly [number, number] }) 
 export type FlamePictogramProps = Props<React.SVGAttributes<SVGSVGElement>> & {
   motionConfig?: Partial<FlameMotionConfig>
   paused?: boolean
+  /** bump (from 0) to play the staggered ignite entrance across the three layers; 0/undefined = skip it */
+  entranceSignal?: number
+  entrance?: Partial<FlameEntranceConfig>
+  /**
+   * `true` — the flame starts at scale 0 (not visible, flicker loop not
+   * running) until the first `entranceSignal` trigger, at which point the
+   * ignite entrance, the loop, and (from the caller) the cue all begin
+   * together. `false`/omitted — the default: already visible and looping.
+   */
+  startHidden?: boolean
 }
 
-export function FlamePictogram({ className, style, motionConfig, paused, ...props }: FlamePictogramProps) {
+export function FlamePictogram({
+  className,
+  style,
+  motionConfig,
+  paused,
+  entranceSignal,
+  entrance,
+  startHidden,
+  ...props
+}: FlamePictogramProps) {
   const gradientIds = [useId(), useId(), useId()]
 
   const c = { ...FLAME_DEFAULT_CONFIG, ...motionConfig }
   const delays = [c.layerDelays.outer, c.layerDelays.middle, c.layerDelays.inner]
   const speeds = [c.layerSpeeds.outer, c.layerSpeeds.middle, c.layerSpeeds.inner]
   const layered = !paused && (delays.some((d) => d !== 0) || speeds.some((s) => s !== 1))
+  const showEntrance = !!entranceSignal
+  const notYetStarted = !!startHidden && !showEntrance
+  const ec = { ...FLAME_ENTRANCE_DEFAULT, ...entrance }
+  const ySettle = springSettleTime(ec.yStiffness, ec.yDamping, ec.yMass)
 
   const scaleKeyframes = paused ? { scaleX: 1, scaleY: 1 } : { scaleX: c.scaleX, scaleY: c.scaleY }
   const baseTransition = paused
@@ -114,29 +179,111 @@ export function FlamePictogram({ className, style, motionConfig, paused, ...prop
           ...style,
         }}
       >
-        {FLAME_LAYERS.map((layer, i) => (
-          <motion.svg
-            key={i}
-            viewBox='0 0 16 32'
-            fill='none'
-            preserveAspectRatio='none'
-            overflow='visible'
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              transformOrigin: c.transformOrigin,
-            }}
-            animate={scaleKeyframes}
-            transition={{ ...baseTransition, duration: c.duration / speeds[i], delay: delays[i] }}
-          >
-            <path d={layer.d} fill={`url(#${gradientIds[i]})`} />
-            <defs>
-              <FlameGradient id={gradientIds[i]} y={layer.gradientY} />
-            </defs>
-          </motion.svg>
-        ))}
+        {FLAME_LAYERS.map((layer, i) => {
+          const svgStyle = {
+            position: 'absolute' as const,
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            transformOrigin: c.transformOrigin,
+          }
+          const svgTransition = { ...baseTransition, duration: c.duration / speeds[i], delay: delays[i] }
+          const svgChildren = (
+            <>
+              <path d={layer.d} fill={`url(#${gradientIds[i]})`} />
+              <defs>
+                <FlameGradient id={gradientIds[i]} y={layer.gradientY} />
+              </defs>
+            </>
+          )
+          if (notYetStarted) {
+            // Dormant — not visible, flicker frozen, waiting for the first trigger.
+            return (
+              <span
+                key={i}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  transform: 'scale(0)',
+                  transformOrigin: 'bottom center',
+                }}
+              >
+                <motion.svg
+                  viewBox='0 0 16 32'
+                  fill='none'
+                  preserveAspectRatio='none'
+                  overflow='visible'
+                  style={svgStyle}
+                  animate={{ scaleX: 1, scaleY: 1 }}
+                  transition={{ duration: 0 }}
+                >
+                  {svgChildren}
+                </motion.svg>
+              </span>
+            )
+          }
+          if (!showEntrance) {
+            return (
+              <motion.svg
+                key={i}
+                viewBox='0 0 16 32'
+                fill='none'
+                preserveAspectRatio='none'
+                overflow='visible'
+                style={svgStyle}
+                animate={scaleKeyframes}
+                transition={svgTransition}
+              >
+                {svgChildren}
+              </motion.svg>
+            )
+          }
+          // The ignite entrance lives on this outer span (scaleY then scaleX,
+          // bottom-anchored, plus a colour flash that holds `flashColor` then
+          // tweens to `color` on the same CSS variable the gradients already
+          // read) so it multiplies with — rather than fights — the flicker's
+          // own scaleX/scaleY keyframes on the inner <motion.svg>.
+          const layerDelay = i * ec.layerStagger
+          return (
+            <motion.span
+              key={`${i}-${entranceSignal}`}
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                display: 'block',
+                transformOrigin: 'bottom center',
+              }}
+              initial={{ scaleY: 0, scaleX: ec.fromScaleX, ['--color-error' as string]: ec.flashColor }}
+              animate={{ scaleY: 1, scaleX: 1, ['--color-error' as string]: c.color }}
+              transition={{
+                scaleY: { type: 'spring', stiffness: ec.yStiffness, damping: ec.yDamping, mass: ec.yMass, delay: layerDelay },
+                scaleX: { type: 'spring', stiffness: ec.xStiffness, damping: ec.xDamping, mass: ec.xMass, delay: layerDelay + ySettle },
+                ['--color-error' as string]: {
+                  type: 'tween',
+                  ease: 'easeOut',
+                  delay: layerDelay + ec.flashHold,
+                  duration: ec.flashDuration,
+                },
+              }}
+            >
+              <motion.svg
+                viewBox='0 0 16 32'
+                fill='none'
+                preserveAspectRatio='none'
+                overflow='visible'
+                style={svgStyle}
+                animate={scaleKeyframes}
+                transition={svgTransition}
+              >
+                {svgChildren}
+              </motion.svg>
+            </motion.span>
+          )
+        })}
       </span>
     )
   }

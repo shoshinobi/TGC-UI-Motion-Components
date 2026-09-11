@@ -15,7 +15,7 @@ deep-link with `?c=`.
 
 | Component | Open | Approved spec | Status |
 |---|---|---|---|
-| **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [↓](#flame-pictogram) | ✅ 2026-08-31 |
+| **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [↓](#flame-pictogram) | ✅ idle loop 2026-08-31 · 🔧 [daily-streak ignite](#daily-streak-trigger-ignite) — pick **looping or hidden-until-triggered** |
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [↓](#feedback-sheet) | ✅ 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [↓](#gauge) | ✅ 2026-08-31 |
 | **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [↓](#banner-stack) | ✅ phone · tablet — 2026-09-01 (tablet is the largest breakpoint used; see note) |
@@ -53,6 +53,13 @@ constant, so the bench component renders the approved animation with no props.
 
 # Flame Pictogram
 
+> **Dev decision — pick a start mode.** This component can run two ways: a
+> **looping** flame that's already visible and animating (the original
+> behaviour), or a flame that **starts hidden at scale 0** and only appears —
+> scale-in, colour flash, loop, and the cue — when you trigger the daily
+> streak. Neither is the "right" one; it depends where you're placing it. See
+> [Daily streak trigger](#daily-streak-trigger-ignite) for both.
+
 ## In your code
 
 `src/components/FlamePictogram.tsx` is **your component, near-verbatim**. Changes
@@ -65,6 +72,7 @@ are additive:
 | 3 `<path>` `d` strings + gradient coords pulled into a `FLAME_LAYERS` array | needed to render layers on separate timelines | cosmetic — same paths, same gradients |
 | `--color-error` set inline from `motionConfig.color` | tweakable in isolation | keep your global `--color-error`; don't pass `color` and it's a no-op |
 | **Second render path**: one stacked `<motion.svg>` per flame layer | `motion/react` can't animate `scale` on SVG children (`<path>`/`<g>`) — only on an `<svg>` root. The approved spec staggers layers, so it needs this path. | a non-layered spec would stay a single `<motion.svg>` |
+| Optional `entranceSignal?: number` + `entrance?: Partial<FlameEntranceConfig>` + `startHidden?: boolean` | the [daily-streak ignite](#daily-streak-trigger-ignite) — a staggered, per-layer scale-in + colour flash, and an optional "starts invisible" mode. Not part of the approved idle-loop spec | none — omit all three, the component renders exactly as before |
 
 ## Bring this over
 
@@ -148,6 +156,52 @@ const FLAME_LAYERS = [
 back to the first (`1`) each cycle — a ~2% jump. Subtle at `0.4 s` / `linear`,
 but if it reads as a tick, set the last `scaleY` keyframe to `1` or switch
 `repeatType` to `mirror`.
+
+## Daily streak trigger ("ignite")
+
+**Stage → `start as`** picks how the flame begins:
+
+- **`looping`** (default) — already visible, already looping, silent. The
+  ignite below plays as a bonus pulse on top, any time you press the trigger,
+  and the loop never stops.
+- **`hidden`** — the flame starts at **scale 0** (not visible) and its flicker
+  loop **isn't running**. Nothing happens until the first trigger — then the
+  ignite entrance, the loop, and the cue all begin together, exactly once
+  (retrigger it same as `looping` after that).
+
+Either way, the **🔥 Daily Streak** button (stage, top-right, and Export)
+fires the same ignite across the three layers (outer / middle / inner), each
+**staggered** `layer stagger (s)` apart (default `0.08s`, outer first):
+
+- each layer grows to **full height first** — `scaleY` springs 0 → 1, anchored
+  **bottom-centre** — using the **height spring (Y)** (default `stiffness 420
+  / damping 40 / mass 1`, close to critically damped so it reads as an ease-out
+  with no overshoot);
+- **once that layer's height spring settles**, it **widens** — `scaleX`
+  springs from `from scaleX` (default `0.35`, a thin sliver) up to `1` — using
+  the separate **width spring (X)** (default `stiffness 420 / damping 34 /
+  mass 1`, a touch softer — a gentle flare as it fills out);
+- at the same time, each layer's **colour starts at `start colour`** (default
+  white) and **holds** it for `hold (s)` (default **150 ms**) measured from
+  that layer's own entrance start, then **tweens** to the appearance `color`
+  over `tween to colour (s)` (default `0.22s`, `easeOut`) — so the flame
+  flashes white-hot at ignition and eases into its real colour, outer layer
+  first, the others a beat behind;
+- `src/assets/mp3/flameStreak.mp3` plays the moment the button is pressed;
+- once every layer has widened out and coloured in, the flame just **keeps
+  running its ordinary flicker loop** underneath — nothing else changes.
+
+Net effect: a thin white-hot lick of flame shoots up to full height, colours
+in and flares out to its normal width, outer → middle → inner just slightly
+apart, then settles into the idle flicker.
+
+This lives in `FlamePictogram.tsx` as **additive, opt-in** props —
+`entranceSignal` (bump to replay), `entrance` config (`layerStagger` /
+`fromScaleX` / the two springs / `flashColor` / `flashHold` / `flashDuration`),
+and `startHidden`. Omit all three and the component is byte-for-byte what it
+always was; `FlameBench.tsx` just wires the button + `start as` select to them
+and plays the cue alongside. Wire the same entrance + cue wherever your real
+daily-streak moment shows the flame.
 
 ---
 
@@ -1016,6 +1070,20 @@ deep-links a viewport. **Export → ★ save settings** stashes the current pane
 JSON above with your changes — send that back to lock it in; **reset to code
 default** restores the committed values.
 
+### Daily gold audio
+
+The **🪙 Daily Gold** button (stage, top-right, and Export) loads this preset,
+re-drops, and plays `src/assets/mp3/dailyGold.mp3` — a combined cue: the
+gold-drop chime **and** a baked-in cha-ching. **`▶ play daily gold sound`**
+(Export) plays the same file on its own, with no config change.
+
+> **Dev note.** If that baked-in cha-ching doesn't land in sync with an avatar
+> reaction elsewhere on your screen, two split files are also in
+> `src/assets/mp3/` (not wired into this bench): `dailyGoldChime.mp3` is just
+> the gold-drop sound — trigger it when the gold appears — and `chaChing.mp3`
+> is the cha-ching on its own, so you can time it independently to whenever
+> the avatar's reaction actually fires.
+
 ---
 
 # Gem Reveal
@@ -1257,12 +1325,13 @@ top-left). The dock's spec cards start collapsed — click a header to expand.
 
 | Group | Controls |
 |---|---|
-| Stage | size (px), background (dark / light / ember), baseline, context row, pause |
+| Stage | size (px), **start as** (looping / hidden), background (dark / light / ember), baseline, context row, pause |
+| **Daily Streak** | layer stagger (s) · from scaleX · **height spring (Y)** stiffness/damping/mass · **width spring (X)** stiffness/damping/mass · **colour flash** (start colour, hold (s), tween to colour (s)) — the [ignite entrance](#daily-streak-trigger-ignite) |
 | Appearance | `color` (→ `--color-error`), `transformOrigin` |
 | Timing | `duration`, `ease` (named + `custom`), cubic-bezier handles, `loop`, `repeatType`, `repeatDelay` |
 | Keyframes | frames 1–4 → `time` / `scaleX` / `scaleY` |
 | Per-layer | outer / middle / inner → `delay (s)`, `speed ×` |
-| Export | reset to approved spec · restart animation · copy Framer Motion · copy JSON tokens |
+| Export | reset to approved spec · restart animation · **🔥 daily streak** · copy Framer Motion · copy JSON tokens |
 
 **Feedback Sheet**
 
@@ -1318,10 +1387,13 @@ physics sub-folders **sway** / **spin**. Labels are trimmed to fit the panel.
 | walls | **side colliders** (on/off), inset, bounce, **friction** |
 | collision | collide + stack, hit radius, bounce, bar grip, **pile friction**, iterations, wake |
 | appearance | asset (both / gbar / tinyBar), size, scale min / max, big=faster, fade in, opacity |
-| Export | **★ save settings** (localStorage, survives reload) · reset to code default · **▶ load "daily gold bonus" preset** · drop again · **⤓ pull the floor out** · copy canvas loop · copy JSON tokens · copy config |
+| Export | **★ save settings** (localStorage, survives reload) · reset to code default · **🪙 load "daily gold bonus" preset** · **▶ play daily gold sound** · drop again · **⤓ pull the floor out** · copy canvas loop · copy JSON tokens · copy config |
 
-Stage buttons: **↻ Drop again** (re-run from scratch) and **⤓ Pull the floor
-out** (clear the screen — see [above](#clearing-the-screen--raindump)).
+Stage buttons: **↻ Drop again** (re-run from scratch), **⤓ Pull the floor
+out** (clear the screen — see [above](#clearing-the-screen--raindump)), and
+**🪙 Daily Gold** (loads the [daily gold bonus preset](#daily-gold-audio),
+re-drops, and plays its cue — see the dev note there about syncing the
+cha-ching to an avatar reaction).
 
 Physics / floor / collision / appearance update **live**; emission, the Stage
 viewport, and the responsive knobs (or **drop again**) re-drop the whole system.

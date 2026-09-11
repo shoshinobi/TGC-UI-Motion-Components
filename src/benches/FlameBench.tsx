@@ -1,8 +1,13 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useControls, folder, button } from 'leva'
-import { FlamePictogram, FLAME_DEFAULT_CONFIG, type FlameMotionConfig } from '@/components/FlamePictogram'
+import {
+  FlamePictogram,
+  FLAME_DEFAULT_CONFIG,
+  type FlameMotionConfig,
+} from '@/components/FlamePictogram'
 import { buildJsxSpec, buildJsonSpec } from '@/lib/buildSpec'
 import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
+import flameStreakUrl from '@/assets/mp3/flameStreak.mp3'
 
 const EASE_OPTIONS = [
   'linear',
@@ -58,12 +63,73 @@ export function FlameBench() {
   // Bump to force the <motion.svg> to remount and replay from the first keyframe.
   const [nonce, setNonce] = useState(0)
 
+  // Flame starts as a silent, always-running loop. "Daily Streak" bumps this —
+  // the flame springs in from scale 0 (bottom-anchored) and flameStreak.mp3
+  // plays; once the spring settles it just continues its ordinary flicker loop.
+  const [streak, setStreak] = useState(0)
+
+  const streakAudioRef = useRef<HTMLAudioElement | null>(null)
+  useEffect(() => {
+    const audio = new Audio(flameStreakUrl)
+    streakAudioRef.current = audio
+    return () => {
+      audio.pause()
+      audio.src = ''
+      streakAudioRef.current = null
+    }
+  }, [])
+  const triggerStreak = () => {
+    const audio = streakAudioRef.current
+    if (audio) {
+      audio.currentTime = 0
+      audio.play().catch(() => {})
+    }
+    setStreak((s) => s + 1)
+  }
+
   const stage = useControls('Stage', {
     size: { value: 120, min: 16, max: 360, step: 1, label: 'size (px)' },
+    startMode: {
+      value: 'looping',
+      options: ['looping', 'hidden'],
+      label: 'start as',
+    },
     background: { value: 'dark', options: ['dark', 'light', 'ember'] },
     baseline: true,
     contextRow: { value: true, label: 'context row' },
     paused: false,
+  })
+  const startHidden = stage.startMode === 'hidden'
+
+  // Switching "start as" is a fresh start — re-arm the trigger so 'hidden'
+  // actually starts hidden again (and 'looping' drops any mid-ignite state).
+  useEffect(() => {
+    setStreak(0)
+  }, [stage.startMode])
+
+  // The daily-streak "ignite": each of the 3 layers grows to full height
+  // (scaleY) first, then — once that spring settles — widens out from
+  // `from scaleX` to full width, staggered outer → middle → inner. The colour
+  // flash rides the same timeline: each layer starts as `flash colour`, holds
+  // it briefly, then tweens to the appearance colour.
+  const entrance = useControls('Daily Streak', {
+    layerStagger: { value: 0.08, min: 0, max: 0.5, step: 0.01, label: 'layer stagger (s)' },
+    fromScaleX: { value: 0.35, min: 0.05, max: 1, step: 0.05, label: 'from scaleX' },
+    'height spring (Y)': folder({
+      yStiffness: { value: 420, min: 40, max: 1200, step: 10, label: 'stiffness' },
+      yDamping: { value: 40, min: 2, max: 80, step: 1, label: 'damping (≥ ~2·√stiffness = no bounce)' },
+      yMass: { value: 1, min: 0.2, max: 4, step: 0.1, label: 'mass' },
+    }),
+    'width spring (X)': folder({
+      xStiffness: { value: 420, min: 40, max: 1200, step: 10, label: 'stiffness' },
+      xDamping: { value: 34, min: 2, max: 80, step: 1, label: 'damping' },
+      xMass: { value: 1, min: 0.2, max: 4, step: 0.1, label: 'mass' },
+    }),
+    'colour flash': folder({
+      flashColor: { value: '#FFFFFF', label: 'start colour' },
+      flashHold: { value: 0.15, min: 0, max: 1, step: 0.01, label: 'hold (s)' },
+      flashDuration: { value: 0.22, min: 0.02, max: 1.5, step: 0.02, label: 'tween to colour (s)' },
+    }),
   })
 
   const [appearance, setAppearance] = useControls('Appearance', () => ({
@@ -163,6 +229,7 @@ export function FlameBench() {
       setNonce((n) => n + 1)
     }),
     'restart animation': button(() => setNonce((n) => n + 1)),
+    '🔥 daily streak': button(() => triggerStreak()),
     'copy Framer Motion': button(copy('jsx')),
     'copy JSON tokens': button(copy('json')),
     'copy config (for defaults)': button(copy('config')),
@@ -191,12 +258,18 @@ export function FlameBench() {
         <button type='button' className='stage-replay' onClick={() => setNonce((n) => n + 1)}>
           ↻ Replay
         </button>
+        <button type='button' className='stage-replay stage-replay--alt' onClick={triggerStreak}>
+          🔥 Daily Streak
+        </button>
         <div className='stage-inner' style={{ color: stage.background === 'light' ? '#18181b' : '#e4e4e7' }}>
           <div className='flame-slot'>
             <FlamePictogram
               key={animKey}
               motionConfig={config}
               paused={stage.paused}
+              entranceSignal={streak}
+              entrance={entrance}
+              startHidden={startHidden}
               className=''
               style={{ width: stage.size / 2, height: stage.size }}
             />

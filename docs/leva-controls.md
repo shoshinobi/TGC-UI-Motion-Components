@@ -23,6 +23,7 @@ changes what you see so you can dial in numbers to hand back.
 | `ember colour` *(Gem)* | colour | The hot colour of the `ember` gradient. Pick anything to test the gem against different background tones. |
 | `ember spread (%)` *(Gem)* | 10–140 | How far the ember gradient reaches — small = a tight glow at the bottom, large = the colour fills most of the frame (near-flat wash). |
 | `paused` | toggle | Freezes the animation / simulation in place. |
+| `start as` *(Flame Pictogram)* | select `looping` / `hidden` | `looping` — visible and looping from the start (default). `hidden` — starts at scale 0, invisible, loop not running, until the first **🔥 Daily Streak**. |
 | `viewport` | select `phone` / `tablet` / `full` | *(Feedback Sheet, Banner Stack, Particle Rain)* Frames the preview at a device width (≈390 / ≈640–720 / full). For Particle Rain it also feeds the responsive auto-scale, so you see real per-size counts. |
 
 ### Export folder (buttons)
@@ -36,9 +37,11 @@ changes what you see so you can dial in numbers to hand back.
 | `copy config (for defaults)` | Copy the flat config object — send this back to bake in a new default. |
 
 Particle Rain adds **`★ save settings`** (persist the current panel to
-`localStorage` so it survives a reload) and **`⤓ pull the floor out (clear
-screen)`**. Banner Stack adds **`next banner ▸`**, **`★ save as approved (this
-viewport)`**, and **`reset this viewport to code default`**.
+`localStorage` so it survives a reload), **`⤓ pull the floor out (clear
+screen)`**, **`🪙 load "daily gold bonus" preset`**, and **`▶ play daily gold
+sound`**. Flame Pictogram adds **`🔥 daily streak`**. Banner Stack adds
+**`next banner ▸`**, **`★ save as approved (this viewport)`**, and **`reset
+this viewport to code default`**.
 
 ---
 
@@ -87,6 +90,39 @@ layers so each can flicker slightly out of phase.
 |---|---|---|---|
 | `delay (s)` | 0–1 | Start offset for that flame layer. | Putting the three layers slightly out of phase so the flame shimmers instead of pulsing as one. |
 | `speed ×` | 0.25–4 | Playback-rate multiplier for that layer (>1 = faster loop). | An inner core that licks quicker than the body. |
+
+### Daily Streak (the "ignite" entrance)
+
+`Stage → start as` picks the idle state: **`looping`** (default) is already
+visible and looping; **`hidden`** starts at scale 0 with the loop not running,
+until the first trigger. Either way, pressing **🔥 Daily Streak** (stage +
+Export button) plays `flameStreak.mp3` and springs each of the three layers in
+— **staggered** (outer → middle → inner). Per layer:
+
+1. **grows to full height first** — `scaleY` 0→1 (bottom-anchored);
+2. **once that settles, widens** — `scaleX` from `from scaleX` → 1;
+3. **colour**: starts at `start colour`, **holds** it for `hold (s)`, then
+   **tweens** to the appearance `color` over `tween to colour (s)` — running
+   the whole time alongside the scale, not after it.
+
+Once every layer has widened out and coloured in, the flame just continues its
+ordinary flicker loop underneath (starting it, in `hidden` mode).
+
+| Control | Range | What it changes | Use it for |
+|---|---|---|---|
+| `layer stagger (s)` | 0–0.5 | Gap between each layer's entrance start (outer first). | Tighter = the three pop almost together; looser = a visible ripple outer→middle→inner. |
+| `from scaleX` | 0.05–1 | How thin each layer starts (in width) before its height finishes growing. | Lower = a finer, whip-like initial lick. |
+| **height spring (Y)** → `stiffness` / `damping` / `mass` | 40–1200 / 2–80 / 0.2–4 | The 0→1 `scaleY` spring — grows the layer to full height. Damping ≥ ≈2·√(stiffness·mass) = critically damped, no bounce (reads as ease-out). | How fast/snappy the flame shoots up. |
+| **width spring (X)** → `stiffness` / `damping` / `mass` | 40–1200 / 2–80 / 0.2–4 | The `from scaleX`→1 spring — starts once that layer's height spring has settled. | How the flame flares out to full width; a touch of underdamping here gives a gentle overshoot/flare. |
+| **colour flash** → `start colour` | colour | What each layer starts as when it ignites (default white). | A different "hot" colour, or match a brand accent. |
+| **colour flash** → `hold (s)` | 0–1 | How long a layer holds `start colour` before it starts tweening away, measured from that layer's own entrance start. | Default **0.15s (150ms)** — a quick white flash before the real colour shows. |
+| **colour flash** → `tween to colour (s)` | 0.02–1.5 | Duration of the `start colour` → `color` tween (`easeOut`). | Snappy vs a slow colour bloom. |
+
+This lives in `FlamePictogram.tsx` as **additive, opt-in** props
+(`entranceSignal` + `entrance` config + `startHidden`) — omit all three and
+the component renders exactly as it always did. `FlameBench.tsx` just wires
+the button + `start as` select to them and plays the cue alongside. Wire the
+same entrance + cue wherever your real daily-streak moment shows the flame.
 
 ---
 
@@ -336,6 +372,21 @@ integration flow.
 | `big=faster` | 0–1 | Couples bar size to fall speed — bigger bars drop faster (parallax). |
 | `fade in (s)` | 0–1 | Spawn fade-in time. |
 | `opacity` | 0–1 | Global peak opacity. |
+
+### audio (not a Leva control — stage + Export buttons)
+
+**🪙 Daily Gold** loads the [daily gold bonus preset](../README.md#daily-gold-bonus--stream-preset),
+re-drops, and plays `dailyGold.mp3`. **`▶ play daily gold sound`** (Export
+only) plays the same cue on its own, no config change. Both live in the bench
+(`RainBench.tsx`).
+
+> **Dev note — syncing the cha-ching to your avatar.** `dailyGold.mp3` is a
+> combined cue (the gold-drop chime **+** a baked-in cha-ching). If that
+> cha-ching doesn't land in sync with an avatar reaction elsewhere in your
+> screen, use the two split files instead: `dailyGoldChime.mp3` (the drop
+> sound only) tied to the gold appearing, and `chaChing.mp3` fired on its own,
+> timed to whenever the avatar's reaction actually happens. All three are in
+> `src/assets/mp3/`; only `dailyGold.mp3` is wired into this bench.
 
 ---
 

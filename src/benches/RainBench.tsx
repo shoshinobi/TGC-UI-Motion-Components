@@ -3,6 +3,7 @@ import { useControls, folder, button } from 'leva'
 import { ParticleRain, PARTICLE_DEFAULT_CONFIG, type ParticleRainConfig } from '@/components/ParticleRain'
 import { buildParticleLoopSpec, buildParticleJsonSpec } from '@/lib/buildParticleSpec'
 import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
+import dailyGoldUrl from '@/assets/mp3/dailyGold.mp3'
 
 const D = PARTICLE_DEFAULT_CONFIG
 
@@ -175,6 +176,30 @@ export function RainBench() {
     }
   }, [set])
 
+  // "Daily Gold" cue — the dailyGold.mp3 one-shot, played standalone or
+  // whenever the daily-bonus preset is launched.
+  const goldAudioRef = useRef<HTMLAudioElement | null>(null)
+  useEffect(() => {
+    const audio = new Audio(dailyGoldUrl)
+    goldAudioRef.current = audio
+    return () => {
+      audio.pause()
+      audio.src = ''
+      goldAudioRef.current = null
+    }
+  }, [])
+  const playGoldSound = () => {
+    const audio = goldAudioRef.current
+    if (!audio) return
+    audio.currentTime = 0
+    audio.play().catch(() => {})
+  }
+  const launchDailyGold = () => {
+    set({ ...DAILY_BONUS_CONFIG } as unknown as Parameters<typeof set>[0])
+    setNonce((k) => k + 1)
+    playGoldSound()
+  }
+
   // Leva flattens folder values, so the panel is 1:1 with the flat config —
   // pull every key straight through by name.
   const values = v as unknown as Record<string, string | number | boolean>
@@ -207,10 +232,8 @@ export function RainBench() {
       set(flatDefaults() as unknown as Parameters<typeof set>[0])
       setNonce((k) => k + 1)
     }),
-    '▶ load "daily gold bonus" preset': button(() => {
-      set({ ...DAILY_BONUS_CONFIG } as unknown as Parameters<typeof set>[0])
-      setNonce((k) => k + 1)
-    }),
+    '🪙 load "daily gold bonus" preset': button(() => launchDailyGold()),
+    '▶ play daily gold sound': button(() => playGoldSound()),
     'drop again': button(() => setNonce((k) => k + 1)),
     '⤓ pull the floor out (clear screen)': button(() => setDump((d) => d + 1)),
     'copy canvas loop': button(copy('loop')),
@@ -251,6 +274,9 @@ export function RainBench() {
           onClick={() => setDump((d) => d + 1)}
         >
           ⤓ Pull the floor out
+        </button>
+        <button type='button' className='stage-replay stage-replay--alt2' onClick={launchDailyGold}>
+          🪙 Daily Gold
         </button>
         <div className='rain-stage-inner'>
           <div className='rain-frame' style={{ width: frameWidth }} data-viewport={stage.viewport}>
