@@ -34,6 +34,7 @@ const DAILY_BONUS_CONFIG: ParticleRainConfig = {
   contactSpin: 0.24,
   floor: 'fallThrough',
   particleSize: 90,
+  autoScale: true, // pinned — independent of the burst default, which is now off
 }
 
 function flatDefaults() {

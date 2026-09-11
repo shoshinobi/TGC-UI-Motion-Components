@@ -226,7 +226,7 @@ export const PARTICLE_DEFAULT_CONFIG: ParticleRainConfig = {
   fadeIn: 0.15,
   opacity: 1,
 
-  autoScale: true,
+  autoScale: false,
   referenceWidth: 570,
   countScale: 0.55,
   sizeScale: 0.3,

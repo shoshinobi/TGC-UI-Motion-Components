@@ -18,7 +18,7 @@ deep-link with `?c=`.
 | **Flame Pictogram** | [`?c=flame`](https://tgc-ui-motion-components.vercel.app/?c=flame) | [↓](#flame-pictogram) | ✅ 2026-08-31 |
 | **Feedback Sheet** (error) | [`?c=sheet`](https://tgc-ui-motion-components.vercel.app/?c=sheet) | [↓](#feedback-sheet) | ✅ 2026-08-31 |
 | **Gauge** | [`?c=gauge`](https://tgc-ui-motion-components.vercel.app/?c=gauge) | [↓](#gauge) | ✅ 2026-08-31 |
-| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [↓](#banner-stack) | ✅ phone · tablet · full — 2026-09-01 |
+| **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [↓](#banner-stack) | ✅ phone · tablet — 2026-09-01 (tablet is the largest breakpoint used; see note) |
 | **Particle Rain** | [`?c=rain`](https://tgc-ui-motion-components.vercel.app/?c=rain) | [↓](#particle-rain) | 🔧 approach locked (burst + floor + walls); two presets — chest-reveal burst + [daily gold bonus stream](#daily-gold-bonus--stream-preset) |
 | **Gem Reveal** | [`?c=gem`](https://tgc-ui-motion-components.vercel.app/?c=gem) | [↓](#gem-reveal) | 🔧 exploring — full sequence (armed → reveal → locked), 6 grade tokens, effects + audio wired; values being dialled |
 
@@ -433,6 +433,11 @@ dims by the same amount.
 > Approved 2026-09-01, per screen size. **Shared across all three:** everything
 > except the 8 fan / drag / tilt values in the diff table. Those 8 are tuned per
 > viewport.
+>
+> **Use phone + tablet only.** `BANNER_CONFIG_FULL` doesn't suit how the real UI
+> is laid out at full width, so don't wire it up — **tablet is the largest
+> breakpoint you should use**, for tablet screens and desktop alike. It's kept
+> below as an explored reference in case that changes.
 
 All three are exported from `src/components/BannerStack.tsx` as
 `BANNER_CONFIG_PHONE` (= `BANNER_DEFAULT_CONFIG`), `BANNER_CONFIG_TABLET`,
@@ -586,16 +591,17 @@ top card tilted `−2°`.
 
 ### Switching configs — yours to wire
 
-```tsx
-import { BANNER_CONFIG_PHONE, BANNER_CONFIG_TABLET, BANNER_CONFIG_FULL } from './BannerStack'
+Two breakpoints, not three — **tablet is the ceiling**:
 
-const config =
-  width >= FULL_BP ? BANNER_CONFIG_FULL : width >= TABLET_BP ? BANNER_CONFIG_TABLET : BANNER_CONFIG_PHONE
+```tsx
+import { BANNER_CONFIG_PHONE, BANNER_CONFIG_TABLET } from './BannerStack'
+
+const config = width >= TABLET_BP ? BANNER_CONFIG_TABLET : BANNER_CONFIG_PHONE
 
 <BannerStack banners={banners} motionConfig={config} />
 ```
 
-The breakpoints and switch are yours. **Export → copy Framer Motion** prints the
+The breakpoint and switch are yours. **Export → copy Framer Motion** prints the
 whole persistent-stack render (the `slot(pos)` function, per-card `animate`, the
 drag handler with `dragConstraints` + `dragTransition`, the CTA), ready to drop
 in. **copy JSON tokens** is the same framework-neutral.
@@ -646,7 +652,7 @@ spills off the bottom.
 
 | param | why |
 |---|---|
-| `count` | match the gold quantity (see flow step 2). Default is **56** (at `referenceWidth` 570); scale it up/down with the payout |
+| `count` | match the gold quantity (see flow step 2). Default is **56**, used literally at every width (`autoScale` is off for this preset); scale it up/down with the payout, or turn `autoScale` on if you want it to track screen width |
 | `spawnWidth` | on wide screens, drop to **~0.4–0.6** so the gold falls in a central column instead of spanning the whole frame |
 | `wallInset` | if you narrow `spawnWidth`, bring the walls in to hug that column. **It's a fixed px value**, not a fraction — so if you use it, test phone → desktop and consider scaling it with width yourself |
 
@@ -655,7 +661,12 @@ Current-config values unless the reveal calls for a different feel.
 
 ## Responsive — automatic, but sanity-check the walls
 
-`autoScale` (on) reads the live canvas width every frame and scales `count` and
+> `autoScale` is **off** in the chest-reveal burst default (Malcolm's call —
+> `count` / `particleSize` are used literally at every width) and **on** in the
+> [daily gold bonus preset](#daily-gold-bonus--stream-preset). Turn it on for
+> the burst if you want the same density treatment there.
+
+`autoScale`, when on, reads the live canvas width every frame and scales `count` and
 `particleSize` against `referenceWidth`, so the downpour keeps the same
 **density** on a 390 px phone as on a 1440 px desktop. `spawnWidth` is a fraction
 of width, so the spawn band tracks automatically. The physics never change with
@@ -687,7 +698,7 @@ effectiveSize  = particleSize · factor_with_sizeScale
 | `sizeScale` | same, for `particleSize`. `1` = a bar is the same fraction of the frame everywhere; `0` = always `particleSize` px; default `0.3` = grows gently |
 | `minScale` / `maxScale` | hard clamp on the factor (both count and size) so a tiny phone or an ultrawide doesn't over/under-do it. Defaults `0.35` / `2.2` |
 
-Worked example with the current defaults (`referenceWidth 570`, `count 56`, `countScale 0.55`, `particleSize 80`, `sizeScale 0.3`): a 390 px phone → **~46 bars @ 72 px**; 720 px tablet → **~64 @ 86 px**; 1400 px full → **~101 @ 115 px**. The `countScale 0.55` means a wide desktop gets more bars but not proportionally more — the payout still reads as "a lot" without burying the frame.
+Worked example with `autoScale` on (`referenceWidth 570`, `count 56`, `countScale 0.55`, `particleSize 80`, `sizeScale 0.3`): a 390 px phone → **~46 bars @ 72 px**; 720 px tablet → **~64 @ 86 px**; 1400 px full → **~101 @ 115 px**. The `countScale 0.55` means a wide desktop gets more bars but not proportionally more — the payout still reads as "a lot" without burying the frame.
 
 ## How the engine works — you don't need Pixi.js
 
@@ -898,7 +909,7 @@ are yours to set; the rest holds until we see it live.
   "bigFallFaster": 1,
   "fadeIn": 0.15,
   "opacity": 1,
-  "autoScale": true,
+  "autoScale": false,
   "referenceWidth": 570,
   "countScale": 0.55,
   "sizeScale": 0.3,
@@ -916,7 +927,7 @@ than a chest payout.
 
 On the bench: **Export → ▶ load "daily gold bonus" preset** swaps it into the
 panel and re-drops. It's `DAILY_BONUS_CONFIG` in
-[`src/benches/RainBench.tsx`](src/benches/RainBench.tsx) — the same 52 keys, 16 of
+[`src/benches/RainBench.tsx`](src/benches/RainBench.tsx) — the same 52 keys, 17 of
 them changed from the burst config:
 
 | key | burst | daily bonus | effect |
@@ -936,9 +947,10 @@ them changed from the burst config:
 | `airborneSpin` | `killOnContact` | **`keep`** | no contacts to speak of — keep spinning |
 | `contactSpin` | 0 | **0.24** | slight torque off the walls on the way down |
 | `particleSize` | 80 | **90** | a touch bigger — the stream is sparse, so each bar carries more |
+| `autoScale` | `false` | **`true`** | pinned on for this preset (the burst default turned it off) — the stream density tracks screen width |
 
-Everything else (`walls`, `wallInset`, `collide*`, `asset`, scale range,
-`autoScale` and the responsive block) is identical to the burst config.
+Everything else (`walls`, `wallInset`, `collide*`, `asset`, scale range, and the
+rest of the responsive block) is identical to the burst config.
 
 ```json
 {
@@ -1010,13 +1022,38 @@ default** restores the committed values.
 
 > 🔧 **Exploring.** The full sequence works end to end — armed hold → launch →
 > reveal loop → lock → punch, grade snaps, effects fade, folded button drops in —
-> with the five `GemReveal_*` SFX cues + a selectable music bed wired in, and an
-> optional timed auto-lock.
-> The individual effect values and the transition timings are still being dialled;
+> with SFX and a selectable music bed wired in, and an optional timed auto-lock.
+> The individual effect values and transition timings are still being dialled;
 > nothing here is signed off.
 
 The looping **`gem.lottie`** (256 × 256, 60 fps) rises from the bottom of the
 screen and hovers in the centre, tinted to one of the six grades.
+
+## Notes for the developer
+
+Five things the bench doesn't show, that you'll need to handle:
+
+1. **Audio is trigger-driven, not a timeline.** Every cue fires off a real event
+   in the sequence — launch, lock, an explicit flash/punch — not a fixed
+   schedule. Wire the matching call in your app and the sounds follow on their
+   own; see [Audio](#audio) for the full trigger list.
+2. **You choose how the reveal ends.** Either let it run until you call `lock()`
+   (`reveal loop: endless`, the default), or set a fixed length (`timed` + a
+   duration) and it locks itself — see
+   [Timed reveal](#the-sequence-armed--reveal--locked).
+3. **Make it responsive to your real UI, not just the viewport.** The bench
+   scales the gem to whatever box it's dropped in, which isn't the same as
+   matching your app's actual breakpoints and component sizing — track the same
+   scaling rules the rest of the screen uses, not the raw window width.
+4. **Where it sits on screen isn't shown here.** The bench renders the gem alone
+   on a plain stage. In the real app you'll need to work out its position
+   relative to the card reveal and any pop-ups around it — that layout is
+   outside this demo.
+5. **The soundtrack is one example, not a requirement.** As shipped here it's
+   wired to start on launch or after the lock, as a self-contained demo of the
+   feature. You may prefer one continuous background track across the whole
+   app instead, independent of this component's lifecycle — treat this as "a
+   way it could work," not "how it has to work."
 
 ## The sequence (armed → reveal → locked)
 
@@ -1066,9 +1103,9 @@ dev.
 
 All in `src/assets/mp3/`, wired to the phase machine. Plain `HTMLAudioElement`
 per clip — **playback needs a user gesture**, so launch is the first sound
-you'll hear. **Audio starts muted** — the 🔊 icon in the stage's bottom-left
-corner (or the `sound` folder's **`sound on (master)`**) toggles it, and gates
-both the SFX and the soundtrack.
+you'll hear. **Sound is on by default**; the 🔊 icon in the stage's bottom-left
+corner (or the `sound` folder's **`sound on (master)`**) mutes/unmutes, gating
+both the SFX and the soundtrack together.
 
 **SFX** — five cues, one shared **`SFX volume`**:
 
@@ -1159,23 +1196,31 @@ non-interactive (`pointer-events: none`); the dev wires the real button.
 
 ## White flash
 
-An impact event — the **⚡ white flash** button / `flashSignal` prop, the **✦
-punch scale** trigger (the two are coupled — either fires both), the **lock**
-(after the white blast + `punch/flash delay`), or between grades in the
-auto-cycle. There's also an **ambient** flash option as the gem enters the loop
-(`flash on entering the loop` — whiteout + glow spike + optional streaks, but
-**no punch**), and the lock's optional **white blast** (`lock transition → white
-blast before reveal`): the gem's colour swaps to pure white and the glow spikes,
-building over `↳ blast build (s)`, before the grade colour bursts in — a hard
-beat between the cycling grades and the locked one. On fire, all at once:
+An impact event. On fire, all at once:
 
 - a **solid white diamond** covers the whole gem shape (clip-path overlay),
   hiding every facet, held for `hold full (s)` then decaying over `decay (s)`;
   `blur / bloom (px)` sits on an unclipped wrapper so the white spills *past* the
   silhouette (also applies to the punch's `apex colour flash`);
-- the **punch scale** kicks (coupled);
+- the **punch scale** kicks (coupled — see below);
 - the **gem-streak burst** goes off (if `emit gem streaks` is on);
 - the **glow spikes** by `glow spike ×` for the duration of the flash.
+
+**What can trigger it:**
+
+| trigger | punch too? | notes |
+|---|---|---|
+| **⚡ white flash** button / `flashSignal` prop | yes (coupled) | either this or **✦ punch scale** fires both — they're one impact event |
+| **✦ punch scale** button / `scaleSignal` prop | — (it *is* the punch) | |
+| the **lock** | yes | fires `punch/flash delay` after the optional white blast (below) |
+| between grades, if `white-flash between` is on | no | auto-cycle only |
+| `flash on entering the loop` (+ `↳ delay after arrival (s)`) | no | ambient — the gem settling into the loop, not an impact |
+
+**The lock's white blast** (`lock transition → white blast before reveal`) is a
+separate, earlier beat: the gem's colour swaps to pure white and the glow
+spikes, building over `↳ blast build (s)`, *before* the grade colour bursts in
+under the flash above — a hard visual break between the cycling grades and the
+locked one.
 
 ## Effects
 
@@ -1242,7 +1287,7 @@ top-left). The dock's spec cards start collapsed — click a header to expand.
 
 | Group | Controls |
 |---|---|
-| Stage | viewport (phone / tablet / full), background, paused |
+| Stage | viewport (phone / tablet / **full — reference only, see [note above](#bring-this-over--one-config-per-viewport)**), background, paused |
 | drag / release | commit distance (px), flick velocity (px/s), snap-back stiffness / damping |
 | fly-out (on release) | distance out (px), toward swipe direction, rotate out (°), duration out (s), ease out |
 | stack fan-out | visible cards, gap X / gap Y, scale − per step, opacity − per step, fan rotate per step, front card tilt (°), darken cards behind |
@@ -1306,8 +1351,8 @@ auto-scale; `?c=rain&vp=phone` deep-links one.
 Colour / hover / effects update **live**; entry re-runs on **↻ Replay reveal**.
 Stage buttons (top-right, stacked): **🔒 Lock grade** (reveal → locked), **⚡
 White flash** (coupled punch + flash), **🚀 Launch** (armed → reveal); the **🔊
-icon** bottom-left mutes/unmutes (starts muted). `★ save settings` persists the
-panel to `localStorage`. Full descriptions in
+icon** bottom-left mutes/unmutes (sound is on by default). `★ save settings`
+persists the panel to `localStorage`. Full descriptions in
 [`docs/leva-controls.md`](docs/leva-controls.md).
 
 ## File map

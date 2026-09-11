@@ -380,7 +380,7 @@ export const GEM_DEFAULT_CONFIG: GemRevealConfig = {
   buttonDamping: 38,
   buttonMass: 2.7,
 
-  sound: false, // bench starts muted (deliberate — the 🔊 toggle unmutes)
+  sound: true,
   volume: 0.85,
   revealMode: 'timed',
   revealDuration: 8,

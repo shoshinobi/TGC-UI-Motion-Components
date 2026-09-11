@@ -177,7 +177,9 @@ A glow pulse on the value pill.
 
 A swipeable, infinitely-looping stack of banner cards. Per-viewport — the
 approved values differ for phone / tablet / full, and switching **Stage →
-viewport** loads that viewport's config.
+viewport** loads that viewport's config. **Only phone and tablet ship** —
+`full` doesn't suit the real UI's layout, so tablet is the largest breakpoint
+to wire up; `full` stays in the bench as a reference.
 
 ### drag / release
 
@@ -536,7 +538,7 @@ The `GemReveal_*.mp3` files. Playback needs a user gesture — **🚀 Launch** i
 
 | Control | Range / options | What it changes | Use it for |
 |---|---|---|---|
-| `sound on (master)` | toggle | Master enable — SFX **and** soundtrack. Off pauses everything; on resumes the loops if you're mid-reveal. **Defaults off** — the 🔊 icon in the stage's bottom-left corner toggles the same value. | Muting the bench. |
+| `sound on (master)` | toggle | Master enable — SFX **and** soundtrack. Off pauses everything; on resumes the loops if you're mid-reveal. **On by default** — the 🔊 icon in the stage's bottom-left corner toggles the same value. | Muting the bench. |
 | `SFX volume` | 0–1 | One gain for the five `GemReveal_*` clips (not the soundtrack). | |
 | `reveal loop` | `endless` / `timed` | `endless` — the reveal runs until you press **🔒 Lock grade**. `timed` — it auto-locks after the duration below (ticker stops, `end` plays, grade locks — same as the button). | A fixed-length daily reveal vs a dev-paced one. |
 | `↳ timed: lock after (s)` | 1–30 | The reveal length in `timed` mode. | |
@@ -552,7 +554,7 @@ The `GemReveal_*.mp3` files. Playback needs a user gesture — **🚀 Launch** i
 |---|---|---|
 | Top-left of the stage | **Stats HUD** | FPS (rolling), JS heap (Chrome only), and the bench bundle size. Click the header to collapse it to a pill. |
 | Below the Stats HUD | **↻ Replay / Drop again** | Re-runs the animation. |
-| Bottom-left of the stage | **🔊 audio toggle** *(Gem)* | Mute / unmute all audio (= the `sound` folder's `sound on` master). **Starts muted.** |
+| Bottom-left of the stage | **🔊 audio toggle** *(Gem)* | Mute / unmute all audio (= the `sound` folder's `sound on` master). **On by default.** |
 | Top-right of the stage | **Next ▸** *(Banner)* · **⤓ Pull the floor out** *(Rain)* · **🔒 Lock grade** + **⚡ White flash** + **🚀 Launch** *(Gem, stacked)* | Advance the stack / dump the pile / run the gem's lock transition, fire the coupled punch+flash, or start the reveal. **🚀 Launch** (armed → reveal) and **🔒 Lock grade** (reveal → locked) each disable once past their phase; **↻ Replay reveal** returns to armed. |
 | Gem Export folder | **🚀 launch** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** | Same phase triggers as the stage buttons, plus the individual punch / flash / streak triggers. |
 | Bottom dock | **spec cards** | The `copy` panels start **collapsed**; click a card header to expand it. The `copy` button works either way. |
