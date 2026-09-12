@@ -77,18 +77,22 @@ export type FlameEntranceConfig = {
 }
 
 export const FLAME_ENTRANCE_DEFAULT: FlameEntranceConfig = {
-  layerStagger: 0.08,
+  layerStagger: 0.21,
   fromScaleX: 0.35,
-  yStiffness: 420,
-  yDamping: 40,
-  yMass: 1,
-  xStiffness: 420,
-  xDamping: 34,
-  xMass: 1,
+  yStiffness: 690,
+  yDamping: 31,
+  yMass: 2.1,
+  xStiffness: 770,
+  xDamping: 14,
+  xMass: 1.6,
   flashColor: '#FFFFFF',
   flashHold: 0.15,
   flashDuration: 0.22,
 }
+
+/** `startHidden` as a named mode, for the bench's "start as" control + its default. */
+export type FlameStartMode = 'looping' | 'hidden'
+export const FLAME_START_MODE_DEFAULT: FlameStartMode = 'hidden'
 
 /**
  * The three nested flame shapes, outer → inner. Each gradient runs from the

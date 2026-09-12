@@ -3,6 +3,8 @@ import { useControls, folder, button } from 'leva'
 import {
   FlamePictogram,
   FLAME_DEFAULT_CONFIG,
+  FLAME_ENTRANCE_DEFAULT,
+  FLAME_START_MODE_DEFAULT,
   type FlameMotionConfig,
 } from '@/components/FlamePictogram'
 import { buildJsxSpec, buildJsonSpec } from '@/lib/buildSpec'
@@ -87,10 +89,10 @@ export function FlameBench() {
     setStreak((s) => s + 1)
   }
 
-  const stage = useControls('Stage', {
+  const [stage, setStage] = useControls('Stage', () => ({
     size: { value: 120, min: 16, max: 360, step: 1, label: 'size (px)' },
     startMode: {
-      value: 'looping',
+      value: FLAME_START_MODE_DEFAULT,
       options: ['looping', 'hidden'],
       label: 'start as',
     },
@@ -98,7 +100,7 @@ export function FlameBench() {
     baseline: true,
     contextRow: { value: true, label: 'context row' },
     paused: false,
-  })
+  }))
   const startHidden = stage.startMode === 'hidden'
 
   // Switching "start as" is a fresh start — re-arm the trigger so 'hidden'
@@ -112,25 +114,26 @@ export function FlameBench() {
   // `from scaleX` to full width, staggered outer → middle → inner. The colour
   // flash rides the same timeline: each layer starts as `flash colour`, holds
   // it briefly, then tweens to the appearance colour.
-  const entrance = useControls('Daily Streak', {
-    layerStagger: { value: 0.08, min: 0, max: 0.5, step: 0.01, label: 'layer stagger (s)' },
-    fromScaleX: { value: 0.35, min: 0.05, max: 1, step: 0.05, label: 'from scaleX' },
+  const ED = FLAME_ENTRANCE_DEFAULT
+  const [entrance, setEntrance] = useControls('Daily Streak', () => ({
+    layerStagger: { value: ED.layerStagger, min: 0, max: 0.5, step: 0.01, label: 'layer stagger (s)' },
+    fromScaleX: { value: ED.fromScaleX, min: 0.05, max: 1, step: 0.05, label: 'from scaleX' },
     'height spring (Y)': folder({
-      yStiffness: { value: 420, min: 40, max: 1200, step: 10, label: 'stiffness' },
-      yDamping: { value: 40, min: 2, max: 80, step: 1, label: 'damping (≥ ~2·√stiffness = no bounce)' },
-      yMass: { value: 1, min: 0.2, max: 4, step: 0.1, label: 'mass' },
+      yStiffness: { value: ED.yStiffness, min: 40, max: 1200, step: 10, label: 'stiffness' },
+      yDamping: { value: ED.yDamping, min: 2, max: 80, step: 1, label: 'damping (≥ ~2·√stiffness = no bounce)' },
+      yMass: { value: ED.yMass, min: 0.2, max: 4, step: 0.1, label: 'mass' },
     }),
     'width spring (X)': folder({
-      xStiffness: { value: 420, min: 40, max: 1200, step: 10, label: 'stiffness' },
-      xDamping: { value: 34, min: 2, max: 80, step: 1, label: 'damping' },
-      xMass: { value: 1, min: 0.2, max: 4, step: 0.1, label: 'mass' },
+      xStiffness: { value: ED.xStiffness, min: 40, max: 1200, step: 10, label: 'stiffness' },
+      xDamping: { value: ED.xDamping, min: 2, max: 80, step: 1, label: 'damping' },
+      xMass: { value: ED.xMass, min: 0.2, max: 4, step: 0.1, label: 'mass' },
     }),
     'colour flash': folder({
-      flashColor: { value: '#FFFFFF', label: 'start colour' },
-      flashHold: { value: 0.15, min: 0, max: 1, step: 0.01, label: 'hold (s)' },
-      flashDuration: { value: 0.22, min: 0.02, max: 1.5, step: 0.02, label: 'tween to colour (s)' },
+      flashColor: { value: ED.flashColor, label: 'start colour' },
+      flashHold: { value: ED.flashHold, min: 0, max: 1, step: 0.01, label: 'hold (s)' },
+      flashDuration: { value: ED.flashDuration, min: 0.02, max: 1.5, step: 0.02, label: 'tween to colour (s)' },
     }),
-  })
+  }))
 
   const [appearance, setAppearance] = useControls('Appearance', () => ({
     color: APPROVED_SPEC.appearance.color,
@@ -218,7 +221,11 @@ export function FlameBench() {
 
   const jsx = buildJsxSpec(config)
   const json = buildJsonSpec(config)
-  const copy = useLiveCopy({ jsx, json, config: stringifyConfig(config) })
+  // "copy config (for defaults)" has to carry everything that can drift from
+  // the shipped defaults — the idle-loop spec *and* the daily-streak ignite
+  // (entrance + start mode) — or a re-paste silently drops the streak tuning.
+  const fullConfig = { ...config, startMode: stage.startMode, entrance }
+  const copy = useLiveCopy({ jsx, json, config: stringifyConfig(fullConfig) })
 
   useControls('Export', {
     'reset to approved spec': button(() => {
@@ -227,6 +234,10 @@ export function FlameBench() {
       setKf(APPROVED_SPEC.keyframes)
       setLayers(APPROVED_SPEC.layers)
       setNonce((n) => n + 1)
+    }),
+    'reset daily streak to default': button(() => {
+      setEntrance(FLAME_ENTRANCE_DEFAULT as unknown as Parameters<typeof setEntrance>[0])
+      setStage({ startMode: FLAME_START_MODE_DEFAULT })
     }),
     'restart animation': button(() => setNonce((n) => n + 1)),
     '🔥 daily streak': button(() => triggerStreak()),
