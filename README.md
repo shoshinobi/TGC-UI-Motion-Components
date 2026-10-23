@@ -1333,7 +1333,7 @@ and/or timers. `onState` tells you where it is.
 | `ready` | optional second line **"Spin the wheel."** fades in (`promptDelay` after the line-up settles) | a **vertical swipe** either way, `spinSignal` (**⟳ Spin**), or `autoSpinAfter` |
 | `spinning` | the drum turns at a constant speed, with **warp speed lines** streaming the same way (intensity follows the wheel speed). A swipe's speed comes from the flick (harder = faster, clamped); the auto spin eases up to `cruiseSpeed` | after **`spinDuration`** (the spin timer), or `stopSignal` (**■ Stop now**) |
 | `stopping` | a **controlled ease-out** that carries the preset `finalGrade` **past the centre by `overshoot` slots** (default 0.5 — it slows to a stop right on the **division line** with the next tier, in whichever direction it's spinning, so the user thinks they're getting it), hangs `overshootHold`, then **snaps back** onto the preset grade — the tease. It always lands on `finalGrade` | settles → `landed` |
-| `landed` | **white flash** (a solid white gem shape with a bloom); under the flash the winner **starts spinning** (live Lottie); the other gems + line work fade; the winner **grows to `winnerScale`** alone in the centre, and its **grade label** (the folded button from Gem Reveal) springs in under it | your next components come on |
+| `landed` | **white flash** (a solid white gem shape with a bloom); under the flash the winner **starts spinning** (live Lottie); the other gems + line work fade; the winner **grows to `winnerScale`** alone in the centre — with an **impact**: it swells to `impactScale` (2×) with an ease-out, then eases slowly back to its resting size, while a **white burst** and a **shockwave ring** fire behind it — and its **grade label** (the folded button from Gem Reveal) springs in under it | your next components come on |
 
 **The controlled stop.** When the slowdown starts at speed ω₀, the wheel picks
 the nearest slot of `finalGrade` that's at least `ω₀ · stopDuration / n` away in
@@ -1544,6 +1544,7 @@ persists the panel to `localStorage`. Full descriptions in
 | spin (3) | auto direction / speed / ease-in · **spin before slowdown (timer)** · flick gain / min / max / threshold |
 | stop + suspense (4–5) | slowdown · ease-out power · extra loops · **go past by** · hang there · snap-back spring |
 | landing (6) | flash delay / hold / decay / bloom · others fade · winner size · grow spring · glow |
+| impact (6b) | swell on/off · peak size × resting · ease out to peak / hold / ease back down · white burst + radius / fade · shockwave ring + colour / travel / width / opacity / duration |
 | grade label | on/off · text override · delay after flash · offset Y · size · from scale / rotate · settled rotate · spring |
 | line work | slot lines · colour / opacity / width · line half-width · fade toward ends · centre arrows + distance · fade in after line-up settles + fade-in |
 | gem animation | wheel rest frame · cached res · spin speed (found + winner) · hover |

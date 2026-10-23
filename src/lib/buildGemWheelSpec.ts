@@ -107,6 +107,19 @@ export function buildGemWheelJsonSpec(c: GemWheelConfig): string {
         winnerNote: 'the winner switches to a live, spinning Lottie at the flash (the wheel gems are still)',
         grow: { stiffness: c.growStiffness, damping: c.growDamping },
         glow: c.glow ? { sizePx: c.glowSize, intensity: c.glowIntensity } : false,
+        impact: c.impact
+          ? {
+              note: 'from the flash: the winner swells to peakScale × its resting size (ease-out), holds, then eases slowly back (easeInOut) — multiplied onto the grow spring',
+              peakScale: c.impactScale,
+              upSec: c.impactUp,
+              holdSec: c.impactHold,
+              downSec: c.impactDown,
+              burst: c.impactFlash > 0 ? { intensity: c.impactFlash, radius: `${c.impactFlashSize} × stage height`, fadeSec: c.impactFlashDecay, color: '#ffffff', blend: 'additive, behind the gem' } : false,
+              ring: c.impactRing
+                ? { color: c.impactRingColor, travelPx: c.impactRingSize, widthPx: c.impactRingWidth, opacity: c.impactRingOpacity, durationSec: c.impactRingDuration, ease: 'ease-out cubic, fading as it travels' }
+                : false,
+            }
+          : false,
         label: c.label
           ? {
               text: c.labelOverride.trim() || 'the landed grade name',

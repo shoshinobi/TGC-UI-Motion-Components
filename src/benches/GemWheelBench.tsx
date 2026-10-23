@@ -210,6 +210,25 @@ export function GemWheelBench() {
       },
       { collapsed: true },
     ),
+    'impact (6b)': folder(
+      {
+        impact: { value: D.impact, label: 'impact swell' },
+        impactScale: { value: D.impactScale, min: 1, max: 4, step: 0.05, label: 'peak size × resting' },
+        impactUp: { value: D.impactUp, min: 0.05, max: 1.5, step: 0.01, label: 'ease out to peak (s)' },
+        impactHold: { value: D.impactHold, min: 0, max: 1, step: 0.01, label: 'hold at peak (s)' },
+        impactDown: { value: D.impactDown, min: 0.1, max: 4, step: 0.05, label: 'ease back down (s)' },
+        impactFlash: { value: D.impactFlash, min: 0, max: 2, step: 0.05, label: 'white burst (0 = off)' },
+        impactFlashSize: { value: D.impactFlashSize, min: 0.1, max: 2, step: 0.05, label: '↳ radius × height' },
+        impactFlashDecay: { value: D.impactFlashDecay, min: 0.05, max: 2, step: 0.05, label: '↳ fade (s)' },
+        impactRing: { value: D.impactRing, label: 'shockwave ring' },
+        impactRingColor: { value: D.impactRingColor, label: '↳ colour' },
+        impactRingSize: { value: D.impactRingSize, min: 20, max: 600, step: 5, label: '↳ travel (px)' },
+        impactRingWidth: { value: D.impactRingWidth, min: 0.5, max: 30, step: 0.5, label: '↳ width (px)' },
+        impactRingOpacity: { value: D.impactRingOpacity, min: 0, max: 1, step: 0.05, label: '↳ opacity' },
+        impactRingDuration: { value: D.impactRingDuration, min: 0.1, max: 2, step: 0.05, label: '↳ duration (s)' },
+      },
+      { collapsed: true },
+    ),
     'grade label': folder(
       {
         label: { value: D.label, label: 'folded label on landing' },

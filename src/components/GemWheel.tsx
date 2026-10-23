@@ -217,6 +217,31 @@ export type GemWheelConfig = {
   glowSize: number
   glowIntensity: number
 
+  // --- impact (the winner swells, then settles back to its resting size) ---
+  impact: boolean
+  /** peak size, × the resting winner size */
+  impactScale: number
+  /** seconds to ease out to the peak (from the flash) */
+  impactUp: number
+  /** seconds held at the peak */
+  impactHold: number
+  /** seconds to ease slowly back down to the resting size */
+  impactDown: number
+  /** white radial burst behind the winner on the flash (0 = off) */
+  impactFlash: number
+  /** burst radius, × the stage's height */
+  impactFlashSize: number
+  /** seconds the burst takes to fade */
+  impactFlashDecay: number
+  /** expanding shockwave ring on the flash */
+  impactRing: boolean
+  impactRingColor: string
+  /** px the ring travels out past the gem's edge */
+  impactRingSize: number
+  impactRingWidth: number
+  impactRingOpacity: number
+  impactRingDuration: number
+
   // --- grade label (the folded button under the winner) ---
   label: boolean
   /** blank = the landed grade's name */
@@ -375,6 +400,20 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   glow: true,
   glowSize: 70,
   glowIntensity: 0.9,
+  impact: true,
+  impactScale: 2,
+  impactUp: 0.3,
+  impactHold: 0.06,
+  impactDown: 1.2,
+  impactFlash: 0.8,
+  impactFlashSize: 0.75,
+  impactFlashDecay: 0.7,
+  impactRing: true,
+  impactRingColor: '#ffffff',
+  impactRingSize: 220,
+  impactRingWidth: 3,
+  impactRingOpacity: 0.8,
+  impactRingDuration: 0.4,
 
   label: true,
   labelOverride: '',
@@ -392,14 +431,14 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   lineColor: '#ffffff',
   lineOpacity: 0.2,
   lineWidth: 1.5,
-  lineHalfWidth: 180,
-  lineSideFade: 0.45,
+  lineHalfWidth: 200,
+  lineSideFade: 0,
   bracket: true,
-  bracketHalfWidth: 126,
+  bracketHalfWidth: 120,
   bracketColor: '#ffffff',
   bracketOpacity: 0.6,
   lineInDelay: 0,
-  lineInFade: 0.5,
+  lineInFade: 0.4,
 
   sound: true,
   volume: 0.85,
@@ -720,10 +759,14 @@ export function GemWheel({
     let state: WheelState = 'armed'
     let stateAt = 0
     let t = 0
+    // seconds in the current state — reset by setState so a transition made
+    // mid-frame never reads the previous state's (stale) elapsed time
+    let st = 0
     const seen = { ...sig.current }
     const setState = (s: WheelState) => {
       state = s
       stateAt = t
+      st = 0
       onStateRef.current?.(s)
     }
     onStateRef.current?.('armed')
@@ -765,6 +808,7 @@ export function GemWheel({
     let lblRotV = 0
     let lblOpacity = 0
     let handoffAt = -1
+    let winnerRestS = 0 // the winner's size without the impact swell
     let punchPlayed = false
     // the repeat slots (beyond the first six) stay hidden until the first spin,
     // so the line-up reads as exactly six gems
@@ -926,7 +970,7 @@ export function GemWheel({
       measureVis()
       if (!pausedRef.current) t += dt
       const live = !pausedRef.current
-      const st = t - stateAt
+      st = t - stateAt
 
       // signals
       if (sig.current.start !== seen.start) {
@@ -1062,6 +1106,7 @@ export function GemWheel({
             grow = 0
             growV = 0
             handoffAt = -1
+            winnerRestS = 0
             punchPlayed = false
             setState('landed')
             playSfx(sfx.end)
@@ -1091,6 +1136,20 @@ export function GemWheel({
       // ---- flashes ----
       let flashK = 0
       let othersK = 1
+      // impact: × size on the winner — ease out to the peak, hold, ease slowly back to 1
+      let impactK = 1
+      let impactT = -1 // seconds since the landing flash
+      if (state === 'landed' && handoffAt >= 0) impactT = t - handoffAt
+      if (cfg.impact && impactT >= 0) {
+        const up = Math.max(0.01, cfg.impactUp)
+        const peak = Math.max(0.1, cfg.impactScale)
+        if (impactT < up) impactK = lerp(1, peak, 1 - Math.pow(1 - impactT / up, 3))
+        else if (impactT < up + cfg.impactHold) impactK = peak
+        else {
+          const u = clamp((impactT - up - cfg.impactHold) / Math.max(0.01, cfg.impactDown), 0, 1)
+          impactK = lerp(peak, 1, EASING.easeInOut(u))
+        }
+      }
       if (foundFlashAt >= 0 && t >= foundFlashAt && (state === 'found' || state === 'lineup')) {
         const ft = t - foundFlashAt
         flashK = ft < cfg.flashHold ? 1 : Math.max(0, 1 - (ft - cfg.flashHold) / Math.max(0.01, cfg.flashDuration))
@@ -1274,7 +1333,7 @@ export function GemWheel({
       if (state === 'landed' && cfg.glow && winnerSlot >= 0) {
         const k = clamp((t - landedAt - cfg.flashDelay) / 0.3, 0, 1)
         const g = winnerSlot % 6
-        const ws = lerp(gemPx(g), cfg.gemSize * cfg.winnerScale, grow)
+        const ws = lerp(gemPx(g), cfg.gemSize * cfg.winnerScale, grow) * impactK
         const r = ws * 0.5 + cfg.glowSize
         const hex = gradeColor(cfg, g)
         const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
@@ -1285,6 +1344,39 @@ export function GemWheel({
         ctx.globalCompositeOperation = 'lighter'
         ctx.fillStyle = grd
         ctx.fillRect(cx - r, cy - r, r * 2, r * 2)
+        ctx.restore()
+      }
+
+      // impact: white burst + shockwave ring behind the winner
+      if (impactT >= 0 && cfg.impact) {
+        ctx.save()
+        ctx.globalCompositeOperation = 'lighter'
+        if (cfg.impactFlash > 0) {
+          const k = 1 - clamp(impactT / Math.max(0.01, cfg.impactFlashDecay), 0, 1)
+          if (k > 0) {
+            const r = Math.max(10, cfg.impactFlashSize * size.h) * lerp(0.6, 1, 1 - k * k)
+            const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, r)
+            const a = clamp(cfg.impactFlash * k * k, 0, 1)
+            grd.addColorStop(0, hexToRgba('#ffffff', a))
+            grd.addColorStop(0.35, hexToRgba('#ffffff', a * 0.45))
+            grd.addColorStop(1, hexToRgba('#ffffff', 0))
+            ctx.fillStyle = grd
+            ctx.fillRect(0, 0, size.w, size.h)
+          }
+        }
+        if (cfg.impactRing && winnerRestS > 0) {
+          const u = clamp(impactT / Math.max(0.01, cfg.impactRingDuration), 0, 1)
+          if (u < 1) {
+            const e = 1 - Math.pow(1 - u, 3)
+            const r0 = winnerRestS * 0.4
+            const r = r0 + (cfg.impactRingSize + winnerRestS * 0.1) * e
+            ctx.strokeStyle = hexToRgba(cfg.impactRingColor, cfg.impactRingOpacity * (1 - u))
+            ctx.lineWidth = Math.max(0.5, cfg.impactRingWidth * (1 - u * 0.7))
+            ctx.beginPath()
+            ctx.arc(cx, cy, r, 0, TAU)
+            ctx.stroke()
+          }
+        }
         ctx.restore()
       }
 
@@ -1311,14 +1403,16 @@ export function GemWheel({
         const sy = lerp(1, p0.sy / p0.sx, u)
         const y = lerp(cy + entryY, p0.y, u) + bob(0)
         const alpha = lerp(1, p0.alpha, u)
-        // the live (spinning) white gem crossfades to the still canvas gem as it
-        // travels — so the gems are all still once they're lined up
+        // the live (spinning) white gem fades out on top of the still canvas gem
+        // as it travels — so the gems are all still once they're lined up.
+        // Only the TOP layer of each blend fades (the one underneath stays
+        // opaque); fading both at once dips the gem see-through mid-way.
         const xfade = smooth(0, Math.max(0.05, cfg.lineupDuration * 0.4), st)
         liveK = 1 - xfade
         liveY = y - cy
         liveS = s
-        drawGem(FOUND, 0, cx, y, s, sy, alpha * (1 - u) * xfade)
-        drawGem(0, 0, cx, y, s, sy, alpha * u * xfade)
+        drawGem(FOUND, 0, cx, y, s, sy, alpha) // white, opaque underneath
+        drawGem(0, 0, cx, y, s, sy, alpha * u) // Notable fading in over it
       } else if (state !== 'armed') {
         // the drum — back to front
         const S = slotCount()
@@ -1343,7 +1437,9 @@ export function GemWheel({
         }
         if (state === 'landed' && winnerSlot >= 0) {
           const g = winnerSlot % 6
-          const ws = lerp(gemPx(g), cfg.gemSize * cfg.winnerScale, grow)
+          const restS = lerp(gemPx(g), cfg.gemSize * cfg.winnerScale, grow)
+          const ws = restS * impactK
+          winnerRestS = restS
           const y = cy + bob(winnerSlot) * clamp(grow, 0, 1)
           if (handoffAt < 0) {
             // still on the wheel's rest frame until the flash
@@ -1387,6 +1483,7 @@ export function GemWheel({
       }
       {
         const fs = 14 * Math.max(0.2, cfg.labelSize)
+        // attached to the winner's bottom point — it rides the impact swell back down
         const winnerBottom = liveY + liveS * 0.41
         const ly = winnerBottom + cfg.labelOffsetY + fs * 1.35
         labelEl.style.setProperty('--gem-btn-fs', `${fs.toFixed(2)}px`)

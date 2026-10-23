@@ -717,6 +717,18 @@ A flat strip with equal spacing — no faked 3D.
 | `grow stiffness / damping` | | The grow spring. |
 | `glow` + `↳ size / intensity` | | A grade-coloured halo behind the winner. |
 
+### impact (6b)
+
+On the landing flash, the winner swells past its resting size and settles back — the "impact" — while a white burst and a shockwave ring fire behind it.
+
+| Control | Range | What it changes |
+|---|---|---|
+| `impact swell` | toggle | On/off. |
+| `peak size × resting` | 1–4 | How big it gets at the peak (default 2× the resting winner size). |
+| `ease out to peak (s)` / `hold at peak (s)` / `ease back down (s)` | | The swell: a fast ease-out to the peak, a brief hold, then a slow ease back to the resting size. |
+| `white burst (0 = off)` + `↳ radius × height` / `↳ fade (s)` | | A big white radial flash behind the gem. |
+| `shockwave ring` + `↳ colour / travel / width / opacity / duration` | | A ring that expands from the gem and fades. |
+
 ### grade label
 
 The folded button from Gem Reveal, springing in under the winner with the landed grade's name.
@@ -739,7 +751,7 @@ The folded button from Gem Reveal, springing in under the winner with the landed
 | `line half-width (px)` | 30–400 | How far the lines reach toward the sides (capped at the stage edge). |
 | `fade toward ends from` | 0–1 | Where along the line the fade to the ends starts (0 = from the centre, 1 = hard ends). |
 | `centre arrows` + `↳ distance from centre (px)` / `↳ colour / opacity` | | The two pointers marking the landing spot. |
-| `fade in after line-up settles (s)` + `↳ fade-in (s)` | 0–2 | The lines and arrows stay hidden while the gems move into the line-up, then fade in this long after they've settled (default 0 s, over 0.5 s). |
+| `fade in after line-up settles (s)` + `↳ fade-in (s)` | 0–2 | The lines and arrows stay hidden while the gems move into the line-up, then fade in this long after they've settled (default 0 s, over 0.4 s). |
 
 ### gem animation
 
