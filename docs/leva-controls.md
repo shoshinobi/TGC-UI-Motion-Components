@@ -623,7 +623,7 @@ Six pickers (defaults = Gem Reveal's approved grade colours) plus **`found gem`*
 |---|---|---|
 | `size × Holy Grail` | 0.3–3 | Size of the found gem, × the Holy Grail size. It spins at full frame rate (live Lottie). |
 | `from below (px)` + spring `stiffness / damping / mass` | | Its rise from the bottom of the screen. |
-| `auto line-up after (s, 0 = trigger)` | 0–10 | Move to the line-up on a timer instead of waiting for **⇣ Line up**. |
+| `auto line-up after (s, 0 = trigger)` | 0–10 | Move to the line-up on a timer, counted from Start (default **2 s**); **⇣ Line up** still works sooner. `0` = wait for **⇣ Line up**. |
 | `white flash on arrival` + `↳ delay after arrival (s)` | | The white flash (a solid white gem shape with a bloom) as the found gem lands; uses the landing folder's hold / decay / bloom. |
 
 ### jet (entry trail)
@@ -739,6 +739,7 @@ The folded button from Gem Reveal, springing in under the winner with the landed
 | `line half-width (px)` | 30–400 | How far the lines reach toward the sides (capped at the stage edge). |
 | `fade toward ends from` | 0–1 | Where along the line the fade to the ends starts (0 = from the centre, 1 = hard ends). |
 | `centre arrows` + `↳ distance from centre (px)` / `↳ colour / opacity` | | The two pointers marking the landing spot. |
+| `fade in after line-up settles (s)` + `↳ fade-in (s)` | 0–2 | The lines and arrows stay hidden while the gems move into the line-up, then fade in this long after they've settled (default 0 s, over 0.5 s). |
 
 ### gem animation
 
@@ -759,7 +760,7 @@ The folded button from Gem Reveal, springing in under the winner with the landed
 | `tick volume` | 0–1 | `drip4.ogg`, played **once per slot passing the centre**, so it runs at the wheel's speed. |
 | `tick rate at rest / at speed` | 0.25–3 | Playback rate (pitch) of the tick, from slow to cruise speed. |
 | `max ticks / s` | 2–40 | Cap so a very fast spin doesn't machine-gun. |
-| `soundtrack` + `↳ volume / loop / starts on / delay` | | The Gem Reveal music, from **start**, the **spin**, or the **landing**. Default as Gem Reveal: Belt and Braces, 3.2 s after the landing. |
+| `soundtrack` + `↳ volume / loop / starts on / delay` | | The Gem Reveal music, from **start**, the **spin**, or the **landing**. Default: Belt and Braces (as Gem Reveal), 0.5 s after the landing, volume 0.1. |
 
 **SFX cues** (fixed): `start` on **▶ Start**; `end` when the wheel settles on the grade; `punch` on the flash.
 

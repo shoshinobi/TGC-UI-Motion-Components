@@ -238,6 +238,8 @@ export function GemWheelBench() {
         bracketHalfWidth: { value: D.bracketHalfWidth, min: 20, max: 300, step: 2, label: '↳ distance from centre (px)' },
         bracketColor: { value: D.bracketColor, label: '↳ colour' },
         bracketOpacity: { value: D.bracketOpacity, min: 0, max: 1, step: 0.05, label: '↳ opacity' },
+        lineInDelay: { value: D.lineInDelay, min: 0, max: 2, step: 0.05, label: 'fade in after line-up settles (s)' },
+        lineInFade: { value: D.lineInFade, min: 0, max: 2, step: 0.05, label: '↳ fade-in (s)' },
       },
       { collapsed: true },
     ),

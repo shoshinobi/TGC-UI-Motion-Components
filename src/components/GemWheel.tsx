@@ -247,6 +247,10 @@ export type GemWheelConfig = {
   bracketHalfWidth: number
   bracketColor: string
   bracketOpacity: number
+  /** the lines + arrows fade in this long after the gems have settled into the line-up */
+  lineInDelay: number
+  /** …over this many seconds */
+  lineInFade: number
 
   // --- audio ---
   sound: boolean
@@ -299,7 +303,7 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   entryStiffness: 200,
   entryDamping: 22,
   entryMass: 1.4,
-  autoLineupAfter: 0,
+  autoLineupAfter: 2,
   foundFlash: true,
   foundFlashDelay: 0,
 
@@ -337,8 +341,8 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   promptDelay: 0.5,
 
   lineupDuration: 0.8,
-  lineupEase: 'easeOut',
-  dropStagger: 0.13,
+  lineupEase: 'easeInOut',
+  dropStagger: 0.16,
   dropStiffness: 295,
   dropDamping: 37,
   autoSpinAfter: 0,
@@ -394,6 +398,8 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   bracketHalfWidth: 126,
   bracketColor: '#ffffff',
   bracketOpacity: 0.6,
+  lineInDelay: 0,
+  lineInFade: 0.5,
 
   sound: true,
   volume: 0.85,
@@ -403,10 +409,10 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   tickPitchMax: 1.4,
   tickMaxRate: 18,
   musicTrack: G.musicTrack, // as Gem Reveal: Belt and Braces
-  musicVolume: G.musicVolume,
+  musicVolume: 0.1,
   musicLoop: G.musicLoop,
   musicStart: 'land',
-  musicDelay: G.musicLockDelay, // as Gem Reveal: after the end sting, once the winner is through
+  musicDelay: 0.5, // after the landing, as the winner comes through
 }
 
 const TAU = Math.PI * 2
@@ -1211,8 +1217,10 @@ export function GemWheel({
       // line work (behind the gems)
       const drumVisible = state === 'ready' || spinning || state === 'landed' || state === 'lineup'
       if (cfg.lines && drumVisible) {
-        const lineIn =
-          state === 'lineup' ? smooth(0, Math.max(0.05, cfg.lineupDuration), st) : state === 'landed' ? othersK : 1
+        // in only once the gems have settled into the line-up
+        const linesUp =
+          lineupDoneAt < 0 ? 0 : smooth(cfg.lineInDelay, cfg.lineInDelay + Math.max(0.01, cfg.lineInFade), t - lineupDoneAt)
+        const lineIn = linesUp * (state === 'landed' ? othersK : 1)
         const hw = Math.max(10, Math.min(cfg.lineHalfWidth, size.w / 2 - 4))
         const sideFade = clamp(cfg.lineSideFade, 0, 0.99) * 0.5
         ctx.save()

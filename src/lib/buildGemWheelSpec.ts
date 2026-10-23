@@ -131,7 +131,7 @@ export function buildGemWheelJsonSpec(c: GemWheelConfig): string {
         music: c.musicTrack === 'off' ? false : { track: c.musicTrack, startsOn: c.musicStart, delaySec: c.musicDelay },
       },
       lineWork: c.lines
-        ? { color: c.lineColor, opacity: c.lineOpacity, widthPx: c.lineWidth, slotLineHalfWidthPx: c.lineHalfWidth, fadeTowardEndsFrom: c.lineSideFade, centreArrows: c.bracket ? { halfWidthPx: c.bracketHalfWidth } : false, note: 'straight, evenly spaced horizontal slot lines (no side rails), fading toward their ends and past the line-up ends' }
+        ? { color: c.lineColor, opacity: c.lineOpacity, widthPx: c.lineWidth, slotLineHalfWidthPx: c.lineHalfWidth, fadeTowardEndsFrom: c.lineSideFade, centreArrows: c.bracket ? { halfWidthPx: c.bracketHalfWidth } : false, fadeIn: { afterLineupSettlesSec: c.lineInDelay, durationSec: c.lineInFade }, note: 'straight, evenly spaced horizontal slot lines (no side rails), fading toward their ends and past the line-up ends' }
         : false,
     },
     null,

@@ -1328,7 +1328,7 @@ and/or timers. `onState` tells you where it is.
 | state | what happens | how it moves on |
 |---|---|---|
 | `armed` | nothing on screen | `startSignal` (bench **▶ Start**) |
-| `found` | a **white gem** rises from below trailing a **jet** (gradient tracks, as in Gem Reveal), **flashes white as it arrives**, and hovers **spinning at full frame rate** (live Lottie), with **"You found a gem."** under it; the jet retracts tail → head as soon as the gem first reaches the centre | `lineupSignal` (**⇣ Line up**) or `autoLineupAfter` seconds |
+| `found` | a **white gem** rises from below trailing a **jet** (gradient tracks, as in Gem Reveal), **flashes white as it arrives**, and hovers **spinning at full frame rate** (live Lottie), with **"You found a gem."** under it; the jet retracts tail → head as soon as the gem first reaches the centre | **`autoLineupAfter`** (default **2 s** after Start), or `lineupSignal` (**⇣ Line up**) any time before; `0` = wait for the signal |
 | `lineup` | the white gem **shrinks and slides into the bottom slot**, colour-tweening white → **Notable**; the other five **drop in from the top**. Bottom → top: Notable, Renowned, Storied, Illustrious, Mythic, Holy Grail. The text fades out as soon as the line-up starts (`textOutDelay` 0). **Holy Grail is the biggest (`gemSize`, 130 px); each grade down is `sizeStep` smaller** (0.2 → Notable ≈ a third of Holy Grail), scaled evenly in both axes, so the user hopes for the big ones. Once lined up the gems **stop spinning** and hold still | settles on its own → `ready` |
 | `ready` | optional second line **"Spin the wheel."** fades in (`promptDelay` after the line-up settles) | a **vertical swipe** either way, `spinSignal` (**⟳ Spin**), or `autoSpinAfter` |
 | `spinning` | the drum turns at a constant speed, with **warp speed lines** streaming the same way (intensity follows the wheel speed). A swipe's speed comes from the flick (harder = faster, clamped); the auto spin eases up to `cruiseSpeed` | after **`spinDuration`** (the spin timer), or `stopSignal` (**■ Stop now**) |
@@ -1362,7 +1362,9 @@ show past either end of the line-up, **fading out** over `fadeSlots` slots —
 they appear once the line-up has settled. **Line work** (optional): a straight
 horizontal line between every slot, moving with the gems, fading toward their
 left/right ends (`lineHalfWidth`, `lineSideFade`) and past the line-up's ends;
-no vertical rails; plus the two centre arrows marking the landing spot.
+no vertical rails; plus the two centre arrows marking the landing spot. The
+line work **fades in only after the gems have settled into the line-up**
+(`lineInDelay`, `lineInFade`).
 
 ## Performance
 
@@ -1380,8 +1382,8 @@ loading) dipped briefly in an earlier build — worth watching on a real phone.
 Reuses the Gem Reveal set: `GemReveal_start.mp3` on **Start**,
 `GemReveal_ambientLoop.mp3` from Start (toggle), `GemReveal_end.mp3` when it
 settles, `GemReveal_punch.mp3` on the flash, and **the soundtrack — on by default, as in
-Gem Reveal**: Belt and Braces comes in **3.2 s after the landing** (after the
-end sting, once the winner is through and labelled), looping at 0.15 volume
+Gem Reveal**: Belt and Braces comes in **0.5 s after the landing** (as the winner comes
+through), looping at 0.1 volume
 (`musicTrack`, `musicStart` start / spin / land, `musicDelay`). **New tick:** `drip4.ogg` plays **once per slot
 passing the centre** (Web Audio, so overlaps are cheap) — it runs at the wheel's
 speed by construction, rising in pitch with speed (`tickPitchMin → Max`), capped
@@ -1543,7 +1545,7 @@ persists the panel to `localStorage`. Full descriptions in
 | stop + suspense (4–5) | slowdown · ease-out power · extra loops · **go past by** · hang there · snap-back spring |
 | landing (6) | flash delay / hold / decay / bloom · others fade · winner size · grow spring · glow |
 | grade label | on/off · text override · delay after flash · offset Y · size · from scale / rotate · settled rotate · spring |
-| line work | slot lines · colour / opacity / width · line half-width · fade toward ends · centre arrows + distance |
+| line work | slot lines · colour / opacity / width · line half-width · fade toward ends · centre arrows + distance · fade in after line-up settles + fade-in |
 | gem animation | wheel rest frame · cached res · spin speed (found + winner) · hover |
 | sound | sound on · SFX volume · ambient · tick volume / rate / max · soundtrack |
 | Export | ★ save settings · reset to code default · replay · start · line up · spin · stop now · copy JSON tokens / wiring / config |
