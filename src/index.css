@@ -852,11 +852,22 @@ body {
   left: auto;
   right: 12px;
 }
+.stage-replay--alt4 {
+  top: 138px;
+  left: auto;
+  right: 12px;
+}
+.stage-replay:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 /* Keep the right-side stage buttons out from under the docked Leva panel. */
 @media (min-width: 720px) {
   .shell[data-panel='expanded'] .stage-replay--alt,
   .shell[data-panel='expanded'] .stage-replay--alt2,
-  .shell[data-panel='expanded'] .stage-replay--alt3 {
+  .shell[data-panel='expanded'] .stage-replay--alt3,
+  .shell[data-panel='expanded'] .stage-replay--alt4,
+  .shell[data-panel='expanded'] .stage-state {
     right: 370px;
   }
 }
@@ -992,4 +1003,109 @@ body {
 }
 .gem-reveal__btn .banner-fold-btn__label {
   font-size: var(--gem-btn-fs, 14px);
+}
+
+/* ---------- Gem Wheel ---------- */
+
+.wheel-stage-inner {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 480px;
+  display: flex;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 32px);
+}
+.wheel-frame {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-width: 100%;
+  border-radius: 16px;
+  outline: 1px solid #26262a;
+  overflow: hidden;
+}
+.stage[data-bg='light'] .wheel-frame {
+  outline-color: #d4d4d8;
+}
+.gem-wheel {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none; /* the vertical swipe spins the wheel, not the page */
+  user-select: none;
+  cursor: grab;
+}
+.gem-wheel:active {
+  cursor: grabbing;
+}
+.gem-wheel__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.gem-wheel__live {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 256px;
+  height: 256px;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+.gem-wheel__lottie,
+.gem-wheel__lottie svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* the landing flash: a solid white gem shape over the live Lottie; the wrapper
+   carries the blur so the bloom spreads past the clip-path edge */
+.gem-wheel__flash-wrap {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.gem-wheel__flash {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background: #fff;
+  clip-path: polygon(50% 7%, 87% 50%, 50% 93%, 13% 50%);
+}
+.gem-wheel__text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #f4f4f5;
+  text-shadow: 0 1px 12px #000a;
+}
+.stage[data-bg='light'] .gem-wheel__text {
+  color: #18181b;
+  text-shadow: none;
+}
+
+/* current wheel state, bottom-right of the stage */
+.stage-state {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 5;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid #3f3f46;
+  background: #1c1c1fcc;
+  backdrop-filter: blur(6px);
+  color: #a1a1aa;
+  font-size: 12px;
+  pointer-events: none;
 }

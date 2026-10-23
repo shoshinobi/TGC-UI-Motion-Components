@@ -21,6 +21,7 @@ deep-link with `?c=`.
 | **Banner Stack** | [`?c=banner`](https://tgc-ui-motion-components.vercel.app/?c=banner) | [↓](#banner-stack) | ✅ phone · tablet — 2026-09-01 (tablet is the largest breakpoint used; see note) |
 | **Particle Rain** | [`?c=rain`](https://tgc-ui-motion-components.vercel.app/?c=rain) | [↓](#particle-rain) | 🔧 approach locked (burst + floor + walls); two presets — chest-reveal burst + [daily gold bonus stream](#daily-gold-bonus--stream-preset) |
 | **Gem Reveal** | [`?c=gem`](https://tgc-ui-motion-components.vercel.app/?c=gem) | [↓](#gem-reveal) | 🔧 exploring — full sequence (armed → reveal → locked), 6 grade tokens, effects + audio wired; values being dialled |
+| **Gem Wheel** | [`?c=wheel`](https://tgc-ui-motion-components.vercel.app/?c=wheel) | [↓](#gem-wheel) | 🔧 new — full sequence (found → line-up → spin → controlled stop + tease → landing) built; values being dialled |
 
 ## Run
 
@@ -1311,6 +1312,102 @@ reveal rAF; **copy config** for the flat object to send back.
 
 ---
 
+# Gem Wheel
+
+> 🔧 **New — first pass.** The whole sequence runs end to end; the numbers are
+> starting points to dial in on the bench.
+
+"You found a gem" → spin a strip of the six grades → it lands on the grade the
+app has already decided.
+
+## The sequence
+
+The component is a state machine you drive with signal props (bump a counter)
+and/or timers. `onState` tells you where it is.
+
+| state | what happens | how it moves on |
+|---|---|---|
+| `armed` | nothing on screen | `startSignal` (bench **▶ Start**) |
+| `found` | a **white gem** rises from below trailing a **jet** (gradient tracks, as in Gem Reveal), **flashes white as it arrives**, and hovers **spinning at full frame rate** (live Lottie), with **"You found a gem."** under it; the jet retracts tail → head as soon as the gem first reaches the centre | `lineupSignal` (**⇣ Line up**) or `autoLineupAfter` seconds |
+| `lineup` | the white gem **shrinks and slides into the bottom slot**, colour-tweening white → **Notable**; the other five **drop in from the top**. Bottom → top: Notable, Renowned, Storied, Illustrious, Mythic, Holy Grail. The text fades out as soon as the line-up starts (`textOutDelay` 0). **Holy Grail is the biggest (`gemSize`, 360 px); each grade down is `sizeStep` smaller** (0.2 → Notable ≈ a third of Holy Grail; neighbouring gems overlap, back-to-front by depth), scaled evenly in both axes, so the user hopes for the big ones. Once lined up the gems **stop spinning** and hold still | settles on its own → `ready` |
+| `ready` | optional second line **"Spin the wheel."** fades in (`promptDelay` after the line-up settles) | a **vertical swipe** either way, `spinSignal` (**⟳ Spin**), or `autoSpinAfter` |
+| `spinning` | the drum turns at a constant speed, with **warp speed lines** streaming the same way (intensity follows the wheel speed). A swipe's speed comes from the flick (harder = faster, clamped); the auto spin eases up to `cruiseSpeed` | after **`spinDuration`** (the spin timer), or `stopSignal` (**■ Stop now**) |
+| `stopping` | a **controlled ease-out** that carries the preset `finalGrade` **past the centre by `overshoot` slots** (default 0.5 — it slows to a stop right on the **division line** with the next tier, in whichever direction it's spinning, so the user thinks they're getting it), hangs `overshootHold`, then **snaps back** onto the preset grade — the tease. It always lands on `finalGrade` | settles → `landed` |
+| `landed` | **white flash** (a solid white gem shape with a bloom); under the flash the winner **starts spinning** (live Lottie); the other gems + line work fade; the winner **grows to `winnerScale`** alone in the centre, and its **grade label** (the folded button from Gem Reveal) springs in under it | your next components come on |
+
+**The controlled stop.** When the slowdown starts at speed ω₀, the wheel picks
+the nearest slot of `finalGrade` that's at least `ω₀ · stopDuration / n` away in
+the spin direction (plus `extraLoops` × 6), and eases to a point `overshoot`
+slots *past* it in the travel direction with
+`φ(t) = φ₀ + dir·D·(1 − (1 − t/T)ⁿ)`, `T = n·D/ω₀` — no speed jump at the
+hand-over; after the hang, a spring brings it back onto the slot, so it always
+lands exactly. Direction follows the user's swipe (or `spinDirection`); with
+the default `overshoot` 0.5 it stops on the division line between the preset
+grade and the next tier along in that direction (the grade above on a downward
+spin, the grade below on an upward one). Extra loops are added automatically
+when the target is too close, so Notable and Holy Grail land just as reliably
+as the middle grades. **copy wiring reference** has it as code.
+
+## The strip
+
+A flat, endless strip — no faked 3D: **equal spacing between every slot**, every
+gem at its own size. The six-gem sequence repeats round the loop (`repeats`,
+default 3 = 18 slots). **Fitted to the stage** (`lineupFit`, default on): the
+line-up is placed so **Holy Grail's top point and Notable's bottom point are
+both `lineupMargin` from the top / bottom edges**, and the spacing is whatever
+fills the gap evenly (measured to the gem's visible points inside the Lottie
+frame). Off: set `slotSpacing` px and `lineupCenter` by hand. The spin lands
+the winner at the stage's centre (the arrows). Gems **further along the loop**
+show past either end of the line-up, **fading out** over `fadeSlots` slots —
+they appear once the line-up has settled. **Line work** (optional): a straight
+horizontal line between every slot, moving with the gems, fading toward their
+left/right ends (`lineHalfWidth`, `lineSideFade`) and past the line-up's ends;
+no vertical rails; plus the two centre arrows marking the landing spot.
+
+## Performance
+
+The wheel gems are **still** — one rest frame of the gem Lottie (`restFrame`),
+rasterised once per grade (7 images, spread over idle time so it never
+stutters) — and all drawn on **one canvas**, so the spinning drum is just
+`drawImage` calls. Only **one live Lottie** ever runs, at full frame rate: the
+found gem (crossfading to the still canvas gem as it slides into the Notable
+slot), then the landed winner from the flash onward. In headless runs it held 60 fps through found, line-up, spin, the
+stop and the settled winner; the landing flash itself (bloom + the live Lottie
+loading) dipped briefly in an earlier build — worth watching on a real phone.
+
+## Audio
+
+Reuses the Gem Reveal set: `GemReveal_start.mp3` on **Start**,
+`GemReveal_ambientLoop.mp3` from Start (toggle), `GemReveal_end.mp3` when it
+settles, `GemReveal_punch.mp3` on the flash, and the soundtrack options
+(start / spin / land + delay). **New tick:** `drip4.ogg` plays **once per slot
+passing the centre** (Web Audio, so overlaps are cheap) — it runs at the wheel's
+speed by construction, rising in pitch with speed (`tickPitchMin → Max`), capped
+at `tickMaxRate` per second. 🔊 bottom-left mutes everything.
+
+## Notes for the developer
+
+- **The final grade is yours.** Set `finalGrade` before the stop starts
+  (normally from the server). The stop math lands it exactly; nothing in the
+  wheel is random about the result.
+- **Swipe:** pointer events on the wheel area, `touch-action: none` so the page
+  doesn't scroll. Below `flickThreshold` px/s it's not a flick and springs back.
+- **Text** is plain DOM over the canvas — swap in your typography components.
+- **Responsive:** the fitted spacing follows the component's height; gem
+  sizes are px — at large sizes neighbouring gems overlap (the one nearest the
+  centre is drawn on top). Match `gemSize` / `winnerScale` to your UI's sizing per
+  breakpoint, the same as Gem Reveal.
+- **After `landed`,** bring your next components on; the winner sits at the
+  centre at `gemSize × winnerScale` (both relative to the Holy Grail size).
+
+## Config
+
+`WHEEL_DEFAULT_CONFIG` in `src/components/GemWheel.tsx`; the grade colours
+default to Gem Reveal's approved ones. **copy JSON tokens**, **copy wiring
+reference**, and **copy config (for defaults)** in Export.
+
+---
+
 ## Panel reference (bench operators)
 
 Pick the component from the `component` dropdown at the top of the Leva panel.
@@ -1427,6 +1524,32 @@ icon** bottom-left mutes/unmutes (sound is on by default). `★ save settings`
 persists the panel to `localStorage`. Full descriptions in
 [`docs/leva-controls.md`](docs/leva-controls.md).
 
+**Gem Wheel**
+
+| Group | Controls |
+|---|---|
+| Stage | **viewport (phone / tablet / full)** · background · ember colour / spread · paused |
+| result | **lands on (preset)** |
+| grade colours | 6 grades + found gem |
+| found (1) | size · from below · spring · auto line-up after · white flash on arrival + delay |
+| jet (entry trail) | on/off · colour · tracks · width / spacing / length / taper · opacity at gem / tail · retract after reaching centre / retract |
+| warp (spin speed lines) | on/off · count · speed × wheel + variation · length / width · colour + variation · opacity + variation · fade in/out |
+| text | text (You found a gem. / Spin the wheel.) · then show · size · gap · fade-in delay · fade · fade-out after line-up starts · prompt in after line-up |
+| line-up (2) | **Holy Grail size** · **shrink per grade down** · found → Notable + ease · drop-in stagger · drop spring · auto spin after |
+| strip (spacing + fade) | fit line-up to stage + margin · slot spacing / line-up centre (not fitted) · fade beyond line-up · sequence repeats |
+| spin (3) | auto direction / speed / ease-in · **spin before slowdown (timer)** · flick gain / min / max / threshold |
+| stop + suspense (4–5) | slowdown · ease-out power · extra loops · **go past by** · hang there · snap-back spring |
+| landing (6) | flash delay / hold / decay / bloom · others fade · winner size · grow spring · glow |
+| grade label | on/off · text override · delay after flash · offset Y · size · from scale / rotate · settled rotate · spring |
+| line work | slot lines · colour / opacity / width · line half-width · fade toward ends · centre arrows + distance |
+| gem animation | wheel rest frame · cached res · spin speed (found + winner) · hover |
+| sound | sound on · SFX volume · ambient · tick volume / rate / max · soundtrack |
+| Export | ★ save settings · reset to code default · replay · start · line up · spin · stop now · copy JSON tokens / wiring / config |
+
+Stage buttons (top-right, stacked): **▶ Start**, **⇣ Line up**, **⟳ Spin**,
+**■ Stop now** — each enabled only in its state; the current state shows
+bottom-right. **Swipe the wheel vertically** to spin it.
+
 ## File map
 
 | Component | File | Default constant |
@@ -1437,3 +1560,4 @@ persists the panel to `localStorage`. Full descriptions in
 | Banner Stack | [src/components/BannerStack.tsx](src/components/BannerStack.tsx) | `BANNER_CONFIG_{PHONE,TABLET,FULL}` |
 | Particle Rain | [src/components/ParticleRain.tsx](src/components/ParticleRain.tsx) | `PARTICLE_DEFAULT_CONFIG` (+ `DAILY_BONUS_CONFIG` in [src/benches/RainBench.tsx](src/benches/RainBench.tsx)) |
 | Gem Reveal | [src/components/GemReveal.tsx](src/components/GemReveal.tsx) | `GEM_DEFAULT_CONFIG` (+ `src/lib/gemTiers.ts` grade colours, `src/lib/buildGemSpec.ts` spec, `src/assets/mp3/` audio) |
+| Gem Wheel | [src/components/GemWheel.tsx](src/components/GemWheel.tsx) | `WHEEL_DEFAULT_CONFIG` (+ `src/lib/buildGemWheelSpec.ts` spec, `src/assets/mp3/drip4.ogg` tick) |

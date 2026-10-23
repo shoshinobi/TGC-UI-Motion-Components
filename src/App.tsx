@@ -6,6 +6,7 @@ import { GaugeBench } from '@/benches/GaugeBench'
 import { BannerBench } from '@/benches/BannerBench'
 import { RainBench } from '@/benches/RainBench'
 import { GemBench } from '@/benches/GemBench'
+import { GemWheelBench } from '@/benches/GemWheelBench'
 import { StatsHud } from '@/components/StatsHud'
 
 const COMPONENTS = [
@@ -15,6 +16,7 @@ const COMPONENTS = [
   'Banner Stack',
   'Particle Rain',
   'Gem Reveal',
+  'Gem Wheel',
 ] as const
 
 const SLUG_OF: Record<string, string> = {
@@ -24,6 +26,7 @@ const SLUG_OF: Record<string, string> = {
   'Banner Stack': 'banner',
   'Particle Rain': 'rain',
   'Gem Reveal': 'gem',
+  'Gem Wheel': 'wheel',
 }
 
 function initialComponent(): string {
@@ -33,6 +36,7 @@ function initialComponent(): string {
   if (c.startsWith('gauge') || c.startsWith('meter')) return 'Gauge'
   if (c.startsWith('banner') || c.startsWith('stack') || c.startsWith('carousel')) return 'Banner Stack'
   if (c.startsWith('rain') || c.startsWith('particle') || c.startsWith('confetti')) return 'Particle Rain'
+  if (c.startsWith('wheel') || c.startsWith('gemwheel') || c.startsWith('gem-wheel')) return 'Gem Wheel'
   if (c.startsWith('gem') || c.startsWith('reveal') || c.startsWith('crystal')) return 'Gem Reveal'
   if (c.startsWith('flame')) return 'Flame Pictogram'
   return COMPONENTS[0]
@@ -80,6 +84,8 @@ export function App() {
         <RainBench key='rain' />
       ) : component === 'Gem Reveal' ? (
         <GemBench key='gem' />
+      ) : component === 'Gem Wheel' ? (
+        <GemWheelBench key='wheel' />
       ) : (
         <FlameBench key='flame' />
       )}

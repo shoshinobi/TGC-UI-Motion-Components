@@ -9,7 +9,7 @@ changes what you see so you can dial in numbers to hand back.
 - **Sliders** drag or type a number. **Selects** are dropdowns. **Toggles** are
   checkboxes. **Colour** swatches open a picker.
 - The `component` dropdown at the very top switches which preview loads (same as
-  the `?c=` URL param: `?c=flame`, `?c=sheet`, `?c=gauge`, `?c=banner`, `?c=rain`).
+  the `?c=` URL param: `?c=flame`, `?c=sheet`, `?c=gauge`, `?c=banner`, `?c=rain`, `?c=gem`, `?c=wheel`).
 
 ---
 
@@ -601,11 +601,174 @@ The `GemReveal_*.mp3` files. Playback needs a user gesture — **🚀 Launch** i
 
 **SFX cues** (fixed, not in Leva): `ambientLoop` starts on launch and loops through to the end; `start` fires on launch; `ticker` loops from launch until the lock; `end` fires on the lock; `punch` fires on every **⚡ White flash** / **✦ Punch scale** trigger (not the lock's internal one, not the auto-cycle flash).
 
+---
+
+## Gem Wheel
+
+"You found a gem" → spin a six-gem strip → land on the developer's preset grade. Seven states, each moved on by a stage button, a timer, or (for the spin) a swipe. The wheel gems are still images on one canvas (a cached rest frame per grade), so the drum stays at 60 fps; only one live, spinning Lottie runs — the found gem, then the landed winner.
+
+### result
+
+| Control | Options | What it changes |
+|---|---|---|
+| `lands on (preset)` | the six grades | The grade the wheel stops on. In the app this comes from the backend; the wheel's stop is calculated to land it exactly at the centre. |
+
+### grade colours
+
+Six pickers (defaults = Gem Reveal's approved grade colours) plus **`found gem`** — the colour of the gem in state 1 before it becomes Notable (white). Changing any colour re-caches the sprites (the wheel replays).
+
+### found (1)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `size × Holy Grail` | 0.3–3 | Size of the found gem, × the Holy Grail size. It spins at full frame rate (live Lottie). |
+| `from below (px)` + spring `stiffness / damping / mass` | | Its rise from the bottom of the screen. |
+| `auto line-up after (s, 0 = trigger)` | 0–10 | Move to the line-up on a timer instead of waiting for **⇣ Line up**. |
+| `white flash on arrival` + `↳ delay after arrival (s)` | | The white flash (a solid white gem shape with a bloom) as the found gem lands; uses the landing folder's hold / decay / bloom. |
+
+### jet (entry trail)
+
+Gradient tracks trailing the found gem as it rises — the Gem Reveal jet. The head stays pinned to the gem; as soon as the gem first reaches the centre the stream retracts tail → head.
+
+| Control | Range | What it changes |
+|---|---|---|
+| `jet trail` / `colour` | | On/off and colour (white by default, to match the found gem). |
+| `tracks` / `track width` / `spacing` / `length` / `taper` | | Shape — 1 or 2 tracks. |
+| `opacity at gem` / `opacity at tail` | 0–1 | The gradient. |
+| `retract after reaching centre (s)` / `retract (s)` | | When the stream pulls back into the gem, and how long that takes. |
+
+### warp (spin speed lines)
+
+Vertical lines streaming past while the wheel spins, in the same direction as the gems — the Gem Reveal warp.
+
+| Control | Range | What it changes |
+|---|---|---|
+| `speed lines` | toggle | On/off. |
+| `count` | 0–160 | How many lines. |
+| `speed × wheel` + `↳ speed variation` | | Line speed relative to the wheel's speed (× the slot spacing) — they speed up and slow down with it. |
+| `length` / `width (px)` | | Line size. |
+| `colour` + `↳ colour variation` / `opacity` + `↳ opacity variation` | | Look. |
+| `fade in / out (s)` | 0.05–2 | How quickly the lines come on as the spin starts and leave as it stops (intensity also follows the wheel speed). |
+
+### text
+
+| Control | Range / options | What it changes |
+|---|---|---|
+| `text` | `You found a gem.` / `Spin the wheel.` | The line under the found gem. |
+| `then show (blank = none)` | text | A second line that fades in after the first fades out, while the wheel waits for a spin. |
+| `size (px)` / `gap below gem (px)` | | Type size and spacing. |
+| `fade-in delay (s)` | 0–3 | How long after the gem starts rising before the text fades in. |
+| `fade (s)` | 0.05–2 | Fade duration (in and out). |
+| `fade-out after line-up starts (s)` | 0–3 | When "You found a gem." fades out, counted from the start of the line-up (default 0 = immediately). |
+| `prompt in after line-up (s)` | 0–3 | How long after all six gems settle before "Spin the wheel." fades in. |
+
+### line-up (2)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `Holy Grail size (px)` | 40–560 | The biggest gem (default 360) — the anchor for every other size. |
+| `shrink per grade down` | 0–0.4 | Each grade down is this much smaller than the one above (default 0.2 → Notable ≈ ⅓ Holy Grail). Scaled evenly in both axes. Each gem keeps its own size the whole way round. |
+| `found → Notable (s)` + `↳ ease` | | The found gem shrinking + sliding into the Notable slot while it colour-tweens white → Notable; its spin crossfades out so all six are still once lined up. |
+| `drop-in stagger (s)` | 0–0.6 | Gap between each of the other five dropping in from the top. |
+| `drop spring stiffness / damping` | | The drop-in spring. |
+| `auto spin after (s, 0 = swipe)` | 0–10 | Spin on a timer instead of waiting for a swipe or **⟳ Spin**. |
+
+### strip (spacing + fade)
+
+A flat strip with equal spacing — no faked 3D.
+
+| Control | Range | What it changes |
+|---|---|---|
+| `fit line-up to stage` | toggle | On (default): Holy Grail's top point and Notable's bottom point sit the same distance from the top / bottom edges, with equal spacing between. |
+| `↳ margin top / bottom (px)` | 0–160 | That distance (default 40; "Spin the wheel." sits in the bottom margin). |
+| `slot spacing (px, not fitted)` / `line-up centre (slot, not fitted)` | | Set the spacing and the line-up position by hand when fitting is off. |
+| `fade beyond line-up (slots)` | 0.1–4 | Gems further along the loop show past either end of the line-up, fading out over this many slots. |
+| `sequence repeats` | 1–4 | How many times the six-gem sequence goes round the loop (3 = 18 slots). |
+
+### spin (3)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `auto direction` | `down` / `up` | Direction for **⟳ Spin** / the auto timer (a swipe picks its own). |
+| `auto speed (slots/s)` + `auto ease-in (s)` | | Cruise speed and how long the auto spin takes to reach it. |
+| `spin before slowdown (s)` | 0–15 | **The spin timer** — how long it spins at speed (after a swipe or the auto ease-in) before the controlled slowdown starts. **■ Stop now** skips the rest. |
+| `flick → speed ×` | 0.1–4 | How strongly swipe speed turns into wheel speed. |
+| `flick min / max (slots/s)` | | Clamp on the swiped speed. |
+| `flick threshold (px/s)` | 0–2000 | A release slower than this isn't a flick — the drum springs back to the line-up. |
+
+### stop + suspense (4–5)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `slowdown (≈ s)` | 0.3–8 | Roughly how long the slowdown takes. The exact length is adjusted so it lands on the preset grade with no speed jump. |
+| `ease-out power` | 1.5–6 | Shape of the slowdown: 2 = gentle, 5+ = a long crawl at the end. |
+| `extra loops` | 0–4 | Extra full trips round the sequence during the slowdown. Loops are also added automatically when the target is too close. |
+| `go past by (slots)` | 0–0.95 | **The tease** — how far it carries on past the preset grade, in the direction it's spinning, before snapping back (`0` = no tease; default **0.5 = stops right on the division line with the next tier**; higher = the next gem is nearly in the slot). It always lands on the preset grade. |
+| `hang there (s)` | 0–2 | How long it hangs at the creep-past point. |
+| `snap-back stiffness / damping` | | The spring back onto the grade. |
+
+### landing (6)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `flash delay / hold / decay (s)` + `flash bloom (px)` | | The white flash: a solid white gem shape over the winner, with a bloom. The winner starts spinning under it. |
+| `others fade (s)` | 0.05–2 | The other gems + the line work fading out. |
+| `winner size × Holy Grail` | 0.3–3 | The final size the winner grows to, alone in the centre. |
+| `grow stiffness / damping` | | The grow spring. |
+| `glow` + `↳ size / intensity` | | A grade-coloured halo behind the winner. |
+
+### grade label
+
+The folded button from Gem Reveal, springing in under the winner with the landed grade's name.
+
+| Control | Range | What it changes |
+|---|---|---|
+| `folded label on landing` | toggle | On/off. |
+| `text (blank = grade name)` | text | Override the label. |
+| `delay after flash (s)` | 0–2 | When it springs in. |
+| `offset Y — overlap (px)` | −120–160 | Gap from the winner's bottom point (negative overlaps). |
+| `size (crisp)` | 0.5–6 | Real size of the button. |
+| `from scale` / `from rotate` / `settled rotate` / spring | | The pop-in. |
+
+### line work
+
+| Control | Range | What it changes |
+|---|---|---|
+| `slot lines` | toggle | A straight horizontal line between each slot, evenly spaced, moving with the gems and fading past the line-up's ends (no vertical rails). |
+| `colour` / `opacity` / `width (px)` | | Line style. |
+| `line half-width (px)` | 30–400 | How far the lines reach toward the sides (capped at the stage edge). |
+| `fade toward ends from` | 0–1 | Where along the line the fade to the ends starts (0 = from the centre, 1 = hard ends). |
+| `centre arrows` + `↳ distance from centre (px)` / `↳ colour / opacity` | | The two pointers marking the landing spot. |
+
+### gem animation
+
+| Control | Range | What it changes |
+|---|---|---|
+| `wheel rest frame` | 0–59 | Which frame of the gem Lottie the still wheel gems show. |
+| `cached res (px)` | 128–512 | Resolution of the cached wheel gems. |
+| `spin speed × (found + winner)` | 0.1–4 | Loop speed of the live, spinning Lottie (the found gem and the winner). |
+| `hover amp / freq / stagger` | | The up-and-down bob (off while spinning; back on the winner). |
+
+### sound
+
+| Control | Range / options | What it changes |
+|---|---|---|
+| `sound on` | toggle | Master (= the 🔊 stage icon). |
+| `SFX volume` | 0–1 | start / ambient / end / punch. |
+| `ambient loop` | toggle | `GemReveal_ambientLoop.mp3` from **▶ Start**. |
+| `tick volume` | 0–1 | `drip4.ogg`, played **once per slot passing the centre**, so it runs at the wheel's speed. |
+| `tick rate at rest / at speed` | 0.25–3 | Playback rate (pitch) of the tick, from slow to cruise speed. |
+| `max ticks / s` | 2–40 | Cap so a very fast spin doesn't machine-gun. |
+| `soundtrack` + `↳ volume / loop / starts on / delay` | | The Gem Reveal music, from **start**, the **spin**, or the **landing**. |
+
+**SFX cues** (fixed): `start` on **▶ Start**; `end` when the wheel settles on the grade; `punch` on the flash.
+
 | Where | Control | What it does |
 |---|---|---|
 | Top-left of the stage | **Stats HUD** | FPS (rolling), JS heap (Chrome only), and the bench bundle size. Click the header to collapse it to a pill. |
 | Below the Stats HUD | **↻ Replay / Drop again** | Re-runs the animation. |
-| Bottom-left of the stage | **🔊 audio toggle** *(Gem)* | Mute / unmute all audio (= the `sound` folder's `sound on` master). **On by default.** |
+| Bottom-left of the stage | **🔊 audio toggle** *(Gem, Gem Wheel)* | Mute / unmute all audio (= the `sound` folder's `sound on` master). **On by default.** |
 | Top-right of the stage | **Next ▸** *(Banner)* · **⤓ Pull the floor out** *(Rain)* · **🔒 Lock grade** + **⚡ White flash** + **🚀 Launch** *(Gem, stacked)* | Advance the stack / dump the pile / run the gem's lock transition, fire the coupled punch+flash, or start the reveal. **🚀 Launch** (armed → reveal) and **🔒 Lock grade** (reveal → locked) each disable once past their phase; **↻ Replay reveal** returns to armed. |
+| Top-right of the stage *(Gem Wheel)* | **▶ Start** · **⇣ Line up** · **⟳ Spin** · **■ Stop now** (stacked) | Move the wheel through its states; each is only enabled in the state it applies to. A **vertical swipe on the stage** also spins it. The current state shows bottom-right. |
 | Gem Export folder | **🚀 launch** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** | Same phase triggers as the stage buttons, plus the individual punch / flash / streak triggers. |
 | Bottom dock | **spec cards** | The `copy` panels start **collapsed**; click a card header to expand it. The `copy` button works either way. |
