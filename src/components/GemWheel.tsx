@@ -278,14 +278,14 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   gcHolyGrail: G.gcHolyGrail,
   foundColor: '#ffffff',
 
-  gemSize: 360,
+  gemSize: 130,
   sizeStep: 0.2,
   repeats: 3,
   lineupFit: true,
-  lineupMargin: 40,
+  lineupMargin: 28,
   slotSpacing: 110,
   lineupCenter: 3,
-  fadeSlots: 1.4,
+  fadeSlots: 1.5,
 
   restFrame: 0,
   spriteRes: 320,
@@ -294,7 +294,7 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   hoverFreq: 0.3,
   hoverStagger: 0.17,
 
-  foundScale: 0.472,
+  foundScale: 1.5,
   entryDistance: 700,
   entryStiffness: 200,
   entryDamping: 22,
@@ -337,10 +337,10 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   promptDelay: 0.5,
 
   lineupDuration: 0.8,
-  lineupEase: 'easeInOut',
-  dropStagger: 0.09,
-  dropStiffness: 220,
-  dropDamping: 20,
+  lineupEase: 'easeOut',
+  dropStagger: 0.13,
+  dropStiffness: 295,
+  dropDamping: 37,
   autoSpinAfter: 0,
 
   spinDirection: 'down',
@@ -365,7 +365,7 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   flashDuration: 0.45,
   flashBlur: 30,
   othersFade: 0.35,
-  winnerScale: 0.6045,
+  winnerScale: 1.5045,
   growStiffness: 160,
   growDamping: 16,
   glow: true,
@@ -402,11 +402,11 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   tickPitchMin: 0.9,
   tickPitchMax: 1.4,
   tickMaxRate: 18,
-  musicTrack: 'off',
-  musicVolume: 0.15,
-  musicLoop: true,
+  musicTrack: G.musicTrack, // as Gem Reveal: Belt and Braces
+  musicVolume: G.musicVolume,
+  musicLoop: G.musicLoop,
   musicStart: 'land',
-  musicDelay: 0.5,
+  musicDelay: G.musicLockDelay, // as Gem Reveal: after the end sting, once the winner is through
 }
 
 const TAU = Math.PI * 2

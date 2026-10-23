@@ -1329,7 +1329,7 @@ and/or timers. `onState` tells you where it is.
 |---|---|---|
 | `armed` | nothing on screen | `startSignal` (bench **▶ Start**) |
 | `found` | a **white gem** rises from below trailing a **jet** (gradient tracks, as in Gem Reveal), **flashes white as it arrives**, and hovers **spinning at full frame rate** (live Lottie), with **"You found a gem."** under it; the jet retracts tail → head as soon as the gem first reaches the centre | `lineupSignal` (**⇣ Line up**) or `autoLineupAfter` seconds |
-| `lineup` | the white gem **shrinks and slides into the bottom slot**, colour-tweening white → **Notable**; the other five **drop in from the top**. Bottom → top: Notable, Renowned, Storied, Illustrious, Mythic, Holy Grail. The text fades out as soon as the line-up starts (`textOutDelay` 0). **Holy Grail is the biggest (`gemSize`, 360 px); each grade down is `sizeStep` smaller** (0.2 → Notable ≈ a third of Holy Grail; neighbouring gems overlap, back-to-front by depth), scaled evenly in both axes, so the user hopes for the big ones. Once lined up the gems **stop spinning** and hold still | settles on its own → `ready` |
+| `lineup` | the white gem **shrinks and slides into the bottom slot**, colour-tweening white → **Notable**; the other five **drop in from the top**. Bottom → top: Notable, Renowned, Storied, Illustrious, Mythic, Holy Grail. The text fades out as soon as the line-up starts (`textOutDelay` 0). **Holy Grail is the biggest (`gemSize`, 130 px); each grade down is `sizeStep` smaller** (0.2 → Notable ≈ a third of Holy Grail), scaled evenly in both axes, so the user hopes for the big ones. Once lined up the gems **stop spinning** and hold still | settles on its own → `ready` |
 | `ready` | optional second line **"Spin the wheel."** fades in (`promptDelay` after the line-up settles) | a **vertical swipe** either way, `spinSignal` (**⟳ Spin**), or `autoSpinAfter` |
 | `spinning` | the drum turns at a constant speed, with **warp speed lines** streaming the same way (intensity follows the wheel speed). A swipe's speed comes from the flick (harder = faster, clamped); the auto spin eases up to `cruiseSpeed` | after **`spinDuration`** (the spin timer), or `stopSignal` (**■ Stop now**) |
 | `stopping` | a **controlled ease-out** that carries the preset `finalGrade` **past the centre by `overshoot` slots** (default 0.5 — it slows to a stop right on the **division line** with the next tier, in whichever direction it's spinning, so the user thinks they're getting it), hangs `overshootHold`, then **snaps back** onto the preset grade — the tease. It always lands on `finalGrade` | settles → `landed` |
@@ -1379,8 +1379,10 @@ loading) dipped briefly in an earlier build — worth watching on a real phone.
 
 Reuses the Gem Reveal set: `GemReveal_start.mp3` on **Start**,
 `GemReveal_ambientLoop.mp3` from Start (toggle), `GemReveal_end.mp3` when it
-settles, `GemReveal_punch.mp3` on the flash, and the soundtrack options
-(start / spin / land + delay). **New tick:** `drip4.ogg` plays **once per slot
+settles, `GemReveal_punch.mp3` on the flash, and **the soundtrack — on by default, as in
+Gem Reveal**: Belt and Braces comes in **3.2 s after the landing** (after the
+end sting, once the winner is through and labelled), looping at 0.15 volume
+(`musicTrack`, `musicStart` start / spin / land, `musicDelay`). **New tick:** `drip4.ogg` plays **once per slot
 passing the centre** (Web Audio, so overlaps are cheap) — it runs at the wheel's
 speed by construction, rising in pitch with speed (`tickPitchMin → Max`), capped
 at `tickMaxRate` per second. 🔊 bottom-left mutes everything.

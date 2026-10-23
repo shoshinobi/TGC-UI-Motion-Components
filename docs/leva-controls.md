@@ -666,7 +666,7 @@ Vertical lines streaming past while the wheel spins, in the same direction as th
 
 | Control | Range | What it changes |
 |---|---|---|
-| `Holy Grail size (px)` | 40–560 | The biggest gem (default 360) — the anchor for every other size. |
+| `Holy Grail size (px)` | 40–560 | The biggest gem (default 130) — the anchor for every other size. |
 | `shrink per grade down` | 0–0.4 | Each grade down is this much smaller than the one above (default 0.2 → Notable ≈ ⅓ Holy Grail). Scaled evenly in both axes. Each gem keeps its own size the whole way round. |
 | `found → Notable (s)` + `↳ ease` | | The found gem shrinking + sliding into the Notable slot while it colour-tweens white → Notable; its spin crossfades out so all six are still once lined up. |
 | `drop-in stagger (s)` | 0–0.6 | Gap between each of the other five dropping in from the top. |
@@ -680,7 +680,7 @@ A flat strip with equal spacing — no faked 3D.
 | Control | Range | What it changes |
 |---|---|---|
 | `fit line-up to stage` | toggle | On (default): Holy Grail's top point and Notable's bottom point sit the same distance from the top / bottom edges, with equal spacing between. |
-| `↳ margin top / bottom (px)` | 0–160 | That distance (default 40; "Spin the wheel." sits in the bottom margin). |
+| `↳ margin top / bottom (px)` | 0–160 | That distance (default 28; "Spin the wheel." sits in the bottom margin). |
 | `slot spacing (px, not fitted)` / `line-up centre (slot, not fitted)` | | Set the spacing and the line-up position by hand when fitting is off. |
 | `fade beyond line-up (slots)` | 0.1–4 | Gems further along the loop show past either end of the line-up, fading out over this many slots. |
 | `sequence repeats` | 1–4 | How many times the six-gem sequence goes round the loop (3 = 18 slots). |
@@ -759,7 +759,7 @@ The folded button from Gem Reveal, springing in under the winner with the landed
 | `tick volume` | 0–1 | `drip4.ogg`, played **once per slot passing the centre**, so it runs at the wheel's speed. |
 | `tick rate at rest / at speed` | 0.25–3 | Playback rate (pitch) of the tick, from slow to cruise speed. |
 | `max ticks / s` | 2–40 | Cap so a very fast spin doesn't machine-gun. |
-| `soundtrack` + `↳ volume / loop / starts on / delay` | | The Gem Reveal music, from **start**, the **spin**, or the **landing**. |
+| `soundtrack` + `↳ volume / loop / starts on / delay` | | The Gem Reveal music, from **start**, the **spin**, or the **landing**. Default as Gem Reveal: Belt and Braces, 3.2 s after the landing. |
 
 **SFX cues** (fixed): `start` on **▶ Start**; `end` when the wheel settles on the grade; `punch` on the flash.
 
