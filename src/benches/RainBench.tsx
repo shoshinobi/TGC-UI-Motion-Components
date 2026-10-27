@@ -239,7 +239,7 @@ export function RainBench() {
     'copy canvas loop': button(copy('loop')),
     'copy JSON tokens': button(copy('json')),
     'copy config (for defaults)': button(copy('config')),
-  })
+  }, { order: 3 }) // Export stays last, whichever bench creates it first
 
   // Physics / floor / appearance update live via a ref inside the component.
   // Emission + anything that changes the drop-time particle count (viewport

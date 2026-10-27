@@ -176,7 +176,7 @@ export function GaugeBench() {
     'copy Framer Motion': button(copy('jsx')),
     'copy JSON tokens': button(copy('json')),
     'copy config (for defaults)': button(copy('config')),
-  })
+  }, { order: 3 }) // Export stays last, whichever bench creates it first
 
   const animKey = `${nonce}-${JSON.stringify(config)}`
 

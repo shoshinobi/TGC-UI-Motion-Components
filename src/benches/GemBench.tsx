@@ -281,7 +281,7 @@ export function GemBench() {
     'copy lottie-web wiring': button(copy('react')),
     'copy JSON tokens': button(copy('json')),
     'copy config (for defaults)': button(copy('config')),
-  })
+  }, { order: 3 }) // Export stays last, whichever bench creates it first
 
   const runKey = [
     nonce,

@@ -244,7 +244,7 @@ export function FlameBench() {
     'copy Framer Motion': button(copy('jsx')),
     'copy JSON tokens': button(copy('json')),
     'copy config (for defaults)': button(copy('config')),
-  })
+  }, { order: 3 }) // Export stays last, whichever bench creates it first
 
   // Remount whenever a timing-affecting param changes so the preview always
   // replays with the current values (motion keeps an infinite loop running with
