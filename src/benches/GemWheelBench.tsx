@@ -20,7 +20,7 @@ const MUSIC_OPTIONS = {
   'Belt and Braces': 'belt-and-braces',
   'Chasing Quails': 'chasing-quails',
 }
-const TEXT_OPTIONS = ['You found a gem.', 'Spin the wheel.']
+const TEXT_OPTIONS = ['You found a gem!', 'Spin the wheel']
 
 const SLOT_KEY = 'tgc-bench:wheel'
 
@@ -31,6 +31,9 @@ function savedSettings(): Record<string, number | string | boolean> | null {
     const obj = JSON.parse(raw) as Record<string, unknown>
     const out: Record<string, number | string | boolean> = {}
     for (const k of Object.keys(D)) if (k in obj) out[k] = obj[k] as number | string | boolean
+    // copy changed since these were saved — carry the old wording forward
+    if (out.text === 'You found a gem.') out.text = 'You found a gem!'
+    if (out.promptText === 'Spin the wheel.') out.promptText = 'Spin the wheel'
     return out
   } catch {
     return null
@@ -71,6 +74,11 @@ export function GemWheelBench() {
     paused: false,
   })
 
+  // its own section, between Stage and Wheel
+  const [hes, setHes] = useControls('Hesitation', () => ({
+    hesitate: { value: D.hesitate, label: 'before final gem' },
+  }), { order: 1 }) // pinned: Stage (0) → Hesitation → Wheel → Export, whatever order they were created in
+
   const [v, set] = useControls('Wheel', () => ({
     result: folder({
       finalGrade: { value: D.finalGrade, options: GRADE_OPTIONS, label: 'lands on (preset)' },
@@ -110,6 +118,7 @@ export function GemWheelBench() {
         textFade: { value: D.textFade, min: 0.05, max: 2, step: 0.05, label: 'fade (s)' },
         textOutDelay: { value: D.textOutDelay, min: 0, max: 3, step: 0.05, label: 'fade-out after line-up starts (s)' },
         promptDelay: { value: D.promptDelay, min: 0, max: 3, step: 0.05, label: 'prompt in after line-up (s)' },
+        promptPosition: { value: D.promptPosition, options: ['center', 'bottom'], label: 'prompt position' },
       },
       { collapsed: true },
     ),
@@ -257,6 +266,9 @@ export function GemWheelBench() {
         bracketHalfWidth: { value: D.bracketHalfWidth, min: 20, max: 300, step: 2, label: '↳ distance from centre (px)' },
         bracketColor: { value: D.bracketColor, label: '↳ colour' },
         bracketOpacity: { value: D.bracketOpacity, min: 0, max: 1, step: 0.05, label: '↳ opacity' },
+        arrowPulse: { value: D.arrowPulse, label: 'arrows pulse with the prompt' },
+        arrowPulseAmp: { value: D.arrowPulseAmp, min: 0, max: 60, step: 1, label: '↳ travel (px)' },
+        arrowPulseSpeed: { value: D.arrowPulseSpeed, min: 0.1, max: 4, step: 0.05, label: '↳ pulses per second' },
         lineInDelay: { value: D.lineInDelay, min: 0, max: 2, step: 0.05, label: 'fade in after line-up settles (s)' },
         lineInFade: { value: D.lineInFade, min: 0, max: 2, step: 0.05, label: '↳ fade-in (s)' },
       },
@@ -290,17 +302,21 @@ export function GemWheelBench() {
       },
       { collapsed: true },
     ),
-  }))
+  }), { order: 2 })
 
   const restored = useRef(false)
   useEffect(() => {
     if (restored.current) return
     restored.current = true
     const saved = savedSettings()
-    if (saved) set(saved as unknown as Parameters<typeof set>[0])
-  }, [set])
+    if (saved) {
+      const { hesitate, ...rest } = saved
+      set(rest as unknown as Parameters<typeof set>[0])
+      if (typeof hesitate === 'boolean') setHes({ hesitate })
+    }
+  }, [set, setHes])
 
-  const values = v as unknown as Record<string, string | number | boolean>
+  const values = { ...v, ...hes } as unknown as Record<string, string | number | boolean>
   const config = Object.fromEntries(Object.keys(D).map((k) => [k, values[k]])) as unknown as GemWheelConfig
 
   const json = buildGemWheelJsonSpec(config)
@@ -323,7 +339,9 @@ export function GemWheelBench() {
       } catch {
         /* ignore */
       }
-      set({ ...D } as unknown as Parameters<typeof set>[0])
+      const { hesitate, ...rest } = D
+      set(rest as unknown as Parameters<typeof set>[0])
+      setHes({ hesitate })
       replay()
     }),
     '↻ replay': button(() => replay()),
@@ -334,7 +352,7 @@ export function GemWheelBench() {
     'copy JSON tokens': button(copy('json')),
     'copy wiring reference': button(copy('wiring')),
     'copy config (for defaults)': button(copy('config')),
-  })
+  }, { order: 3 }) // Export stays last, whichever bench creates it first
 
   // anything baked into the cached sprites or the drum's slot count re-mounts
   const runKey = [

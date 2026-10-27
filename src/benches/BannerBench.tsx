@@ -192,7 +192,7 @@ export function BannerBench() {
     'copy Framer Motion': button(copy('jsx')),
     'copy JSON tokens': button(copy('json')),
     'copy config (for defaults)': button(copy('config')),
-  })
+  }, { order: 3 }) // Export stays last, whichever bench creates it first
 
   const frameWidth = stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '640px' : 'min(880px, 100%)'
   const animKey = `${nonce}-${JSON.stringify(config)}`

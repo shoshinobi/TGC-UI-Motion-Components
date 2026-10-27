@@ -64,6 +64,7 @@ export function buildGemWheelJsonSpec(c: GemWheelConfig): string {
       text: {
         first: c.text,
         prompt: c.promptText || null,
+        promptPosition: c.promptPosition === 'center' ? 'centre of the stage, between the arrows' : 'bottom margin, under Notable',
         sizePx: c.textSize,
         inDelaySec: c.textInDelay,
         fadeSec: c.textFade,
@@ -93,7 +94,9 @@ export function buildGemWheelJsonSpec(c: GemWheelConfig): string {
         approxDurationSec: c.stopDuration,
         easeOutPower: c.stopEasePower,
         extraLoops: c.extraLoops,
-        overshootSlots: c.overshoot,
+        hesitate: c.hesitate,
+        hesitateNote: c.hesitate ? 'goes past the grade, hangs, snaps back' : 'no tease — the ease-out lands straight on the grade (overshoot / hold / snap unused)',
+        overshootSlots: c.hesitate ? c.overshoot : 0,
         overshootNote: '0.5 = stops right on the division line with the next tier (in the spin direction), then snaps back',
         overshootHoldSec: c.overshootHold,
         snap: { stiffness: c.snapStiffness, damping: c.snapDamping },
@@ -144,7 +147,7 @@ export function buildGemWheelJsonSpec(c: GemWheelConfig): string {
         music: c.musicTrack === 'off' ? false : { track: c.musicTrack, startsOn: c.musicStart, delaySec: c.musicDelay },
       },
       lineWork: c.lines
-        ? { color: c.lineColor, opacity: c.lineOpacity, widthPx: c.lineWidth, slotLineHalfWidthPx: c.lineHalfWidth, fadeTowardEndsFrom: c.lineSideFade, centreArrows: c.bracket ? { halfWidthPx: c.bracketHalfWidth } : false, fadeIn: { afterLineupSettlesSec: c.lineInDelay, durationSec: c.lineInFade }, note: 'straight, evenly spaced horizontal slot lines (no side rails), fading toward their ends and past the line-up ends' }
+        ? { color: c.lineColor, opacity: c.lineOpacity, widthPx: c.lineWidth, slotLineHalfWidthPx: c.lineHalfWidth, fadeTowardEndsFrom: c.lineSideFade, centreArrows: c.bracket ? { halfWidthPx: c.bracketHalfWidth, pulse: c.arrowPulse ? { travelPx: c.arrowPulseAmp, perSec: c.arrowPulseSpeed, when: 'while the prompt shows (ready); eased in/out', curve: 'offset = travel × (0.5 − 0.5·cos 2π·f·t), outward from the rest position' } : false } : false, fadeIn: { afterLineupSettlesSec: c.lineInDelay, durationSec: c.lineInFade }, note: 'straight, evenly spaced horizontal slot lines (no side rails), fading toward their ends and past the line-up ends' }
         : false,
     },
     null,
@@ -170,7 +173,7 @@ export function buildGemWheelWiringSpec(c: GemWheelConfig): string {
 
 // --- controlled stop: land the preset grade at the centre, with the tease ---
 function planStop(phi, omega, gradeIndex /* 0 = Notable … 5 = Holy Grail */) {
-  const n = ${c.stopEasePower}, o = ${c.overshoot}
+  const n = ${c.stopEasePower}, o = ${c.hesitate ? c.overshoot : 0}   // ${c.hesitate ? 'hesitate on: go past, hang, snap back' : 'hesitate off: ease straight onto the grade'}
   const dir = Math.sign(omega), w0 = Math.abs(omega)
   const want = (w0 * ${c.stopDuration}) / n + 6 * ${Math.round(c.extraLoops)}
   const target = dir > 0

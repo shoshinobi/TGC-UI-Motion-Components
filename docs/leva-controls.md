@@ -607,6 +607,8 @@ The `GemReveal_*.mp3` files. Playback needs a user gesture — **🚀 Launch** i
 
 "You found a gem" → spin a six-gem strip → land on the developer's preset grade. Seven states, each moved on by a stage button, a timer, or (for the spin) a swipe. The wheel gems are still images on one canvas (a cached rest frame per grade), so the drum stays at 60 fps; only one live, spinning Lottie runs — the found gem, then the landed winner.
 
+
+**Hesitation → `before final gem`** (its own **Hesitation** section, between Stage and Wheel; toggle) — **Off (default):** the slowdown eases straight into the final resting position on the preset grade, no tease. **On:** it goes past, hangs, and snaps back (`go past by` / `hang there` / snap spring in **stop + suspense**).
 ### result
 
 | Control | Options | What it changes |
@@ -654,20 +656,21 @@ Vertical lines streaming past while the wheel spins, in the same direction as th
 
 | Control | Range / options | What it changes |
 |---|---|---|
-| `text` | `You found a gem.` / `Spin the wheel.` | The line under the found gem. |
+| `text` | `You found a gem!` / `Spin the wheel` | The line under the found gem. |
 | `then show (blank = none)` | text | A second line that fades in after the first fades out, while the wheel waits for a spin. |
 | `size (px)` / `gap below gem (px)` | | Type size and spacing. |
 | `fade-in delay (s)` | 0–3 | How long after the gem starts rising before the text fades in. |
 | `fade (s)` | 0.05–2 | Fade duration (in and out). |
-| `fade-out after line-up starts (s)` | 0–3 | When "You found a gem." fades out, counted from the start of the line-up (default 0 = immediately). |
-| `prompt in after line-up (s)` | 0–3 | How long after all six gems settle before "Spin the wheel." fades in. |
+| `fade-out after line-up starts (s)` | 0–3 | When "You found a gem!" fades out, counted from the start of the line-up (default 0 = immediately). |
+| `prompt in after line-up (s)` | 0–3 | How long after all six gems settle before "Spin the wheel" fades in. |
+| `prompt position` | center / bottom | **center** (default): in the middle of the stage, between the two arrows. **bottom**: in the bottom margin, under Notable. |
 
 ### line-up (2)
 
 | Control | Range | What it changes |
 |---|---|---|
-| `Holy Grail size (px)` | 40–560 | The biggest gem (default 130) — the anchor for every other size. |
-| `shrink per grade down` | 0–0.4 | Each grade down is this much smaller than the one above (default 0.2 → Notable ≈ ⅓ Holy Grail). Scaled evenly in both axes. Each gem keeps its own size the whole way round. |
+| `Holy Grail size (px)` | 40–560 | The biggest gem (default 88) — the anchor for every other size. |
+| `shrink per grade down` | 0–0.4 | Each grade down is this much smaller than the one above (default 0.15 → Notable ≈ 0.44 × Holy Grail, ~39 px). Scaled evenly in both axes. Each gem keeps its own size the whole way round. |
 | `found → Notable (s)` + `↳ ease` | | The found gem shrinking + sliding into the Notable slot while it colour-tweens white → Notable; its spin crossfades out so all six are still once lined up. |
 | `drop-in stagger (s)` | 0–0.6 | Gap between each of the other five dropping in from the top. |
 | `drop spring stiffness / damping` | | The drop-in spring. |
@@ -680,7 +683,7 @@ A flat strip with equal spacing — no faked 3D.
 | Control | Range | What it changes |
 |---|---|---|
 | `fit line-up to stage` | toggle | On (default): Holy Grail's top point and Notable's bottom point sit the same distance from the top / bottom edges, with equal spacing between. |
-| `↳ margin top / bottom (px)` | 0–160 | That distance (default 28; "Spin the wheel." sits in the bottom margin). |
+| `↳ margin top / bottom (px)` | 0–160 | That distance (default 42). |
 | `slot spacing (px, not fitted)` / `line-up centre (slot, not fitted)` | | Set the spacing and the line-up position by hand when fitting is off. |
 | `fade beyond line-up (slots)` | 0.1–4 | Gems further along the loop show past either end of the line-up, fading out over this many slots. |
 | `sequence repeats` | 1–4 | How many times the six-gem sequence goes round the loop (3 = 18 slots). |
@@ -703,6 +706,7 @@ A flat strip with equal spacing — no faked 3D.
 | `slowdown (≈ s)` | 0.3–8 | Roughly how long the slowdown takes. The exact length is adjusted so it lands on the preset grade with no speed jump. |
 | `ease-out power` | 1.5–6 | Shape of the slowdown: 2 = gentle, 5+ = a long crawl at the end. |
 | `extra loops` | 0–4 | Extra full trips round the sequence during the slowdown. Loops are also added automatically when the target is too close. |
+| *(Hesitation → `before final gem` — the toggle in the **Hesitation** section — switches the three settings below on/off)* | | |
 | `go past by (slots)` | 0–0.95 | **The tease** — how far it carries on past the preset grade, in the direction it's spinning, before snapping back (`0` = no tease; default **0.5 = stops right on the division line with the next tier**; higher = the next gem is nearly in the slot). It always lands on the preset grade. |
 | `hang there (s)` | 0–2 | How long it hangs at the creep-past point. |
 | `snap-back stiffness / damping` | | The spring back onto the grade. |
@@ -751,6 +755,7 @@ The folded button from Gem Reveal, springing in under the winner with the landed
 | `line half-width (px)` | 30–400 | How far the lines reach toward the sides (capped at the stage edge). |
 | `fade toward ends from` | 0–1 | Where along the line the fade to the ends starts (0 = from the centre, 1 = hard ends). |
 | `centre arrows` + `↳ distance from centre (px)` / `↳ colour / opacity` | | The two pointers marking the landing spot. |
+| `arrows pulse with the prompt` + `↳ travel (px)` / `↳ pulses per second` | | While "Spin the wheel" shows, the arrows pulse outward and back in toward it in a loop (default 10 px, 1.2 per second); eased in with the prompt and out when the spin starts. |
 | `fade in after line-up settles (s)` + `↳ fade-in (s)` | 0–2 | The lines and arrows stay hidden while the gems move into the line-up, then fade in this long after they've settled (default 0 s, over 0.4 s). |
 
 ### gem animation

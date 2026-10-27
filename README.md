@@ -1328,11 +1328,11 @@ and/or timers. `onState` tells you where it is.
 | state | what happens | how it moves on |
 |---|---|---|
 | `armed` | nothing on screen | `startSignal` (bench **▶ Start**) |
-| `found` | a **white gem** rises from below trailing a **jet** (gradient tracks, as in Gem Reveal), **flashes white as it arrives**, and hovers **spinning at full frame rate** (live Lottie), with **"You found a gem."** under it; the jet retracts tail → head as soon as the gem first reaches the centre | **`autoLineupAfter`** (default **2 s** after Start), or `lineupSignal` (**⇣ Line up**) any time before; `0` = wait for the signal |
-| `lineup` | the white gem **shrinks and slides into the bottom slot**, colour-tweening white → **Notable**; the other five **drop in from the top**. Bottom → top: Notable, Renowned, Storied, Illustrious, Mythic, Holy Grail. The text fades out as soon as the line-up starts (`textOutDelay` 0). **Holy Grail is the biggest (`gemSize`, 130 px); each grade down is `sizeStep` smaller** (0.2 → Notable ≈ a third of Holy Grail), scaled evenly in both axes, so the user hopes for the big ones. Once lined up the gems **stop spinning** and hold still | settles on its own → `ready` |
-| `ready` | optional second line **"Spin the wheel."** fades in (`promptDelay` after the line-up settles) | a **vertical swipe** either way, `spinSignal` (**⟳ Spin**), or `autoSpinAfter` |
+| `found` | a **white gem** rises from below trailing a **jet** (gradient tracks, as in Gem Reveal), **flashes white as it arrives**, and hovers **spinning at full frame rate** (live Lottie), with **"You found a gem!"** under it; the jet retracts tail → head as soon as the gem first reaches the centre | **`autoLineupAfter`** (default **2 s** after Start), or `lineupSignal` (**⇣ Line up**) any time before; `0` = wait for the signal |
+| `lineup` | the white gem **shrinks and slides into the bottom slot**, colour-tweening white → **Notable**; the other five **drop in from the top**. Bottom → top: Notable, Renowned, Storied, Illustrious, Mythic, Holy Grail. The text fades out as soon as the line-up starts (`textOutDelay` 0). **Holy Grail is the biggest (`gemSize`, 88 px); each grade down is `sizeStep` smaller** (0.15 → Notable ≈ 0.44 × Holy Grail, ~39 px), scaled evenly in both axes, so the user hopes for the big ones. Once lined up the gems **stop spinning** and hold still | settles on its own → `ready` |
+| `ready` | optional second line **"Spin the wheel"** fades in (`promptDelay` after the line-up settles), **centred on the stage between the arrows** (`promptPosition`: center / bottom), while the two arrows **pulse out and back in toward it** in a loop (`arrowPulse`) | a **vertical swipe** either way, `spinSignal` (**⟳ Spin**), or `autoSpinAfter` |
 | `spinning` | the drum turns at a constant speed, with **warp speed lines** streaming the same way (intensity follows the wheel speed). A swipe's speed comes from the flick (harder = faster, clamped); the auto spin eases up to `cruiseSpeed` | after **`spinDuration`** (the spin timer), or `stopSignal` (**■ Stop now**) |
-| `stopping` | a **controlled ease-out** that carries the preset `finalGrade` **past the centre by `overshoot` slots** (default 0.5 — it slows to a stop right on the **division line** with the next tier, in whichever direction it's spinning, so the user thinks they're getting it), hangs `overshootHold`, then **snaps back** onto the preset grade — the tease. It always lands on `finalGrade` | settles → `landed` |
+| `stopping` | a **controlled ease-out** that **eases straight into the final resting position** on the preset `finalGrade` (default, `hesitate` off). With **`hesitate` on**, it instead carries the grade **past the centre by `overshoot` slots** (default 0.5 — it slows to a stop right on the **division line** with the next tier, in whichever direction it's spinning, so the user thinks they're getting it), hangs `overshootHold`, then **snaps back** onto the preset grade — the tease. It always lands on `finalGrade` | settles → `landed` |
 | `landed` | **white flash** (a solid white gem shape with a bloom); under the flash the winner **starts spinning** (live Lottie); the other gems + line work fade; the winner **grows to `winnerScale`** alone in the centre — with an **impact**: it swells to `impactScale` (2×) with an ease-out, then eases slowly back to its resting size, while a **white burst** and a **shockwave ring** fire behind it — and its **grade label** (the folded button from Gem Reveal) springs in under it | your next components come on |
 
 **The controlled stop.** When the slowdown starts at speed ω₀, the wheel picks
@@ -1341,8 +1341,10 @@ the spin direction (plus `extraLoops` × 6), and eases to a point `overshoot`
 slots *past* it in the travel direction with
 `φ(t) = φ₀ + dir·D·(1 − (1 − t/T)ⁿ)`, `T = n·D/ω₀` — no speed jump at the
 hand-over; after the hang, a spring brings it back onto the slot, so it always
-lands exactly. Direction follows the user's swipe (or `spinDirection`); with
-the default `overshoot` 0.5 it stops on the division line between the preset
+lands exactly. **`hesitate` off (default)** skips the tease: the ease-out ends
+exactly on the slot (`overshoot` treated as 0, no hang, no snap). Direction
+follows the user's swipe (or `spinDirection`); with `hesitate` on and
+`overshoot` 0.5 it stops on the division line between the preset
 grade and the next tier along in that direction (the grade above on a downward
 spin, the grade below on an upward one). Extra loops are added automatically
 when the target is too close, so Notable and Holy Grail land just as reliably
@@ -1533,20 +1535,21 @@ persists the panel to `localStorage`. Full descriptions in
 | Group | Controls |
 |---|---|
 | Stage | **viewport (phone / tablet / full)** · background · ember colour / spread · paused |
+| Hesitation | **before final gem** (on/off — go past + snap back, or ease straight in) |
 | result | **lands on (preset)** |
 | grade colours | 6 grades + found gem |
 | found (1) | size · from below · spring · auto line-up after · white flash on arrival + delay |
 | jet (entry trail) | on/off · colour · tracks · width / spacing / length / taper · opacity at gem / tail · retract after reaching centre / retract |
 | warp (spin speed lines) | on/off · count · speed × wheel + variation · length / width · colour + variation · opacity + variation · fade in/out |
-| text | text (You found a gem. / Spin the wheel.) · then show · size · gap · fade-in delay · fade · fade-out after line-up starts · prompt in after line-up |
+| text | text (You found a gem! / Spin the wheel) · then show · size · gap · fade-in delay · fade · fade-out after line-up starts · prompt in after line-up · prompt position |
 | line-up (2) | **Holy Grail size** · **shrink per grade down** · found → Notable + ease · drop-in stagger · drop spring · auto spin after |
 | strip (spacing + fade) | fit line-up to stage + margin · slot spacing / line-up centre (not fitted) · fade beyond line-up · sequence repeats |
 | spin (3) | auto direction / speed / ease-in · **spin before slowdown (timer)** · flick gain / min / max / threshold |
-| stop + suspense (4–5) | slowdown · ease-out power · extra loops · **go past by** · hang there · snap-back spring |
+| stop + suspense (4–5) | slowdown · ease-out power · extra loops · go past by · hang there · snap-back spring |
 | landing (6) | flash delay / hold / decay / bloom · others fade · winner size · grow spring · glow |
 | impact (6b) | swell on/off · peak size × resting · ease out to peak / hold / ease back down · white burst + radius / fade · shockwave ring + colour / travel / width / opacity / duration |
 | grade label | on/off · text override · delay after flash · offset Y · size · from scale / rotate · settled rotate · spring |
-| line work | slot lines · colour / opacity / width · line half-width · fade toward ends · centre arrows + distance · fade in after line-up settles + fade-in |
+| line work | slot lines · colour / opacity / width · line half-width · fade toward ends · centre arrows + distance · arrows pulse with the prompt + travel / speed · fade in after line-up settles + fade-in |
 | gem animation | wheel rest frame · cached res · spin speed (found + winner) · hover |
 | sound | sound on · SFX volume · ambient · tick volume / rate / max · soundtrack |
 | Export | ★ save settings · reset to code default · replay · start · line up · spin · stop now · copy JSON tokens / wiring / config |

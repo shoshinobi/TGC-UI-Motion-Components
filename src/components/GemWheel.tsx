@@ -19,7 +19,7 @@ import { hexToRgb01, hexToRgba, shiftHue } from '@/lib/gemTiers'
  *   armed → found → lineup → ready → spinning → stopping → landed
  *
  * - **found**: a white gem rises from below and hovers, with a line of text
- *   ("You found a gem.") under it.
+ *   ("You found a gem!") under it.
  * - **lineup**: the white gem shrinks and slides into the bottom (Notable) slot,
  *   tweening white → Notable, while the other five drop in from the top. Six
  *   gems, bottom → top Notable … Holy Grail, each a step bigger than the last.
@@ -156,8 +156,10 @@ export type GemWheelConfig = {
   textFade: number
   /** seconds after the line-up STARTS before the text fades out (0 = immediately) */
   textOutDelay: number
-  /** "Spin the wheel." fades in this long after the line-up settles */
+  /** "Spin the wheel" fades in this long after the line-up settles */
   promptDelay: number
+  /** where "Spin the wheel" sits: the centre of the stage (between the arrows) or the bottom margin */
+  promptPosition: 'center' | 'bottom'
 
   // --- line-up (state 2) ---
   /** the found gem's move + colour tween into the Notable slot, s */
@@ -194,6 +196,8 @@ export type GemWheelConfig = {
   stopEasePower: number
   /** extra full loops added to the slowdown */
   extraLoops: number
+  /** the tease: go past the grade, hang, snap back. Off = ease straight into the final resting position */
+  hesitate: boolean
   /** slots the drum carries on past the grade, in the direction it's travelling, before snapping back (0.5 = the division line with the next tier; 0 = no tease) */
   overshoot: number
   /** seconds it hangs at the overshoot */
@@ -272,6 +276,12 @@ export type GemWheelConfig = {
   bracketHalfWidth: number
   bracketColor: string
   bracketOpacity: number
+  /** while "Spin the wheel" shows, the arrows pulse out and back in toward it, in a loop */
+  arrowPulse: boolean
+  /** px the arrows travel outward at the pulse's widest */
+  arrowPulseAmp: number
+  /** pulses per second */
+  arrowPulseSpeed: number
   /** the lines + arrows fade in this long after the gems have settled into the line-up */
   lineInDelay: number
   /** …over this many seconds */
@@ -297,7 +307,7 @@ export type GemWheelConfig = {
 
 const G = GEM_DEFAULT_CONFIG
 export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
-  finalGrade: 'illustrious',
+  finalGrade: 'renowned',
 
   gcNotable: G.gcNotable,
   gcRenowned: G.gcRenowned,
@@ -307,14 +317,14 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   gcHolyGrail: G.gcHolyGrail,
   foundColor: '#ffffff',
 
-  gemSize: 130,
-  sizeStep: 0.2,
+  gemSize: 88,
+  sizeStep: 0.15,
   repeats: 3,
   lineupFit: true,
-  lineupMargin: 28,
-  slotSpacing: 110,
-  lineupCenter: 3,
-  fadeSlots: 1.5,
+  lineupMargin: 42,
+  slotSpacing: 40,
+  lineupCenter: 2.35,
+  fadeSlots: 1.3,
 
   restFrame: 0,
   spriteRes: 320,
@@ -323,7 +333,7 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   hoverFreq: 0.3,
   hoverStagger: 0.17,
 
-  foundScale: 1.5,
+  foundScale: 1.75,
   entryDistance: 700,
   entryStiffness: 200,
   entryDamping: 22,
@@ -356,14 +366,15 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   warpOpacityVar: G.warpOpacityVar,
   warpFade: 0.4,
 
-  text: 'You found a gem.',
-  promptText: 'Spin the wheel.',
+  text: 'You found a gem!',
+  promptText: 'Spin the wheel',
   textSize: 22,
   textGap: 18,
   textInDelay: 0.5,
   textFade: 0.4,
   textOutDelay: 0,
   promptDelay: 0.5,
+  promptPosition: 'center',
 
   lineupDuration: 0.8,
   lineupEase: 'easeInOut',
@@ -384,6 +395,7 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   stopDuration: 2.6,
   stopEasePower: 3,
   extraLoops: 0,
+  hesitate: false,
   overshoot: 0.5,
   overshootHold: 0.35,
   snapStiffness: 380,
@@ -434,9 +446,12 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   lineHalfWidth: 200,
   lineSideFade: 0,
   bracket: true,
-  bracketHalfWidth: 120,
+  bracketHalfWidth: 130,
   bracketColor: '#ffffff',
   bracketOpacity: 0.6,
+  arrowPulse: true,
+  arrowPulseAmp: 10,
+  arrowPulseSpeed: 1.2,
   lineInDelay: 0,
   lineInFade: 0.4,
 
@@ -808,6 +823,7 @@ export function GemWheel({
     let lblRotV = 0
     let lblOpacity = 0
     let handoffAt = -1
+    let arrowPulseW = 0 // 0–1: eases the arrow pulse in with the prompt, and out when the spin starts
     let winnerRestS = 0 // the winner's size without the impact swell
     let punchPlayed = false
     // the repeat slots (beyond the first six) stay hidden until the first spin,
@@ -945,7 +961,7 @@ export function GemWheel({
       const w0 = Math.abs(omega) || cfg.cruiseSpeed
       const dir = Math.sign(omega) || 1
       const n = Math.max(1.2, cfg.stopEasePower)
-      const o = Math.max(0, cfg.overshoot)
+      const o = cfg.hesitate ? Math.max(0, cfg.overshoot) : 0 // no tease: ease straight onto the grade
       const want = (w0 * cfg.stopDuration) / n + 6 * Math.max(0, Math.round(cfg.extraLoops))
       let target: number
       // the hold point is `o` slots PAST the target in the travel direction
@@ -1133,6 +1149,15 @@ export function GemWheel({
         lastSlot = slotNow
       }
 
+      // ---- arrow pulse: only while the prompt is up ----
+      {
+        const want =
+          cfg.arrowPulse && cfg.promptText.trim() && state === 'ready' && lineupDoneAt >= 0
+            ? smooth(cfg.promptDelay, cfg.promptDelay + cfg.textFade, t - lineupDoneAt)
+            : 0
+        arrowPulseW += (want - arrowPulseW) * Math.min(1, dt * 8)
+      }
+
       // ---- flashes ----
       let flashK = 0
       let othersK = 1
@@ -1312,7 +1337,9 @@ export function GemWheel({
           const bk = cfg.bracketOpacity * lineIn
           ctx.fillStyle = hexToRgba(cfg.bracketColor, bk)
           const s = 9
-          const bhw = Math.min(cfg.bracketHalfWidth, size.w / 2 - 4)
+          // pulse: out and back in toward the text (rests at bracketHalfWidth)
+          const pulse = arrowPulseW * cfg.arrowPulseAmp * (0.5 - 0.5 * Math.cos(TAU * cfg.arrowPulseSpeed * t))
+          const bhw = Math.min(cfg.bracketHalfWidth + pulse, size.w / 2 - 4)
           const xl = cx - bhw
           const xr = cx + bhw
           ctx.beginPath()
@@ -1507,8 +1534,13 @@ export function GemWheel({
         textEl.style.transform = `translate(-50%, 0) translate(0px, ${(textY - cy).toFixed(1)}px)`
         promptEl.style.opacity = k2.toFixed(3)
         promptEl.style.fontSize = `${cfg.textSize}px`
-        const promptY = size.h - cfg.lineupMargin + 4 // in the bottom margin, just under Notable
-        promptEl.style.transform = `translate(-50%, 0) translate(0px, ${(Math.min(promptY, size.h - cfg.textSize * 1.4) - cy).toFixed(1)}px)`
+        if (cfg.promptPosition === 'center') {
+          // centred on the stage, between the two arrows
+          promptEl.style.transform = 'translate(-50%, -50%)'
+        } else {
+          const promptY = size.h - cfg.lineupMargin + 4 // in the bottom margin, just under Notable
+          promptEl.style.transform = `translate(-50%, 0) translate(0px, ${(Math.min(promptY, size.h - cfg.textSize * 1.4) - cy).toFixed(1)}px)`
+        }
       }
 
       raf = requestAnimationFrame(tickLoop)
