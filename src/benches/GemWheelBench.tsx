@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { useControls, folder, button } from 'leva'
+import { useControls, folder, button, LevaInputs } from 'leva'
 import {
   GemWheel,
   WHEEL_DEFAULT_CONFIG,
@@ -111,7 +111,7 @@ export function GemWheelBench() {
     text: folder(
       {
         text: { value: D.text, options: TEXT_OPTIONS, label: 'text' },
-        promptText: { value: D.promptText, label: 'then show (blank = none)' },
+        promptText: { value: D.promptText, type: LevaInputs.STRING, label: 'then show (blank = none)' },
         textSize: { value: D.textSize, min: 10, max: 48, step: 1, label: 'size (px)' },
         textGap: { value: D.textGap, min: 0, max: 80, step: 1, label: 'gap below gem (px)' },
         textInDelay: { value: D.textInDelay, min: 0, max: 3, step: 0.05, label: 'fade-in delay (s)' },
@@ -241,7 +241,7 @@ export function GemWheelBench() {
     'grade label': folder(
       {
         label: { value: D.label, label: 'folded label on landing' },
-        labelOverride: { value: D.labelOverride, label: 'text (blank = grade name)' },
+        labelOverride: { value: D.labelOverride, type: LevaInputs.STRING, label: 'text (blank = grade name)' },
         labelDelay: { value: D.labelDelay, min: 0, max: 2, step: 0.02, label: 'delay after flash (s)' },
         labelOffsetY: { value: D.labelOffsetY, min: -120, max: 160, step: 1, label: 'offset Y — overlap (px)' },
         labelSize: { value: D.labelSize, min: 0.5, max: 6, step: 0.1, label: 'size (crisp)' },

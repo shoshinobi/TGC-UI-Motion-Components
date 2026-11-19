@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { useControls, folder, button } from 'leva'
+import { useControls, folder, button, LevaInputs } from 'leva'
 import {
   GoldReveal,
   GOLD_DEFAULT_CONFIG,
@@ -35,6 +35,10 @@ function savedSettings(): Record<string, number | string | boolean> | null {
     const obj = JSON.parse(raw) as Record<string, unknown>
     const out: Record<string, number | string | boolean> = {}
     for (const k of Object.keys(D)) if (k in obj) out[k] = obj[k] as number | string | boolean
+    // Leva used to turn a colour-name label ("Gold") into a hex code — drop one that got saved
+    for (const k of ['amountLabel', 'headerText', 'closingText', 'buttonText'] as const) {
+      if (typeof out[k] === 'string' && /^#[0-9a-f]{3,8}$/i.test(out[k] as string)) out[k] = D[k]
+    }
     const split = typeof out.teaseText === 'string' ? OLD_TEASE[out.teaseText] : undefined
     if (split) {
       out.teaseText = split[0]
@@ -162,7 +166,7 @@ export function GoldRevealBench() {
     ),
     'reveal + count (4)': folder(
       {
-        headerText: { value: D.headerText, label: 'heading (above icon)' },
+        headerText: { value: D.headerText, type: LevaInputs.STRING, label: 'heading (above icon)' },
         headerSize: { value: D.headerSize, min: 10, max: 60, step: 1, label: '↳ size (px)' },
         headerColor: { value: D.headerColor, label: '↳ colour' },
         headerGap: { value: D.headerGap, min: -40, max: 80, step: 1, label: '↳ gap to icon (px)' },
@@ -170,7 +174,7 @@ export function GoldRevealBench() {
         amountGap: { value: D.amountGap, min: -40, max: 80, step: 1, label: 'amount gap below icon (px)' },
         amountSize: { value: D.amountSize, min: 12, max: 120, step: 1, label: 'number size (px)' },
         amountColor: { value: D.amountColor, label: 'number colour' },
-        amountLabel: { value: D.amountLabel, label: 'label after number' },
+        amountLabel: { value: D.amountLabel, type: LevaInputs.STRING, label: 'label after number' },
         labelSize: { value: D.labelSize, min: 10, max: 120, step: 1, label: '↳ size (px)' },
         labelColor: { value: D.labelColor, label: '↳ colour' },
         textTilt: { value: D.textTilt, min: -15, max: 15, step: 0.5, label: 'text tilt (°)' },
@@ -227,14 +231,14 @@ export function GoldRevealBench() {
     'shop push (6)': folder(
       {
         shopBottom: { value: D.shopBottom, min: 0, max: 240, step: 2, label: 'block: up from the bottom (px)' },
-        closingText: { value: D.closingText, label: 'closing line' },
+        closingText: { value: D.closingText, type: LevaInputs.STRING, label: 'closing line' },
         closingSize: { value: D.closingSize, min: 10, max: 40, step: 1, label: '↳ size (px)' },
 
         closingDelay: { value: D.closingDelay, min: 0, max: 3, step: 0.05, label: '↳ delay after the count (s)' },
         closingFade: { value: D.closingFade, min: 0.05, max: 2, step: 0.05, label: '↳ fade (s)' },
         closingMaxWidth: { value: D.closingMaxWidth, min: 0, max: 600, step: 10, label: '↳ max width (px, wraps; 0 = screen)' },
         button: { value: D.button, label: 'shop button' },
-        buttonText: { value: D.buttonText, label: '↳ label' },
+        buttonText: { value: D.buttonText, type: LevaInputs.STRING, label: '↳ label' },
         buttonGap: { value: D.buttonGap, min: 0, max: 120, step: 1, label: '↳ gap under line (px)' },
         buttonDelay: { value: D.buttonDelay, min: 0, max: 3, step: 0.05, label: '↳ delay after the count (s)' },
         buttonSize: { value: D.buttonSize, min: 0.5, max: 3, step: 0.05, label: '↳ size (crisp)' },

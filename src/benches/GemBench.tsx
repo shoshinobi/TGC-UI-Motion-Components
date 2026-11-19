@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { useControls, folder, button } from 'leva'
+import { useControls, folder, button, LevaInputs } from 'leva'
 import { GemReveal, GEM_DEFAULT_CONFIG, type GemRevealConfig } from '@/components/GemReveal'
 import { GEM_GRADES } from '@/lib/gemTiers'
 import { buildGemJsonSpec, buildGemReactSpec } from '@/lib/buildGemSpec'
@@ -202,7 +202,7 @@ export function GemBench() {
     'grade button': folder(
       {
         button: { value: D.button, label: 'folded button on lock' },
-        buttonLabelOverride: { value: D.buttonLabelOverride, label: 'label (blank = tier name)' },
+        buttonLabelOverride: { value: D.buttonLabelOverride, type: LevaInputs.STRING, label: 'label (blank = tier name)' },
         buttonOffsetX: { value: D.buttonOffsetX, min: -200, max: 200, step: 1, label: 'offset X (px)' },
         buttonOffsetY: { value: D.buttonOffsetY, min: -120, max: 160, step: 1, label: 'offset Y — overlap (px)' },
         buttonDelay: { value: D.buttonDelay, min: 0, max: 2, step: 0.02, label: 'delay after lock (s)' },
