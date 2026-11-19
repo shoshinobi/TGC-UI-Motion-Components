@@ -7,6 +7,8 @@ import { BannerBench } from '@/benches/BannerBench'
 import { RainBench } from '@/benches/RainBench'
 import { GemBench } from '@/benches/GemBench'
 import { GemWheelBench } from '@/benches/GemWheelBench'
+import { GoldRevealBench } from '@/benches/GoldRevealBench'
+import { ConfettiBench } from '@/benches/ConfettiBench'
 import { StatsHud } from '@/components/StatsHud'
 
 const COMPONENTS = [
@@ -17,6 +19,8 @@ const COMPONENTS = [
   'Particle Rain',
   'Gem Reveal',
   'Gem Wheel',
+  'Gold Reveal',
+  'Confetti',
 ] as const
 
 const SLUG_OF: Record<string, string> = {
@@ -27,6 +31,8 @@ const SLUG_OF: Record<string, string> = {
   'Particle Rain': 'rain',
   'Gem Reveal': 'gem',
   'Gem Wheel': 'wheel',
+  'Gold Reveal': 'gold',
+  Confetti: 'confetti',
 }
 
 function initialComponent(): string {
@@ -35,7 +41,9 @@ function initialComponent(): string {
   if (c.startsWith('sheet') || c.startsWith('feedback')) return 'Feedback Sheet'
   if (c.startsWith('gauge') || c.startsWith('meter')) return 'Gauge'
   if (c.startsWith('banner') || c.startsWith('stack') || c.startsWith('carousel')) return 'Banner Stack'
-  if (c.startsWith('rain') || c.startsWith('particle') || c.startsWith('confetti')) return 'Particle Rain'
+  if (c.startsWith('confetti') || c.startsWith('firework')) return 'Confetti'
+  if (c.startsWith('rain') || c.startsWith('particle')) return 'Particle Rain'
+  if (c.startsWith('gold') || c.startsWith('payday')) return 'Gold Reveal'
   if (c.startsWith('wheel') || c.startsWith('gemwheel') || c.startsWith('gem-wheel')) return 'Gem Wheel'
   if (c.startsWith('gem') || c.startsWith('reveal') || c.startsWith('crystal')) return 'Gem Reveal'
   if (c.startsWith('flame')) return 'Flame Pictogram'
@@ -86,6 +94,10 @@ export function App() {
         <GemBench key='gem' />
       ) : component === 'Gem Wheel' ? (
         <GemWheelBench key='wheel' />
+      ) : component === 'Gold Reveal' ? (
+        <GoldRevealBench key='gold' />
+      ) : component === 'Confetti' ? (
+        <ConfettiBench key='confetti' />
       ) : (
         <FlameBench key='flame' />
       )}
