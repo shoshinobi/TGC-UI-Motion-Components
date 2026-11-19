@@ -22,6 +22,8 @@ deep-link with `?c=`.
 | **Particle Rain** | [`?c=rain`](https://tgc-ui-motion-components.vercel.app/?c=rain) | [↓](#particle-rain) | 🔧 approach locked (burst + floor + walls); two presets — chest-reveal burst + [daily gold bonus stream](#daily-gold-bonus--stream-preset) |
 | **Gem Reveal** | [`?c=gem`](https://tgc-ui-motion-components.vercel.app/?c=gem) | [↓](#gem-reveal) | 🔧 exploring — full sequence (armed → reveal → locked), 6 grade tokens, effects + audio wired; values being dialled |
 | **Gem Wheel** | [`?c=wheel`](https://tgc-ui-motion-components.vercel.app/?c=wheel) | [↓](#gem-wheel) | 🔧 new — full sequence (found → line-up → spin → controlled stop + tease → landing) built; values being dialled |
+| **Confetti** | [`?c=confetti`](https://tgc-ui-motion-components.vercel.app/?c=confetti) | [↓](#confetti) | 🔧 new — rain + firework pop, gold G + paper pieces; presets: fireworks · side cannons · gold rain |
+| **Gold Reveal** | [`?c=gold`](https://tgc-ui-motion-components.vercel.app/?c=gold) | [↓](#gold-reveal) | 🔧 new — first pass: tease → gold pile-up (Particle Rain) → floor pulled → count-up + impact → Grail Shop push |
 
 ## Run
 
@@ -899,6 +901,7 @@ This is the complete set for when you need it.
 | | `pileFriction` | per-frame horizontal + spin + downward damping on any **supported** particle — **the pile-lock knob**: raise it if the pile keeps spreading, 0–1 |
 | | `collideIterations` | position-solver passes per frame — higher = firmer, less springy stacks (current default `6`); drop it if you need the CPU back at very high counts |
 | | `collideWake` | relative impact speed (px/s) that un-settles a rammed pile particle (`0` = pile never disturbed — the default) |
+| | `forceSleepAfter` | seconds after the last particle is released before the whole pile is frozen in place (`0` = off — the default; the Gold Reveal uses it for its screen-deep pile) |
 | **appearance** | `asset` | `both` / `gbar` / `tinyBar` |
 | | `particleSize` | on-screen size (longest edge) of a scale-1 particle, px — **at `referenceWidth`; scales with actual width** |
 | | `scaleMin` / `scaleMax` | per-particle size variance |
@@ -1412,6 +1415,165 @@ at `tickMaxRate` per second. 🔊 bottom-left mutes everything.
 default to Gem Reveal's approved ones. **copy JSON tokens**, **copy wiring
 reference**, and **copy config (for defaults)** in Export.
 
+# Gold Reveal
+
+> 🔧 **New — first pass.** The whole sequence runs end to end; the numbers are
+> starting points to dial in on the bench.
+
+A balance update turned into a payday: gold buries the screen, falls away to
+show the amount, then points the player straight to the **Grail Shop**.
+
+## The sequence
+
+| state | what happens | how it moves on |
+|---|---|---|
+| `armed` | nothing on screen | `startSignal` (bench **▶ Start**) |
+| `tease` | a playful two-part line **pops in** with a springy scale + tilt — the headline ***Ka-ching!*** first, then the subheader *"Somebody's buying something nice."* rises in underneath 0.35 s later while the headline **slides up from the centre** (0.4 s) so the pair ends up centred (or *Gold incoming.* / *Mind your head.*) | after `teaseInDelay + teaseHold` (0.2 + 1.4 s) |
+| `pour` | gold bars **pour in from the top and pile up until they fill the screen** — the **Particle Rain** engine (approved burst + bounce floor + walls + collisions). The tease is *under* the pile: it gets buried, and fades out `teaseOutDelay` after the pour starts. `dailyGold.mp3` plays | once the pile has settled (`settleTime` after the last bar drops in) |
+| `piled` | the full pile holds a beat | after `drainDelay` (0.5 s) — or the bench **⤓ Pull the floor** / `drainSignal` at any point in `pour` / `piled`. `autoDrain` off = wait for the signal |
+| `drain` | **the floor is pulled out** (Particle Rain's `dumpSignal`) and the pile sweeps off the bottom | once `revealAtCleared` (55 %) of the bars have gone (and ≥ `countDelay`) |
+| `count` | near the end of the drain, with the last bars still falling past, the stacked reveal **scales in** (0.4 s, ease-out-back from 0.4×): ***YOU FOUND GOLD!*** / **`GOLDBAR_X3.svg`** / ***2,500 GRAILGOLD*** — and **the impact fires with it** (`impactDelay` 0): white burst, shockwave ring, gold **starburst**, the icon swell + warm glow, `chaChing.mp3`, the impact confetti. The amount **counts up** (2 s, ease-out, `GemReveal_ticker.mp3`) and keeps going past the effects | when the count is done **and** `landAtCleared` (92 %) of the bars have gone |
+| `landed` | the count has finished: the icon keeps **pulsing** in a loop (`iconLoopScale` +6 %, `iconLoopSpeed` 0.8 / s; the text stays put), and in their own block **anchored to the bottom of the screen** (40 px + safe area) the closing line *"The Grail Shop is open. Treat yourself."* (wraps at `closingMaxWidth`, 300 px) fades up and the **Go to the Grail Shop** button springs in under it | `onShop` when the button is pressed |
+
+## Filling any screen
+
+The pile is sized to the stage at the moment the pour starts, so the same
+`fillLevel` buries a phone and a desktop alike — no breakpoints:
+
+- **bar size** = `barSize` (80 px on a 390-wide phone) × `1 + (w/390 − 1) · barSizeVsWidth`
+  (0.4 → ~114 px bars at 720 wide, ~153 px at 1100), so big screens get bigger bars rather than hundreds more;
+- **bar count** = `fillDensity · floorWidth · pileHeight / (2√3 · E[r²])` — each bar's
+  collision circle (`collideRadius` × half its size), hex-packed. ≈ 100 bars on a
+  phone, ≈ 90 on a desktop frame at the defaults (the bench's state pill shows the live estimate).
+- **Varying amounts:** `fillByAmount` scales the pile with the amount —
+  `minFillLevel` at 0 up to `fillLevel` at `fullAmount` and above — so a small
+  payout is a small heap and a big one buries the screen. Off by default (always a full screen).
+
+A screen-deep pile never goes fully quiet on its own (the bars holding it up keep
+trading tiny impulses), so Particle Rain has a new opt-in **`forceSleepAfter`**:
+`settleTime` (1.2 s) after the last bar is released, the pile is frozen in place
+and `onSettled` fires. The Rain bench keeps it at 0 (unchanged). Particle Rain
+also gained **`onSettled`**, **`onCleared`** and **`onDrain(gone, total)`**
+callbacks — the reveal reads the drain share to time the count and the impact.
+
+## Notes for the developer
+
+- **The amount is yours** (`amount`, normally from the server); `countFrom`
+  lets a top-up count from the old balance.
+- **Text** (tease, amount, closing line) is plain DOM — swap in your typography
+  components; the amount uses tabular numerals and is sized to its final value,
+  so the row doesn't shift while it counts.
+- **The button** is the folded-button stub — wire `onShop` to open the Grail Shop.
+- **Layers**, back → front: fx canvas (glow / burst / ring) → tease → amount +
+  shop push → the pile canvas (clicks pass through it).
+- **Pour** is quick: bars enter already falling (1300–1900 px/s), gravity 24,
+  all released over 0.8 s — with an **ease-in**: the release rate builds from a
+  trickle (`pourEase` 2.2) and the first bars drop in slower (`pourSpeedStart`
+  0.35×), so it starts gently and then floods (Particle Rain `burstEasePower` /
+  `burstSpeedStart`, off by default).
+- **Drain — smooth by default:** with collisions on, a draining deep pile
+  jitters (falling bars get shoved out of the still-frozen ones every frame, and
+  fast hits knock frozen, slightly-overlapping bars apart). So the drain switches
+  collisions **off** and releases the bars **bottom → top on a timed sweep**
+  (0.9 s, cubic: creeps, then races up), each with a little drift + spin; a bar
+  released later always starts higher than the ones already falling, so they
+  barely cross and nothing gets shoved. Gravity ramps on a cubic ease-in too (× 0.35 → × 3.5 over 1 s). A phone
+  clears in ≈ 0.8 s. `drain style: physics` brings back the true collapse.
+  Particle Rain gained the matching `dumpMode: 'sequenced'` (+ sequence time /
+  power / jitter / drift / spin) and `dumpGravityStart / End`, `dumpRampTime`,
+  `dumpRampPower`, `dumpStaggerEnd` — defaults leave the Rain bench unchanged.
+- **Timing** at the defaults: tease 0 s → pour 1.6 s → piled ≈ 3.6 s → floor
+  ≈ 4.1 s → scale-in + count ≈ 5.2 s → impact ≈ 6.2 s → button ≈ 7.1 s.
+- **Confetti, two cues:** **side cannons** fire 0.1 s after the tease line pops
+  in, from the side edges at mid-height + 70 px — a **random side first, the other
+  0.12 s later, ± 0.06 s jitter** per shot (`cannonOrder / Stagger / Jitter`) —
+  launched at **65°** with light drag (1)
+  and real gravity (9) — they rise, crest just past the middle and **arc down
+  over the text**, each piece falling at its own speed (`confettiCannonFallVar` 0.35) (wider screens keep the phone's rise and throw further),
+  reaching 0.9 of the way in within 0.75 s (speed solved per screen);
+  `aim by: height` aims at a height instead; **gold rain** (3 s) starts on the impact, behind the reveal text. Each cue
+  has its own style / delay / amount / launch speed / bursts / spread / rain
+  time; gravity, drag, flutter, G share / size and palette are shared
+  (`goldConfettiConfig(c, cue)` builds each one). Timed on the loop's clock, so
+  `paused` holds them. The impact rain **loops** by default (`impactConfettiLoop`);
+  firework / cannon pieces **fade + shrink** out (`confettiPopExit`, start /
+  duration / randomness — or off).
+- **Performance:** Particle Rain's collision grid uses numeric cell keys (no
+  per-frame string building), each bar is one `setTransform` + `drawImage`, and
+  a frozen pile isn't redrawn until something moves. The reveal's per-frame
+  style writes only touch the DOM when a value changes, and the fx canvas is
+  left alone until the impact.
+
+## Config
+
+`GOLD_DEFAULT_CONFIG` in `src/components/GoldReveal.tsx`. **copy JSON tokens**
+(with phone + desktop bar counts worked out), **copy wiring reference**, and
+**copy config (for defaults)** in Export.
+
+# Confetti
+
+> 🔧 **New — first pass**, built to test. Shared celebration layer: the Gold
+> Reveal fires it twice (side cannons with the tease, gold rain on the impact),
+> and it'll drop into the cosmetic reveal the same way.
+
+One canvas, one rAF loop. Pieces are a mix of the **`GOLD_G.svg`** mark (34 px)
+and paper confetti — strips and dots — from a palette (`goldWhite` default;
+`gold`, `grail` = the six gem-grade colours, `party`).
+
+**Two styles** (`mode`: `pop` / `rain` / `both`):
+
+- **pop** — firework bursts: `bursts` pops, `burstInterval` apart, each throwing
+  `burstPieces` out from an origin — **random** spots across the upper half,
+  the **center** (`originX/Y`), two **side cannons** on the side edges (at
+  `cannonY` × height + `cannonOffsetY`) that **aim at a target** — `cannonAimX` ×
+  the half-width in, `cannonAimY` px from that height — and solve their own launch
+  angle + speed so the burst's middle arrives in `cannonTime` seconds under the
+  burst drag + gravity (`vx = dx·k/e`, `vy = (dy − (g/k)(T − e/k))·k/e`,
+  `e = 1 − e^−kT`). Phone, tablet and widescreen all land the same, no
+  per-viewport tuning; or the **bottom** centre. `burstSpread` 360° = a full shell; less =
+  a cone aimed at `burstAngle`. `sphere` fills the shell (random speeds), `ring`
+  keeps them near top speed for a crisp ring. Each origin can get a soft white **flash** and a
+  **starburst** — straight strokes flying outward like clock hands (aimed fan /
+  even / random; count, fan width, radius, stroke length + width, duration,
+  intensity). One path per starburst, additive.
+- **rain** — pieces spawn across the top (`rainRate`/s for `rainDuration`, or
+  `rainLoop`) and flutter down. Rain pieces live **until they leave the bottom**
+  — whatever the screen height — and fade only over the bottom `rainFadeZone`
+  (12 %) of it. The rate grows with the width and the fall time with the height,
+  so the density holds on any screen.
+
+**How it moves:** gravity (m/s², the same world scale as Particle Rain) against
+strong **air drag** — set **separately for the rain and for bursts**
+(`rainGravity / rainDrag`, `popGravity / popDrag`) — a burst flies out fast and stalls, then everything floats
+down at ≈ gravity ÷ drag (≈ 250 px/s at the defaults). The top-fall-speed cap
+only stops gravity adding speed — it never trims a burst's launch speed.
+**Flutter** (sideways sway) fades in as a piece slows, so bursts fly out clean
+and only drift once floating. Every piece **flips in 3D** the cheap way —
+squashed by `cos(flip)`, its back face darker (`backShade`) — so it catches the
+light as it turns. Pieces fade out at the end of their life.
+
+**Exit (pop pieces):** burst pieces can **fade, shrink, or both** once they've
+had their moment (`popExit`, from 1.1 s after launch over 0.8 s, ± 50 % per
+piece) — or `off` to let them fall. **Rain loop:** `rainLoop` keeps it raining
+until `stopSignal` (bench: **■ stop rain**).
+
+**Performance (mobile first):** the rAF loop **sleeps when nothing is on screen
+or scheduled** and wakes on fire; one `setTransform` per piece (no
+save/restore); fill colours come from a pre-built shade table (no per-frame
+string building); dead pieces are swap-removed; the G is rasterised at the size
+it's drawn; DPR capped at 2. With 4× CPU throttling in headless Chrome, the full
+Gold Reveal (pile + both confetti cues + looping rain) held **60 fps (p95 17 ms)**
+in every state, phone and desktop frames.
+
+**Presets** (stage buttons + Export): **Fireworks** (3 random pops, 360°),
+**Side cannons** (2 volleys from the bottom corners, 34° cones), **Gold rain**
+(2.5 s of rain). Counts grow with the stage width (`countVsWidth`).
+
+**Wiring:** `<Confetti config={…} fireSignal={n} />` — bump `fireSignal` to fire
+(or `autoFire` + `fireDelay`, `loopEvery` to repeat). `intensity` multiplies the
+counts (e.g. by payout). Tokens: **copy JSON tokens**; defaults:
+`CONFETTI_DEFAULT_CONFIG` / `CONFETTI_PRESETS` in `src/components/Confetti.tsx`.
+
 ---
 
 ## Panel reference (bench operators)
@@ -1558,6 +1720,33 @@ Stage buttons (top-right, stacked): **▶ Start**, **⇣ Line up**, **⟳ Spin**
 **■ Stop now** — each enabled only in its state; the current state shows
 bottom-right. **Swipe the wheel vertically** to spin it.
 
+**Gold Reveal**
+
+| Group | Controls |
+|---|---|
+| Stage | **viewport (phone / tablet / full)** · background · ember colour / spread · paused |
+| amount | **gold amount** · count from |
+| tease (1) | line · size · pop-in delay · fade · pop from scale / rotate · settled tilt · pop spring · alone before the pour · fade after pour starts |
+| pile-up (2) | **fill level × height** · smaller amount → smaller pile + full pile at / smallest pile · packing · **bar size on phone** · bar size vs width · bars · scale min / max · pour + ease-in + first bars speed · drop in from above · gravity · drop-in speed min / max · top fall speed · bounce · settle after last bar |
+| drain (3) | auto pull the floor · hold settled pile · pull anyway after · **gravity × as the floor goes / at full ramp · ramp time · ramp power (3 = cubic)** · **drain style (smooth / physics)** + sweep time / power / release jitter / drift / spin · physics stagger at start / at full ramp |
+| reveal + count (4) | heading + size / colour / gap · icon size × heading text · amount gap · number size / colour · label + size / colour · text tilt · icon offset from centre · **scale in once drained + scale-in time / from scale / overshoot** · fade in · count after floor goes · count / impact once drained (share) · count duration · ease-out power |
+| impact (5) | swell on/off · peak size · ease out / hold / ease back · white burst + radius / fade · shockwave ring + colour / travel / width / opacity / duration · warm glow + colour / radius / intensity / pulse · icon pulse loop + size / speed / start |
+| shop push (6) | closing line + size / gap / delay / fade · shop button + label / gap / delay / size / from scale / rotate / settled rotate / spring |
+| sound | sound on · SFX volume · pour / count ticker / impact · soundtrack + volume / loop / starts on (start / drain / impact) / delay |
+| Export | ★ save settings · reset to code default · replay · restart (replay + start) · start · pull the floor out · copy JSON tokens / wiring / config |
+
+Stage buttons (top-right): **▶ Start**, **↻ Restart** (back to the top and
+straight into the tease — one click; `autoStart` on a fresh mount), **⤓ Pull the
+floor** (enabled while pouring / piled). **confetti — tease** / **confetti — impact** folders: style
+(off / side cannons / gold rain / fireworks), delay, amount, launch speed, pop
+bursts / spread and rain seconds (0 = the style's own); **confetti — flash + starburst**: position (in from / below
+each cannon mouth), white flash
+(intensity / radius / fade) and starburst (intensity / strokes / distribution /
+fan / radius / stroke length + width / duration / colour) at each cannon mouth;
+**confetti look (both)**: cannon height (below centre), launch angle (+ keep the phone's height on wider screens),
+gravity, drag, flutter, G share / size, palette. The state pill bottom-right also shows the estimated bar count
+for the current viewport.
+
 ## File map
 
 | Component | File | Default constant |
@@ -1569,3 +1758,5 @@ bottom-right. **Swipe the wheel vertically** to spin it.
 | Particle Rain | [src/components/ParticleRain.tsx](src/components/ParticleRain.tsx) | `PARTICLE_DEFAULT_CONFIG` (+ `DAILY_BONUS_CONFIG` in [src/benches/RainBench.tsx](src/benches/RainBench.tsx)) |
 | Gem Reveal | [src/components/GemReveal.tsx](src/components/GemReveal.tsx) | `GEM_DEFAULT_CONFIG` (+ `src/lib/gemTiers.ts` grade colours, `src/lib/buildGemSpec.ts` spec, `src/assets/mp3/` audio) |
 | Gem Wheel | [src/components/GemWheel.tsx](src/components/GemWheel.tsx) | `WHEEL_DEFAULT_CONFIG` (+ `src/lib/buildGemWheelSpec.ts` spec, `src/assets/mp3/drip4.ogg` tick) |
+| Confetti | [src/components/Confetti.tsx](src/components/Confetti.tsx) | `CONFETTI_DEFAULT_CONFIG` + `CONFETTI_PRESETS` (+ `src/lib/buildConfettiSpec.ts`, `src/assets/GOLD_G.svg`) |
+| Gold Reveal | [src/components/GoldReveal.tsx](src/components/GoldReveal.tsx) | `GOLD_DEFAULT_CONFIG` (+ `src/lib/buildGoldRevealSpec.ts` spec, `src/assets/GOLDBAR_X3*.svg`, pile = `ParticleRain`) |

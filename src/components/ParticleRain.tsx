@@ -65,6 +65,10 @@ export type ParticleRainConfig = {
   count: number
   /** burst: seconds over which the full count is released (0 = all on frame 1) */
   burstWindow: number
+  /** burst: ease-in on the release rate — 1 = steady, higher = a trickle that builds to a downpour */
+  burstEasePower: number
+  /** burst: the first bars' starting speed, × the normal one, ramping to 1× on the same curve (1 = off) */
+  burstSpeedStart: number
   /** stream: particles spawned per second */
   spawnRate: number
   /** stream: seconds the emitter runs (0 = infinite) */
@@ -119,6 +123,30 @@ export type ParticleRainConfig = {
    *  loses support before it lets go — spreads the collapse into a cascade from
    *  the bottom up instead of the whole pile dropping at once. 0 = instant cascade */
   dumpStagger: number
+  /** dump ramp: gravity × this the moment the floor goes (1 = normal) — < 1 starts the collapse slowly */
+  dumpGravityStart: number
+  /** dump ramp: gravity × this once the ramp completes — > 1 clears the screen sooner */
+  dumpGravityEnd: number
+  /** dump ramp: seconds from start to end gravity */
+  dumpRampTime: number
+  /** dump ramp: ease-in power (3 = cubic — slow, then sharply faster) */
+  dumpRampPower: number
+  /** dump ramp: the cascade stagger it eases to by the end of the ramp (-1 = keep dumpStagger) */
+  dumpStaggerEnd: number
+  /** "pull the floor out" style: `physics` = collisions stay on, each bar lets go once nothing holds it
+   *  (a real collapse, but jittery in a deep pile) · `sequenced` = collisions off, bars are released
+   *  bottom → top on a timed front and fall freely (smooth) */
+  dumpMode: 'physics' | 'sequenced'
+  /** sequenced: seconds for the release front to travel from the bottom of the pile to the top */
+  dumpSequenceTime: number
+  /** sequenced: ease-in power of the front (3 = cubic: creeps off the bottom, then races up) */
+  dumpSequencePower: number
+  /** sequenced: ± random seconds on each bar's release, so layers don't go as neat rows */
+  dumpReleaseJitter: number
+  /** sequenced: random sideways speed a bar gets as it lets go, ± px/s */
+  dumpDrift: number
+  /** sequenced: random spin a bar gets as it lets go, ± °/s */
+  dumpSpin: number
 
   // --- side walls (optional — left + right colliders, same idea as the floor) ---
   /** on = particles bounce off / pile against the left and right frame edges */
@@ -145,6 +173,9 @@ export type ParticleRainConfig = {
   collideIterations: number
   /** relative-impact speed (px/s) that un-settles a rammed pile particle (0 = the pile is never disturbed) */
   collideWake: number
+  /** seconds after the last particle is released before the whole pile is frozen in place, settled or not
+   *  (0 = off — wait for it to go quiet). A deep, screen-filling pile needs this: it never fully quietens. */
+  forceSleepAfter: number
 
   // --- appearance ---
   asset: 'gbar' | 'tinyBar' | 'both'
@@ -177,6 +208,8 @@ export const PARTICLE_DEFAULT_CONFIG: ParticleRainConfig = {
   mode: 'burst',
   count: 56,
   burstWindow: 0.75,
+  burstEasePower: 1,
+  burstSpeedStart: 1,
   spawnRate: 30,
   streamDuration: 0,
   spawnWidth: 1,
@@ -204,6 +237,17 @@ export const PARTICLE_DEFAULT_CONFIG: ParticleRainConfig = {
   restThreshold: 5,
   fadeOut: 0,
   dumpStagger: 0.2,
+  dumpGravityStart: 1,
+  dumpGravityEnd: 1,
+  dumpRampTime: 1,
+  dumpRampPower: 3,
+  dumpStaggerEnd: -1,
+  dumpMode: 'physics',
+  dumpSequenceTime: 1,
+  dumpSequencePower: 3,
+  dumpReleaseJitter: 0.06,
+  dumpDrift: 40,
+  dumpSpin: 60,
 
   walls: true,
   wallInset: -24,
@@ -217,6 +261,7 @@ export const PARTICLE_DEFAULT_CONFIG: ParticleRainConfig = {
   pileFriction: 1,
   collideIterations: 6,
   collideWake: 0,
+  forceSleepAfter: 0,
 
   asset: 'both',
   particleSize: 80,
@@ -237,6 +282,7 @@ export const PARTICLE_DEFAULT_CONFIG: ParticleRainConfig = {
 const TAU = Math.PI * 2
 const DEG = Math.PI / 180
 const rand = (a: number, b: number) => a + Math.random() * (b - a)
+const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v)
 
 /** The engine's world scale: `gravity` is set in m/s² and multiplied by this to
  *  get px/s². 143 keeps the default 9.8 m/s² at the long-standing ~1400 px/s². */
@@ -275,6 +321,8 @@ type Particle = {
   restFor: number
   /** dump: seconds left before an unsupported pile particle lets go (-1 = not counting) */
   releaseCountdown: number
+  /** sequenced dump: seconds after the floor goes that this particle lets go (-1 = not planned) */
+  dumpAt: number
 }
 
 /** Rasterise an SVG (or any image URL) to an offscreen canvas once it loads. */
@@ -306,9 +354,23 @@ export type ParticleRainProps = {
    *  every visible particle drops off the bottom of the view and despawns.
    *  Spawning stops until the next `runKey`. */
   dumpSignal?: number
+  /** fires once per run, the first time the whole pile goes to sleep (every bar released + at rest) */
+  onSettled?: () => void
+  /** fires once per run, when a "pull the floor out" has drained every bar off the bottom */
+  onCleared?: () => void
+  /** every frame while draining: how many particles have gone off the bottom, of the total */
+  onDrain?: (gone: number, total: number) => void
 }
 
-export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }: ParticleRainProps) {
+export function ParticleRain({
+  config,
+  paused = false,
+  runKey,
+  dumpSignal = 0,
+  onSettled,
+  onCleared,
+  onDrain,
+}: ParticleRainProps) {
   const c: ParticleRainConfig = { ...PARTICLE_DEFAULT_CONFIG, ...config }
   const wrapRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -318,6 +380,8 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
   cfgRef.current = c
   const pausedRef = useRef(paused)
   pausedRef.current = paused
+  const callbacksRef = useRef({ onSettled, onCleared, onDrain })
+  callbacksRef.current = { onSettled, onCleared, onDrain }
 
   // "Pull the floor out" — set true when dumpSignal changes, cleared on re-drop.
   const dumpRef = useRef(false)
@@ -344,8 +408,9 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
     rasterizeSprite(tinyBarUrl, (s) => (sprites.tinyBar = s))
 
     let size = { w: wrap.clientWidth, h: wrap.clientHeight }
+    let dpr = Math.min(window.devicePixelRatio || 1, 2)
     const resizeCanvas = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2)
+      dpr = Math.min(window.devicePixelRatio || 1, 2)
       size = { w: wrap.clientWidth, h: wrap.clientHeight }
       canvas.width = Math.max(1, Math.round(size.w * dpr))
       canvas.height = Math.max(1, Math.round(size.h * dpr))
@@ -375,6 +440,11 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
     let spawnAcc = 0
     let quietFor = 0 // seconds the whole system has been at rest (→ auto-sleep)
     let nextId = 0
+    let dumpT = 0 // seconds since the floor was pulled
+    let dumpPlanned = false // sequenced dump: release times assigned
+    let releasedFor = 0 // seconds since the last particle was released (→ forceSleepAfter)
+    let settledFired = false
+    let clearedFired = false
 
     const pickSprite = (asset: ParticleRainConfig['asset']): SpriteKey =>
       asset === 'gbar' ? 'gbar' : asset === 'tinyBar' ? 'tinyBar' : Math.random() < 0.5 ? 'gbar' : 'tinyBar'
@@ -411,6 +481,7 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         contacted: false,
         restFor: 0,
         releaseCountdown: -1,
+        dumpAt: -1,
       }
     }
 
@@ -419,8 +490,17 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
     if (cfg0.mode === 'burst') {
       const n0 = effectiveCount(cfg0)
       const size0 = effectiveSize(cfg0)
+      // ease-in: the share released by time t is (t / window)^power, so a
+      // uniform draw u releases at window · u^(1/power) — sparse first, then dense
+      const easeP = Math.max(1, cfg0.burstEasePower)
       for (let i = 0; i < n0; i++) {
-        particles.push(makeParticle(cfg0, cfg0.burstWindow > 0 ? Math.random() * cfg0.burstWindow : 0, size0))
+        const f = cfg0.burstWindow > 0 ? Math.pow(Math.random(), 1 / easeP) : 1
+        const p = makeParticle(cfg0, f * cfg0.burstWindow, size0)
+        // the earliest bars drop in slower, building to full speed on the same curve
+        const speedK = cfg0.burstSpeedStart + (1 - cfg0.burstSpeedStart) * Math.pow(f, easeP)
+        p.vy *= speedK
+        p.vx *= speedK
+        particles.push(p)
       }
     }
 
@@ -449,8 +529,9 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
       const radiusOf = (p: Particle) => (cfg.collideRadius * effSize * p.scale) / 2
       const maxR = (cfg.collideRadius * effSize * cfg.scaleMax) / 2
       const cell = Math.max(4, maxR * 2)
-      const grid = new Map<string, Particle[]>()
-      const keyOf = (cx: number, cy: number) => `${cx},${cy}`
+      // numeric cell keys (no per-lookup string building — this runs ~6× per particle per frame)
+      const grid = new Map<number, Particle[]>()
+      const keyOf = (cx: number, cy: number) => (cx + 2048) * 8192 + (cy + 4096)
       for (const p of list) {
         const k = keyOf(Math.floor(p.x / cell), Math.floor(p.y / cell))
         const bucket = grid.get(k)
@@ -568,6 +649,14 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
       // collapse. Particle collisions stay ON so it drains and cascades from the
       // bottom up rather than the whole heap dropping as one block.
       const dumping = dumpRef.current
+      if (dumping) dumpT += dt
+      // dump ramp: 0 → 1 over dumpRampTime, eased in (power 3 = cubic)
+      const ramp = dumping
+        ? Math.pow(Math.min(1, dumpT / Math.max(0.01, cfg.dumpRampTime)), Math.max(1, cfg.dumpRampPower))
+        : 0
+      const gMul = dumping ? cfg.dumpGravityStart + (cfg.dumpGravityEnd - cfg.dumpGravityStart) * ramp : 1
+      const staggerNow =
+        cfg.dumpStaggerEnd >= 0 ? cfg.dumpStagger + (cfg.dumpStaggerEnd - cfg.dumpStagger) * ramp : cfg.dumpStagger
       if (cfg.mode === 'stream' && !dumping) spawnStream(cfg, dt, effSize)
       const halfOf = (p: Particle) => (effSize * p.scale) / 2
 
@@ -590,12 +679,13 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         // A particle that was resting last frame doesn't get re-accelerated
         // downward — that steady drip of vy is what made it jitter and then snap
         // when it finally settled. (During a dump, everything loose falls.)
-        if (!p.grounded || dumping) p.vy += cfg.gravity * PX_PER_METER * p.speedMul * dt
+        if (!p.grounded || dumping) p.vy += cfg.gravity * PX_PER_METER * p.speedMul * dt * gMul
         p.vx += cfg.wind * dt
         const damp = Math.exp(-cfg.airDrag * dt)
         p.vx *= damp
         p.vy *= damp
-        if (cfg.terminalVelocity > 0 && p.vy > cfg.terminalVelocity) p.vy = cfg.terminalVelocity
+        const vMax = cfg.terminalVelocity * (dumping ? Math.max(1, gMul) : 1) // the ramp may out-run the cap
+        if (cfg.terminalVelocity > 0 && p.vy > vMax) p.vy = vMax
         p.x += p.vx * dt
         p.y += p.vy * dt
         p.spin *= Math.exp(-cfg.spinDrag * dt)
@@ -613,8 +703,31 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         }
       }
 
-      // pass 2 — particle-particle collision (sets support flags)
-      if (anyActive) resolveCollisions(cfg, effSize)
+      // sequenced dump: plan every bar's release once, by its height in the pile —
+      // the front moves bottom → top on an ease-in curve, so it creeps, then races
+      const sequenced = dumping && cfg.dumpMode === 'sequenced'
+      if (sequenced && !dumpPlanned) {
+        dumpPlanned = true
+        let lo = Infinity
+        let hi = -Infinity
+        for (const p of particles) {
+          if (p.dead) continue
+          if (p.y < lo) lo = p.y
+          if (p.y > hi) hi = p.y
+        }
+        const span = Math.max(1, hi - lo)
+        const T = Math.max(0.01, cfg.dumpSequenceTime)
+        const n = Math.max(1, cfg.dumpSequencePower)
+        for (const p of particles) {
+          if (p.dead) continue
+          const h = clamp01((hi - p.y) / span) // 0 = bottom of the pile, 1 = top
+          p.dumpAt = Math.max(0, T * Math.pow(h, 1 / n) + (Math.random() * 2 - 1) * cfg.dumpReleaseJitter)
+        }
+      }
+
+      // pass 2 — particle-particle collision (sets support flags). Off for a
+      // sequenced dump: falling bars never shove each other, so it stays smooth.
+      if (anyActive && !sequenced) resolveCollisions(cfg, effSize)
 
       // pass 3 — dump release, floor contact, settle, fade, despawn
       for (const p of particles) {
@@ -625,11 +738,18 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         // the floor is gone, so the bottom of the pile goes first, then whatever
         // was resting on it, and so on. `dumpStagger` adds a short (jittered)
         // delay so the collapse reads as a cascade, not a single lurch.
-        if (p.settled && dumping) {
+        if (p.settled && sequenced) {
+          if (p.dumpAt >= 0 && dumpT >= p.dumpAt) {
+            p.settled = false
+            p.vx = (Math.random() * 2 - 1) * cfg.dumpDrift
+            p.vy = 0
+            p.spin = (Math.random() * 2 - 1) * cfg.dumpSpin * DEG
+          }
+        } else if (p.settled && dumping) {
           if (p.support) {
             p.releaseCountdown = -1
           } else {
-            if (p.releaseCountdown < 0) p.releaseCountdown = cfg.dumpStagger * (0.5 + Math.random())
+            if (p.releaseCountdown < 0) p.releaseCountdown = staggerNow * (0.5 + Math.random())
             p.releaseCountdown -= dt
             if (p.releaseCountdown <= 0) p.settled = false
           }
@@ -733,9 +853,14 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
           const m = Math.hypot(p.vx, p.vy) + Math.abs(p.spin) * 18
           if (m > maxMotion) maxMotion = m
         }
-        if (maxMotion < 8 && !pending) {
+        if (pending) releasedFor = 0
+        else releasedFor += dt
+        // a deep pile never fully quietens on its own (the bars holding it up
+        // keep trading tiny impulses) — `forceSleepAfter` freezes it in place
+        const forced = cfg.forceSleepAfter > 0 && !pending && releasedFor >= cfg.forceSleepAfter
+        if ((maxMotion < 8 && !pending) || forced) {
           quietFor += dt
-          if (quietFor > 0.4) {
+          if (quietFor > 0.4 || forced) {
             for (const p of particles) {
               if (!p.dead && p.active && !p.settled) {
                 p.settled = true
@@ -744,6 +869,10 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
                 p.spin = 0
               }
             }
+            if (!settledFired) {
+              settledFired = true
+              callbacksRef.current.onSettled?.()
+            }
           }
         } else {
           quietFor = 0
@@ -751,11 +880,37 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
       } else {
         quietFor = 0
       }
+
+      if (dumping && !clearedFired) {
+        let gone = 0
+        for (const p of particles) if (p.dead) gone++
+        callbacksRef.current.onDrain?.(gone, particles.length)
+        if (gone === particles.length) {
+          clearedFired = true
+          callbacksRef.current.onCleared?.()
+        }
+      }
     }
 
+    // A frozen pile is drawn once, then left alone: skip the redraw while nothing
+    // moves and nothing that affects the picture has changed.
+    let lastDrawKey = ''
     const draw = (cfg: ParticleRainConfig, effSize: number) => {
       const dumping = dumpRef.current
-      ctx.clearRect(0, 0, size.w, size.h)
+      let moving = dumping
+      if (!moving) {
+        for (const p of particles) {
+          if (!p.dead && (!p.active || !p.settled || p.fade < 1)) {
+            moving = true
+            break
+          }
+        }
+      }
+      const key = `${canvas.width}x${canvas.height}|${effSize}|${cfg.opacity}|${!!sprites.gbar}${!!sprites.tinyBar}`
+      if (!moving && key === lastDrawKey) return
+      lastDrawKey = moving ? '' : key
+      ctx.setTransform(1, 0, 0, 1, 0, 0)
+      ctx.clearRect(0, 0, canvas.width, canvas.height)
       for (const p of particles) {
         if (p.dead || !p.active || p.fade <= 0) continue
         const spr = sprites[p.sprite]
@@ -764,15 +919,17 @@ export function ParticleRain({ config, paused = false, runKey, dumpSignal = 0 }:
         const h = spr.ah * effSize * p.scale
         // Flutter scales with how fast the particle is moving, so the sway offset
         // eases to 0 as it comes to rest — no horizontal jump when it settles.
-        const flutter = p.settled || dumping ? 0 : Math.min(1, Math.hypot(p.vx, p.vy) / 200)
-        const swayX = cfg.swayAmplitude * Math.sin(TAU * cfg.swayFrequency * p.age + p.swayPhase) * flutter
-        ctx.save()
+        const flutter =
+          p.settled || dumping || cfg.swayAmplitude === 0 ? 0 : Math.min(1, Math.sqrt(p.vx * p.vx + p.vy * p.vy) / 200)
+        const swayX = flutter === 0 ? 0 : cfg.swayAmplitude * Math.sin(TAU * cfg.swayFrequency * p.age + p.swayPhase) * flutter
+        // one transform per bar (translate · rotate, × DPR) — no save/restore
+        const cr = Math.cos(p.angle) * dpr
+        const sr = Math.sin(p.angle) * dpr
+        ctx.setTransform(cr, sr, -sr, cr, (p.x + swayX) * dpr, p.y * dpr)
         ctx.globalAlpha = Math.min(1, p.fade * cfg.opacity)
-        ctx.translate(p.x + swayX, p.y)
-        ctx.rotate(p.angle)
         ctx.drawImage(spr.bitmap, -w / 2, -h / 2, w, h)
-        ctx.restore()
       }
+      ctx.globalAlpha = 1
     }
 
     let raf = 0

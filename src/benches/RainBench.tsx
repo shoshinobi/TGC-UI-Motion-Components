@@ -81,6 +81,8 @@ export function RainBench() {
       mode: { value: D.mode, options: ['burst', 'stream'] },
       count: { value: D.count, min: 1, max: 400, step: 1, label: 'count / pool' },
       burstWindow: { value: D.burstWindow, min: 0, max: 4, step: 0.05, label: 'burst window (s)' },
+      burstEasePower: { value: D.burstEasePower, min: 1, max: 6, step: 0.1, label: '↳ release ease-in (1=steady)' },
+      burstSpeedStart: { value: D.burstSpeedStart, min: 0, max: 1, step: 0.05, label: '↳ first bars speed ×' },
       spawnRate: { value: D.spawnRate, min: 1, max: 200, step: 1, label: 'stream /s' },
       streamDuration: { value: D.streamDuration, min: 0, max: 30, step: 0.5, label: 'stream secs (0=∞)' },
       spawnWidth: { value: D.spawnWidth, min: 0, max: 1, step: 0.01, label: 'spawn band' },
@@ -131,6 +133,17 @@ export function RainBench() {
       restThreshold: { value: D.restThreshold, min: 5, max: 400, step: 5, label: 'settle < px/s' },
       fadeOut: { value: D.fadeOut, min: 0, max: 2, step: 0.05, label: 'fade-out (s)' },
       dumpStagger: { value: D.dumpStagger, min: 0, max: 0.6, step: 0.01, label: 'dump stagger (s)' },
+      dumpGravityStart: { value: D.dumpGravityStart, min: 0.05, max: 3, step: 0.05, label: 'dump gravity × at start' },
+      dumpGravityEnd: { value: D.dumpGravityEnd, min: 0.05, max: 8, step: 0.05, label: 'dump gravity × at end' },
+      dumpRampTime: { value: D.dumpRampTime, min: 0.05, max: 4, step: 0.05, label: 'dump ramp (s)' },
+      dumpRampPower: { value: D.dumpRampPower, min: 1, max: 6, step: 0.1, label: 'dump ramp power (3=cubic)' },
+      dumpStaggerEnd: { value: D.dumpStaggerEnd, min: -1, max: 0.6, step: 0.01, label: 'dump stagger at end (-1=same)' },
+      dumpMode: { value: D.dumpMode, options: ['physics', 'sequenced'], label: 'dump style' },
+      dumpSequenceTime: { value: D.dumpSequenceTime, min: 0.1, max: 4, step: 0.05, label: '↳ seq: front time (s)' },
+      dumpSequencePower: { value: D.dumpSequencePower, min: 1, max: 6, step: 0.1, label: '↳ seq: front power' },
+      dumpReleaseJitter: { value: D.dumpReleaseJitter, min: 0, max: 0.4, step: 0.01, label: '↳ seq: release jitter (s)' },
+      dumpDrift: { value: D.dumpDrift, min: 0, max: 400, step: 5, label: '↳ seq: drift ± px/s' },
+      dumpSpin: { value: D.dumpSpin, min: 0, max: 720, step: 5, label: '↳ seq: spin ± °/s' },
     }),
     walls: folder(
       {
@@ -149,6 +162,7 @@ export function RainBench() {
       pileFriction: { value: D.pileFriction, min: 0, max: 1, step: 0.02, label: 'pile friction' },
       collideIterations: { value: D.collideIterations, min: 1, max: 6, step: 1, label: 'iterations' },
       collideWake: { value: D.collideWake, min: 0, max: 1200, step: 20, label: 'wake px/s (0=off)' },
+      forceSleepAfter: { value: D.forceSleepAfter, min: 0, max: 10, step: 0.1, label: 'freeze pile after (s, 0=off)' },
     }),
     appearance: folder(
       {

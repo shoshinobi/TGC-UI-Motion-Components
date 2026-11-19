@@ -1109,3 +1109,200 @@ body {
   font-size: 12px;
   pointer-events: none;
 }
+
+/* ---------- Gold Reveal ---------- */
+
+.gold-stage-inner {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 480px;
+  display: flex;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 32px);
+}
+.gold-frame {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-width: 100%;
+  border-radius: 16px;
+  outline: 1px solid #26262a;
+  overflow: hidden;
+}
+.stage[data-bg='light'] .gold-frame {
+  outline-color: #d4d4d8;
+}
+.gold-reveal {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  user-select: none;
+}
+.gold-reveal__fx {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* the pile sits on top of everything — it buries the tease, then drains off
+   the amount. Clicks pass through to the shop button underneath. */
+.gold-reveal__pile {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.gold-reveal__text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+  max-width: calc(100% - 32px);
+  text-align: center;
+  pointer-events: none;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #f4f4f5;
+  text-shadow: 0 1px 12px #000a;
+  will-change: transform, opacity;
+}
+.gold-reveal__tease {
+  width: max-content;
+  font-weight: 800;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+.gold-reveal__closing {
+  width: max-content;
+  text-wrap: balance;
+  color: #e4e4e7;
+}
+.stage[data-bg='light'] .gold-reveal__text {
+  color: #18181b;
+  text-shadow: none;
+}
+.gold-reveal__piece {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+.gold-reveal__icon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  -webkit-user-drag: none;
+}
+/* heading + amount line: italic caps with a slight tilt, as the reference */
+.gold-reveal__caps {
+  white-space: nowrap;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-style: italic;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+  text-shadow: 0 2px 14px #000b;
+}
+.gold-reveal__amount-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3em;
+}
+.gold-reveal__amount {
+  display: inline-grid;
+  font-variant-numeric: tabular-nums;
+}
+.gold-reveal__amount > span {
+  grid-area: 1 / 1;
+  justify-self: end;
+}
+.gold-reveal__amount-ghost {
+  visibility: hidden;
+}
+.gold-reveal__btn {
+  transform-origin: center top;
+}
+.gold-reveal__btn .banner-fold-btn {
+  white-space: nowrap;
+}
+
+/* ---------- Confetti ---------- */
+
+.confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.confetti__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.confetti-stage-inner {
+  flex: 1 1 auto;
+  align-self: stretch;
+  min-height: 480px;
+  display: flex;
+  justify-content: center;
+  padding: clamp(12px, 3vw, 32px);
+}
+.confetti-frame {
+  position: relative;
+  flex: 0 0 auto;
+  align-self: stretch;
+  max-width: 100%;
+  border-radius: 16px;
+  outline: 1px solid #26262a;
+  overflow: hidden;
+}
+.stage[data-bg='light'] .confetti-frame {
+  outline-color: #d4d4d8;
+}
+.gold-reveal__tease-sub {
+  width: max-content;
+  font-weight: 600;
+  line-height: 1.2;
+  text-wrap: balance;
+}
+/* shop push: closing line + button, its own block anchored to the bottom */
+.gold-reveal__shop {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 40px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.gold-reveal__closing {
+  opacity: 0;
+  text-align: center;
+  text-wrap: balance;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #e4e4e7;
+  text-shadow: 0 1px 12px #000a;
+  will-change: transform, opacity;
+}
+.stage[data-bg='light'] .gold-reveal__closing {
+  color: #18181b;
+  text-shadow: none;
+}
+.gold-reveal__shop .gold-reveal__btn {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform-origin: center center;
+}
+.gold-reveal__shop .gold-reveal__closing {
+  width: auto;
+  max-width: 100%;
+}

@@ -361,6 +361,10 @@ integration flow.
 | `pile friction` | 0–1 | Per-frame damping on any supported bar. **The pile-lock knob** — raise it if the pile keeps creeping outward. | |
 | `iterations` | 1–6 | Position-solver passes per frame. Higher = firmer, less springy stacks (costs a little CPU). | Deep / high-count piles. |
 | `wake px/s (0=off)` | 0–1200 | Impact speed that un-settles a rammed pile bar. `0` = the settled pile is never disturbed. | Letting a hard landing knock the pile loose. |
+| `dump gravity × at start / at end` · `dump ramp (s)` · `dump ramp power` · `dump stagger at end` *(floor folder)* | | Optional "pull the floor" ramp: gravity eases (power 3 = cubic) from the start to the end multiplier, and the stagger to its end value. Defaults (1 / 1 / −1) leave the dump as it was. |
+| `↳ release ease-in (1=steady)` / `↳ first bars speed ×` *(emission folder)* | | Burst only: ease the release rate in (a trickle that builds) and start the first bars slower. Defaults (1 / 1) leave the burst as it was. |
+| `dump style` + `↳ seq: front time / front power / release jitter / drift / spin` *(floor folder)* | | `physics` (default) = the original collapse; `sequenced` = collisions off, bars released bottom → top on an eased front — the smooth drain the Gold Reveal uses. |
+| `freeze pile after (s, 0=off)` | 0–10 | Seconds after the last bar drops in before the whole pile is frozen as settled. `0` = off (wait for it to go quiet). | A very deep pile that never quite stops jittering (the Gold Reveal sets it). |
 
 ### appearance
 
@@ -732,6 +736,7 @@ On the landing flash, the winner swells past its resting size and settles back �
 | `ease out to peak (s)` / `hold at peak (s)` / `ease back down (s)` | | The swell: a fast ease-out to the peak, a brief hold, then a slow ease back to the resting size. |
 | `white burst (0 = off)` + `↳ radius × height` / `↳ fade (s)` | | A big white radial flash behind the gem. |
 | `shockwave ring` + `↳ colour / travel / width / opacity / duration` | | A ring that expands from the gem and fades. |
+| `starburst (0 = off)` + `↳ strokes / distribution / rotate / burst radius / stroke length / stroke width / duration / colour` | | Straight strokes flying out from the icon's edge like clock hands, with the ring (default 16 gold strokes, even, 170 px, 0.55 s). |
 
 ### grade label
 
@@ -787,6 +792,251 @@ The folded button from Gem Reveal, springing in under the winner with the landed
 | Below the Stats HUD | **↻ Replay / Drop again** | Re-runs the animation. |
 | Bottom-left of the stage | **🔊 audio toggle** *(Gem, Gem Wheel)* | Mute / unmute all audio (= the `sound` folder's `sound on` master). **On by default.** |
 | Top-right of the stage | **Next ▸** *(Banner)* · **⤓ Pull the floor out** *(Rain)* · **🔒 Lock grade** + **⚡ White flash** + **🚀 Launch** *(Gem, stacked)* | Advance the stack / dump the pile / run the gem's lock transition, fire the coupled punch+flash, or start the reveal. **🚀 Launch** (armed → reveal) and **🔒 Lock grade** (reveal → locked) each disable once past their phase; **↻ Replay reveal** returns to armed. |
+| Top-right of the stage *(Gold Reveal)* | **▶ Start** · **↻ Restart** · **⤓ Pull the floor** | Start the sequence; restart it from the top in one click (replay + start); pull the floor out early (enabled while pouring / piled). The state + estimated bar count show bottom-right. |
 | Top-right of the stage *(Gem Wheel)* | **▶ Start** · **⇣ Line up** · **⟳ Spin** · **■ Stop now** (stacked) | Move the wheel through its states; each is only enabled in the state it applies to. A **vertical swipe on the stage** also spins it. The current state shows bottom-right. |
 | Gem Export folder | **🚀 launch** · **🔒 lock grade** · **✦ punch scale** · **⚡ white flash** · **✷ emit streaks** | Same phase triggers as the stage buttons, plus the individual punch / flash / streak triggers. |
 | Bottom dock | **spec cards** | The `copy` panels start **collapsed**; click a card header to expand it. The `copy` button works either way. |
+
+## Gold Reveal
+
+Tease → gold pile-up → the floor is pulled out → the amount (next to
+`GOLDBAR_X3.svg`) counts up and lands with an impact → the Grail Shop push. The
+pile is the Particle Rain engine, sized to fill whatever stage it's in.
+
+### amount
+
+| Control | Range | What it changes |
+|---|---|---|
+| `gold amount` | 100–10000 | The gold the player receives (set by the app). |
+| `count from` | 0–10000 | Where the count-up starts (0, or the old balance). |
+
+### tease (1)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `headline` + `↳ size (px)` | select | *Ka-ching!* / *Gold incoming.* — pops in first (default 40 px). |
+| `subheader (then)` + `↳ size (px)` | select | *Somebody's buying something nice.* / *Mind your head.* / none — pops in under it (default 20 px). |
+| `↳ comes in after headline (s)` / `↳ gap under headline (px)` | | When the subheader follows (0.35 s) and the space between the lines (6 px). |
+| `↳ headline slides up over (s)` | 0.05–1.5 | The headline arrives alone at the centre; as the subheader comes in it slides up over this long (0.4 s) so the pair ends up centred together (heights are measured, so a wrapped subheader still centres). |
+| `size (px)` | 12–48 | Text size. |
+| `pop-in delay (s)` / `fade (s)` | | When it appears after Start, and its fade. |
+| `pop from scale` / `pop from rotate (°)` / `settled tilt (°)` / `pop stiffness` / `pop damping` | | The springy pop-in — a little overshoot and a tilt for character. |
+| `alone before the pour (s)` | 0–5 | How long the line is on its own before the gold starts. |
+| `fade after pour starts (s)` | 0–3 | It sits under the pile, so it's buried anyway; this fades it out. |
+
+### pile-up (2)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `fill level × height` | 0.2–1.3 | How high the settled pile reaches (1 = the whole screen). |
+| `smaller amount → smaller pile` + `↳ full pile at amount` / `↳ smallest pile × height` | | Scale the pile with the amount: the smallest pile at 0, the full `fill level` at the set amount and above. |
+| `packing (bar count ×)` | 0.4–2 | Fudge on the computed bar count — raise it if the pile comes up short of the fill level. |
+| `bar size on phone (px)` | 24–200 | Bar size on a 390-wide phone. |
+| `bar size vs width` | 0–1 | How much bars grow on wider screens (0 = same px everywhere → many more bars on desktop). |
+| `bars` / `scale min` / `scale max` | | Which bar images, and their size spread. |
+| `pour (release over, s)` | 0–5 | All the bars are released over this long. |
+| `↳ ease-in (1 = steady)` | 1–6 | Ease-in on the release rate: the share released by time t is (t / pour)^ease, so it starts as a trickle and builds to a downpour (default 2.2). |
+| `↳ first bars speed ×` | 0–1 | The first bars drop in at this × the drop-in speed, building to full speed on the same curve (default 0.35; 1 = off). |
+| `drop in from above (px)` | 0–1200 | How far above the top edge they start. |
+| `gravity (m/s²)` / `bounce` | | Fall acceleration and bounciness (default 24 — faster than the Rain bench's 14, so the pile builds quicker). |
+| `drop-in speed min / max (px/s)` | 0–4000 | Bars enter already falling this fast (default 1300–1900). |
+| `top fall speed (px/s)` | 500–5000 | Terminal velocity while pouring (default 2600). |
+| `settle after last bar (s)` | 0.1–5 | After the last bar drops in, the pile is frozen as settled this long later. |
+
+### drain (3)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `auto pull the floor` | toggle | On = pull it automatically once the pile settles; off = wait for **⤓ Pull the floor** / `drainSignal`. |
+| `hold settled pile (s)` | 0–5 | Beat between the pile settling and the floor going. |
+| `pull anyway after (s, 0 = off)` | 0–15 | Safety cap from the pour start. |
+| `gravity × as the floor goes` | 0.05–3 | Gravity multiplier at the moment the floor goes — below 1 = the collapse starts slowly (default 0.35). |
+| `gravity × at full ramp` | 0.5–10 | Gravity multiplier once the ramp completes — higher = the pile is off screen sooner (default 3.5). Top fall speed scales up with it. |
+| `ramp time (s)` | 0.05–4 | How long the ramp takes from start to full (default 1 s). |
+| `ramp power (3 = cubic)` | 1–6 | Shape of the ramp: 1 = steady, 3 = cubic (slow, then sharply faster), higher = a longer slow start and a harder kick. |
+| `drain style` | `smooth` / `physics` | **smooth** (default): collisions switch off for the drain and bars let go bottom → top on a timed sweep, each falling freely — no jitter. **physics**: collisions stay on and each bar lets go once nothing holds it — a truer collapse, but bars shove each other and it jitters. |
+| `↳ smooth: bottom → top sweep (s)` | 0.1–4 | How long the release front takes to travel from the bottom of the pile to the top (default 0.9). |
+| `↳ smooth: sweep power (3 = cubic)` | 1–6 | Shape of the sweep: creeps off the bottom, then races up. |
+| `↳ smooth: release jitter (s)` | 0–0.4 | Random ± on each bar's release so it doesn't go in neat rows. |
+| `↳ smooth: drift ± (px/s)` / `↳ smooth: spin ± (°/s)` | | A little sideways drift and tumble as each bar lets go. |
+| `↳ physics: stagger at start / at full ramp (s)` | 0–0.6 | Physics style only: how long each layer waits once nothing holds it, easing from start to end on the ramp. |
+
+### reveal + count (4)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `heading (above icon)` + `↳ size / colour / gap to icon` | | *YOU FOUND GOLD!* — shown upper-case. |
+| `icon size × heading text` | 1–12 | `GOLDBAR_X3.svg`, centred, sized as a multiple of the heading's text size (5.4 = the reference proportion — 140 px at 26 px text); the heading and amount line hang off its top / bottom edges. |
+| `amount gap below icon (px)` | −40–80 | Space between the icon and the amount line. |
+| `number size (px)` / `number colour` | | The counting number (muted gold). |
+| `label after number` + `↳ size / colour` | | *GRAILGOLD* — shown upper-case, after the number. |
+| `text tilt (°)` | −15–15 | Tilt on the heading and amount line (italic caps, as the reference). |
+| `icon offset from centre (px)` | −300–300 | Moves the whole stack up / down. |
+| `offset from centre (px)` | −300–300 | Moves the whole reveal up / down. |
+| `scale in once drained (share)` | 0–1 | The icon, heading and amount line scale in together — and the count starts — once this share of the bars has fallen off the bottom (default 0.55: near the end of the drain, with the last bars still falling past). |
+| `↳ scale-in time (s)` / `↳ from scale` / `↳ overshoot (0 = none)` | | The scale-in: 0.4 s from 0.4×, ease-out-back with a small overshoot; it fades in over the first half. |
+| `count after floor goes (s)` | 0–3 | Earliest the scale-in + count can start after the floor goes. |
+| `impact once drained (share)` | 0–1 | The impact waits until this share has gone, so it never lands under the gold (the count holds its final value). |
+| `count duration (s)` / `count ease-out power` | | The count-up (default 2 s — it runs on past the impact effects; the shop push comes in when it's done). |
+
+### impact (5)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `impact delay after text (s)` | 0–2 | The impact (flash, ring, starburst, swell, glow, cha-ching, impact confetti) fires **with the reveal** — as the text + icon scale in — plus this delay (default 0). The count keeps running on past it. |
+| `impact swell` + `peak size × resting` / `ease out to peak` / `hold at peak` / `ease back down` | | The same swell curve as the gem, on the icon — the heading and amount line ride its edges. |
+| `white burst (0 = off)` + `↳ radius × height` / `↳ fade (s)` | | White radial flash behind. |
+| `shockwave ring` + `↳ colour / travel / width / opacity / duration` | | Expanding ring. |
+| `warm glow behind` + `↳ colour / radius × height / intensity / pulse` | | A soft gold glow that stays behind the amount. |
+| `icon pulse loop (after impact)` | toggle | Once the impact swell settles, the gold bars keep pulsing — the icon only; the text stays put. |
+| `↳ size (+ × at peak)` / `↳ speed (pulses / s)` / `↳ starts after swell (s)` | | How much bigger at the top of each pulse (0.06 = +6 %), how fast (0.8 / s), and an extra wait before it starts (it eases in). |
+
+### shop push (6)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `block: up from the bottom (px)` | 0–240 | The closing line + shop button are their own block, anchored to the bottom of the screen — this is the padding (default 40, plus the device's safe-area inset). |
+| `closing line` + `↳ size / delay after impact / fade` | | *The Grail Shop is open. Treat yourself.* |
+| `↳ max width (px, wraps; 0 = screen)` | 0–600 | A longer closing line wraps onto balanced lines at this width (default 300). |
+| `shop button` + `↳ label / gap under line / delay after the count / size` | | The folded button that sends them to the Grail Shop. |
+| `↳ from scale / from rotate / settled rotate / spring` | | Its pop-in (as the Gem Reveal grade button). |
+
+### sound
+
+| Control | Range / options | What it changes |
+|---|---|---|
+| `sound on` / `SFX volume` | | Master (= the 🔊 stage icon) and SFX level. |
+| `pour (dailyGold)` | toggle | `dailyGold.mp3` as the bars pour in. |
+| `count ticker` | toggle | `GemReveal_ticker.mp3`, looped under the count-up. |
+| `impact (chaChing)` | toggle | `chaChing.mp3` on the impact. |
+| `soundtrack` + `↳ volume / loop / starts on / delay` | | The Gem Reveal music, from **start**, the **drain**, or the **impact** (default: Belt and Braces, 0.5 s after the impact, 0.1 volume). |
+
+### confetti — tease / confetti — impact *(Gold Reveal)*
+
+Two confetti cues, each a Confetti preset with its own tweaks. Defaults: **side cannons** as the tease comes up, **gold rain** on the impact.
+
+| Control | Range | What it changes |
+|---|---|---|
+| `with the tease` / `on the impact` | off / side cannons / gold rain / fireworks | The style for that cue. |
+| `↳ delay (s)` | 0–4 | Tease: after the line pops in (default 0.1). Impact: after the impact (default 0). |
+| `↳ amount ×` | 0.1–4 | × the piece counts (pop) or rain rate. |
+| `↳ launch speed ×` | 0.2–3 | × how hard bursts throw / how fast the rain starts. |
+| `↳ pop: bursts (0 = style)` | 0–10 | Pop styles: volleys / pops. 0 = the style's own (cannons 2, fireworks 3). |
+| `↳ pop: spread ° (0 = style)` | 0–360 | Pop styles: cone width. 0 = the style's own (cannons 34°, fireworks 360°). |
+| `↳ rain: seconds (0 = style)` | 0–10 | Rain style: how long it rains (impact default 3 s; 0 = the preset's 2.5 s). |
+| `↳ rain: loop (keeps raining)` | toggle | Rain style: keep raining until the reveal is replayed (seconds ignored). **On** for the impact by default. |
+
+### confetti — flash + starburst *(Gold Reveal)*
+
+At each cannon mouth (and each firework pop, if a cue uses fireworks).
+
+| Control | Range | What it changes |
+|---|---|---|
+| `position: in from cannon (px)` / `position: below cannon (px, − = up)` | | Where the flash + starburst sit relative to each cannon mouth — x is inward (mirrored for the right cannon), so you can keep them fully on-screen while the cannons fire from the edge. |
+| `white flash (0 = off)` | 0–2 | Intensity of the white bloom at each cannon mouth / firework pop (default 0.8). |
+| `↳ radius (px)` / `↳ fade (s)` | | How big the flash gets (it swells to this as it fades; default 110) and how long it takes (0.35 s). |
+| `starburst (0 = off)` | 0–1.5 | Intensity of the starburst — straight strokes flying outward from the origin like clock hands (default 1). |
+| `↳ strokes` | 1–40 | How many (default 12). |
+| `↳ distribution` | aimed fan / even (clock) / random | **aimed fan** = spread evenly across a fan centred on the shot direction (best for edge cannons — nothing wasted off-screen); **even** = equal gaps round the full circle; **random** = scattered angles. |
+| `↳ fan width (°, aimed)` | 10–360 | Width of the aimed fan (default 150). |
+| `↳ burst radius (px)` | 10–500 | How far the strokes fly out (default 120). |
+| `↳ stroke length (px)` / `↳ stroke width (px)` | | Stroke size (34 / 3); each one shortens and thins as it flies. |
+| `↳ duration (s)` / `↳ colour` | | How long the burst lasts (0.45 s) and its colour (white). |
+
+### confetti look (both) *(Gold Reveal)*
+
+| Control | Range | What it changes |
+|---|---|---|
+| `rain: gravity (m/s²)` / `rain: air drag (float)` | | How the rain falls: ≈ gravity × 143 ÷ drag px/s (≈ 250 at the defaults). |
+| `rain: fade at bottom (× height)` | 0–0.5 | Rain falls until it leaves the screen and only fades over this bottom share of the height (default 0.12; 0 = no fade). |
+| `side cannons: gravity (arc)` / `side cannons: air drag (low = long arc)` | | The cannons' own physics (defaults 9 / 1): light drag and real gravity, so they launch up, gravity takes over, and they arc down over the middle. Raise drag for a punchier stall-and-float. Fireworks keep their own (5 / 2.8). The aim still lands on target either way. |
+| `side cannons: fall speed variation` | 0–1 | Each piece gets its own gravity, drag and top fall speed, so they don't fall in lockstep — some drop quickly, some hang and drift (default 0.35; 0 = all the same). |
+| `rain: fall speed variation` | 0–1 | The same for the rain (default 0). |
+| `side cannons: below centre (px)` | −400–400 | The cannons sit on the side edges at the vertical centre plus this (default 70 — just under the tease line, so they reach it at full throw). |
+| `↳ aim in (× way to middle)` | 0–1.5 | **The cannons aim at a target** — this is how far in from each edge it is (1 = dead centre, default 0.85). They solve their own angle + speed for each screen size, so phone, tablet and widescreen all land the same. |
+| `↳ aim by` | launch angle / aim at a height | **launch angle** (default): you set the angle. **aim at a height**: the cannons aim at `aim height` and work the angle out. |
+| `↳ launch angle (° up)` | 0–85 | The launch angle above horizontal, inward (default 65). The speed is worked out so the burst still reaches `aim in` in `time to target`. |
+| `↳ keep the phone’s height on wider screens` | toggle | On (default): the angle is how it looks on a phone, and wider screens keep that same rise — the shot just travels further and flattens, so it lands on the text everywhere. Off: the exact angle on every screen (a wide screen throws much higher). |
+| `↳ aim height vs text (px, height mode)` | −400–400 | Height mode only: target height relative to the tease line (default −10). |
+| `↳ time to target (s)` | 0.1–2 | How long the middle of the burst takes to get there — shorter = a harder, flatter shot; longer = a softer lob (default 0.55). |
+| `↳ speed spread` | 0–0.9 | ± per-piece speed, so pieces land short of and past the target (default 0.35). The cue's `launch speed ×` overshoots (> 1) or falls short (< 1). |
+| `↳ firing order` | random side first / alternate / together | Which cannon leads each volley — a random side (default), alternating sides, or both at once. |
+| `↳ gap between sides (s)` | 0–1 | How long after the first cannon the second fires (default 0.12). |
+| `↳ timing jitter ± (s)` | 0–0.5 | Random ± on every shot, so the rhythm isn't mechanical (default 0.06). |
+| `flutter (px)` | 0–80 | Sideways sway once floating. |
+| `gold G share` / `G size (px)` / `palette` | | The mix and colours, shared by both cues. |
+| `pop exit (fireworks / cannons)` | fade + shrink / fade / shrink / off | How burst pieces leave. `off` = they just fall and fade at the end of their life. |
+| `↳ starts after (s)` / `↳ takes (s)` / `↳ randomness` | | When the exit starts after launch (1.1 s), how long it takes (0.8 s), and how much that start varies per piece (0.5) so they don't vanish together. |
+
+## Confetti
+
+Rain-down or firework-pop confetti — gold G's (`GOLD_G.svg`) and paper strips / dots. Stage buttons: **🎆 Fire**, **Fireworks**, **Side cannons**, **Gold rain** (load the preset and fire), **↻ Clear + replay**.
+
+### style
+
+| Control | Range | What it changes |
+|---|---|---|
+| `style` | pop / rain / both | Firework bursts, a rain from the top, or both at once. |
+| `fire on replay` + `↳ delay (s)` | | Fire automatically when the bench replays. |
+| `repeat every (s, 0 = once)` | 0–10 | Keep re-firing — handy while tuning. |
+
+### pop (firework)
+
+| Control | Range | What it changes |
+|---|---|---|
+| `bursts` / `between bursts (s)` | | How many pops, and the gap between them. |
+| `from` | random / center / sides / bottom | Where they pop: random spots in the upper half, a set point (`↳ centre x / y`), two cannons in the bottom corners aimed up and inward, or the bottom centre. |
+| `pieces per burst` | 5–300 | Pieces per pop (split between the two cannons for `sides`). |
+| `speed min / max (px/s)` | | Launch speed range — drag stalls them quickly, so this sets how far a burst throws. |
+| `spread (°, 360 = ring)` / `aim (°, −90 = up)` | | 360 = a full firework shell; less = a cone, aimed by `aim` (sides aim themselves). |
+| `shape` | sphere / ring | `sphere` fills the burst; `ring` keeps pieces near top speed for a crisp ring. |
+| `white flash at origin (0 = off)` + `↳ radius (px)` / `↳ fade (s)` | | A soft white bloom at each pop / cannon mouth. |
+| `starburst at origin (0 = off)` + `↳ strokes / distribution / fan width / burst radius / stroke length / stroke width / duration / colour` | | Straight strokes flying outward from each origin like clock hands — aimed fan, even (clock face) or random. On in the side-cannons preset. |
+| `exit` | fade + shrink / fade / shrink / off | How burst pieces leave (rain pieces aren't affected). `off` = they fall and fade at the end of their life. |
+| `↳ starts after (s)` / `↳ takes (s)` / `↳ randomness` | | Exit timing after launch, its length, and per-piece variation on the start. |
+| `side cannons: height (0.5 = middle)` + `↳ offset (px)` | | Where the two edge cannons sit. |
+| `flash + star: offset x / y (px)` | | Where the flash + starburst sit relative to each burst origin (x inward for the side cannons). |
+| `↳ firing order` / `↳ gap between sides` / `↳ timing jitter` | | Which side leads each volley (random / alternate / together), the gap before the other side, and ± jitter per shot. |
+| `↳ aim by` / `↳ launch angle` / `↳ keep the phone’s height` | | Set the launch angle yourself (kept to the phone's rise on wider screens by default), or aim at a height. |
+| `↳ aim in` / `↳ aim height` / `↳ time to target` / `↳ power` / `↳ speed spread` | | The cannons aim at a target (in from each edge × half-width, at the cannon height + aim height) and solve their own launch angle + speed so the burst's middle arrives in `time to target` under the burst drag + gravity — consistent on every screen. `power` 1 lands on the target; `speed min / max` don't apply to them. |
+
+### rain
+
+| Control | Range | What it changes |
+|---|---|---|
+| `pieces / s` / `duration (s)` | | How dense, how long. |
+| `spread (× width)` / `start speed (px/s)` | | How wide the rain band is, and the initial fall speed. |
+| `loop (until stopped)` | toggle | Keep raining until **■ stop rain** (Export) / `stopSignal`; duration is ignored. |
+| `fade at bottom (× height)` | 0–0.5 | Rain lives until it leaves the screen — whatever its height — and fades only over this bottom share. |
+
+### physics
+
+| Control | Range | What it changes |
+|---|---|---|
+| `rain: gravity` / `rain: air drag` | | Rain only: fall speed ≈ gravity × 143 ÷ drag px/s. High drag = papery. |
+| `bursts: gravity` / `bursts: air drag (throw + float)` | | Pop pieces only: drag sets how far a burst throws (≈ speed ÷ drag) and the float afterwards. |
+| `bursts: fall speed variation` / `rain: fall speed variation` | 0–1 | Per-piece variation in gravity, drag and top fall speed, so pieces don't fall in lockstep. |
+| `top fall speed (px/s)` | 0–2000 | Cap on the fall (it never trims a burst's launch speed). |
+| `wind (px/s²)` | ±600 | Constant sideways push. |
+| `flutter (px)` / `↳ per second` | | Sideways sway once a piece is floating (fades in as it slows). |
+| `spin min / max (°/s)` | | In-plane rotation. |
+| `3D flip min / max (turns/s)` | | The tumble — the piece squashes edge-on and shows its darker back. |
+
+### pieces
+
+| Control | Range | What it changes |
+|---|---|---|
+| `gold G share` + `↳ G size (px)` / `↳ G colour` | | How many pieces are the G mark, its size, and its own orange or tinted from the palette. |
+| `dots (of paper)` | 0–1 | Share of the paper pieces that are dots (the rest are strips). |
+| `paper size (px)` / `↳ strip width ÷ length` | | Strip size and shape. |
+| `size variation` | 0–0.9 | Random ± on every piece's size. |
+| `palette` | goldWhite / gold / grail / party | Paper (and tinted G) colours — `grail` = the six gem-grade colours. |
+| `back face darker by` | 0–0.9 | How dark the back face is as pieces flip. |
+
+### life
+
+| Control | Range | What it changes |
+|---|---|---|
+| `burst life min / max (s)` / `fade out (s)` | | How long a burst piece lives, then fades (rain pieces live until they leave the screen). |
+| `max pieces` | 50–3000 | Hard cap on live pieces. |
+| `more pieces on wider screens` | 0–1 | Counts × (1 + (width/390 − 1) × this), so a desktop isn't sparse. |
