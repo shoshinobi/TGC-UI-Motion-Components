@@ -1420,6 +1420,28 @@ reference**, and **copy config (for defaults)** in Export.
 > 🔧 **New — first pass.** The whole sequence runs end to end; the numbers are
 > starting points to dial in on the bench.
 
+> ⚠️ **Important — read before building this:**
+> 1. **Integrate the existing avatar system.** The avatar here is a placeholder
+>    PNG (two poses). The real character lives in the current avatar system / the
+>    Rive file — you'll need to find a way to bring that in and drive it through
+>    the same beats (up with the side cannons, buried by the gold, out at
+>    half-pour).
+> 2. **Use the existing design system for all text, fonts and buttons.** Every
+>    line of copy (tease, *YOU FOUND GOLD!*, the amount + label, the closing
+>    line) and both shop-push buttons are stand-ins styled in CSS to show
+>    layout, size, colour and motion. Build them from the design-system type
+>    styles, fonts and button components; keep the motion and timing.
+> 3. **The audio is temporary.** The pour, count ticker, cha-ching and music are
+>    placeholders and will be replaced for the final release — keep the cue
+>    points (pour start, count, impact, music on impact), not the files.
+> 4. **The amount is random on the bench only.** In the app, `amount` is the
+>    gold the player actually received.
+> 5. **Keep the room between the avatar and the text.** Whatever the screen
+>    size, the top of the avatar should always sit at least ~56 px
+>    (`avatarTextGap`) below the bottom of the tease text — never crowding or
+>    overlapping it. The text grows on wider screens, so the avatar moves down
+>    to keep that space rather than the text and avatar closing in on each other.
+
 A balance update turned into a payday: gold buries the screen, falls away to
 show the amount, then points the player straight to the **Grail Shop**.
 
@@ -1428,12 +1450,12 @@ show the amount, then points the player straight to the **Grail Shop**.
 | state | what happens | how it moves on |
 |---|---|---|
 | `armed` | nothing on screen | `startSignal` (bench **▶ Start**) |
-| `tease` | a playful two-part line **pops in** with a springy scale + tilt — the headline ***Ka-ching!*** first, then the subheader *"Somebody's buying something nice."* rises in underneath 0.35 s later while the headline **slides up from the centre** (0.4 s) so the pair ends up centred (or *Gold incoming.* / *Mind your head.*) | after `teaseInDelay + teaseHold` (0.2 + 1.4 s) |
+| `tease` | a playful two-part line **pops in** with a springy scale + tilt — a **random pair each run** (`GOLD_TEASE_LINES`, never the same twice in a row): the headline first (*Ka-ching!*, *Heads up!*, *Payday!*, *Gold rush!*, *Look out below!*, *Big catch!*, *Clear some space!*, *Jackpot!* — one line, shrunk to fit a narrow screen; both lines grow with the screen width — ≈ 1.3× on a tablet, 1.6× at 1100 px, `teaseSizeVsWidth` / `teaseSizeMax`), then its subheader rises in underneath while the headline **slides up from the centre** so the pair ends up centred | after `teaseInDelay + teaseHold` |
 | `pour` | gold bars **pour in from the top and pile up until they fill the screen** — the **Particle Rain** engine (approved burst + bounce floor + walls + collisions). The tease is *under* the pile: it gets buried, and fades out `teaseOutDelay` after the pour starts. `dailyGold.mp3` plays | once the pile has settled (`settleTime` after the last bar drops in) |
 | `piled` | the full pile holds a beat | after `drainDelay` (0.5 s) — or the bench **⤓ Pull the floor** / `drainSignal` at any point in `pour` / `piled`. `autoDrain` off = wait for the signal |
 | `drain` | **the floor is pulled out** (Particle Rain's `dumpSignal`) and the pile sweeps off the bottom | once `revealAtCleared` (55 %) of the bars have gone (and ≥ `countDelay`) |
 | `count` | near the end of the drain, with the last bars still falling past, the stacked reveal **scales in** (0.4 s, ease-out-back from 0.4×): ***YOU FOUND GOLD!*** / **`GOLDBAR_X3.svg`** / ***2,500 GRAILGOLD*** — and **the impact fires with it** (`impactDelay` 0): white burst, shockwave ring, gold **starburst**, the icon swell + warm glow, `chaChing.mp3`, the impact confetti. The amount **counts up** (2 s, ease-out, `GemReveal_ticker.mp3`) and keeps going past the effects | when the count is done **and** `landAtCleared` (92 %) of the bars have gone |
-| `landed` | the count has finished: the icon keeps **pulsing** in a loop (`iconLoopScale` +6 %, `iconLoopSpeed` 0.8 / s; the text stays put), and in their own block **anchored to the bottom of the screen** (40 px + safe area) the closing line *"The Grail Shop is open. Treat yourself."* (wraps at `closingMaxWidth`, 300 px) fades up and the **Go to the Grail Shop** button springs in under it | `onShop` when the button is pressed |
+| `landed` | the count has finished: the icon keeps **pulsing** in a loop (`iconLoopScale` +6 %, `iconLoopSpeed` 0.8 / s; the text stays put), and in their own block **anchored to the bottom of the screen** (40 px + safe area) a **random closing line** (`GOLD_CLOSING_LINES`, 7 — e.g. *"Go on. You've earned it."*) (wraps at `closingMaxWidth`, 300 px) fades up and **two folded buttons** spring in under it, one after the other — gold ***Buy another chest*** (`onBuy`) over navy ***Check out the shop*** (`onShop`), tilted −2° / +1°, 8 px apart, each with its folded corner | `onBuy` / `onShop` when a button is pressed |
 
 ## Filling any screen
 
@@ -1459,11 +1481,33 @@ callbacks — the reveal reads the drain share to time the count and the impact.
 ## Notes for the developer
 
 - **The amount is yours** (`amount`, normally from the server); `countFrom`
-  lets a top-up count from the old balance.
-- **Text** (tease, amount, closing line) is plain DOM — swap in your typography
-  components; the amount uses tabular numerals and is sized to its final value,
-  so the row doesn't shift while it counts.
-- **The button** is the folded-button stub — wire `onShop` to open the Grail Shop.
+  lets a top-up count from the old balance. The bench rolls a **random amount
+  each run** (`amountRandom`, 100–10,000 in steps of 10) — prototype only.
+- **All text, fonts and buttons → the existing design system.** The tease, the
+  heading, the amount + label and the closing line are plain DOM with stand-in
+  CSS type (Inter); build them from the design-system type styles and fonts.
+  Keep the behaviour: the amount uses tabular numerals and is sized to its final
+  value so it doesn't shift while counting; the tease headline stays on one line
+  and shrinks to fit; the subheader wraps at its max width.
+- **Audio is temporary** — `dailyGold.mp3` (pour), `GemReveal_ticker.mp3`
+  (count), `chaChing.mp3` (impact) and the music bed are placeholders; final
+  sounds come later. Keep the cues, not the files.
+- **The avatar is a placeholder — integrate the existing avatar system** (the
+  current avatar / Rive file); you'll need to find the best way to bring it in. The bench uses
+  two PNGs (`pointUp.png`, `fistRaise.png`; random pose each run) to show the
+  beats: he **springs up from the bottom with the side cannons** (0.3 s after
+  Start), sits **behind the confetti, the tease text and the gold pile** so the
+  pour buries him, and **slides back out of the bottom once the pour is ~50 %
+  done** (`avatarOutAt`). Bring the Rive avatar in (e.g. `@rive-app/react-canvas`)
+  and drive the same beats; height is × the stage height (0.6, capped at 80 %
+  of its width), feet anchored to the bottom edge, and he always keeps at least
+  `avatarTextGap` (56 px) below the tease text — the text grows on wider screens,
+  so there he sits lower by the difference instead of crowding it.
+- **The two buttons are an example only — use the existing design-system buttons.**
+  The bench draws stand-ins (the `FoldableButton` stub, recoloured in CSS) just to
+  show the layout, colours, labels and motion. Build them from your own button
+  component; keep the motion (staggered spring-in, settled tilt) and the wiring:
+  `onBuy` → *Buy another chest*, `onShop` → *Check out the shop*.
 - **Layers**, back → front: fx canvas (glow / burst / ring) → tease → amount +
   shop push → the pile canvas (clicks pass through it).
 - **Pour** is quick: bars enter already falling (1300–1900 px/s), gravity 24,
@@ -1506,7 +1550,7 @@ callbacks — the reveal reads the drain share to time the count and the impact.
 
 ## Config
 
-`GOLD_DEFAULT_CONFIG` in `src/components/GoldReveal.tsx`. **copy JSON tokens**
+`GOLD_DEFAULT_CONFIG` in `src/components/goldReveal.config.ts`. **copy JSON tokens**
 (with phone + desktop bar counts worked out), **copy wiring reference**, and
 **copy config (for defaults)** in Export.
 
@@ -1572,7 +1616,7 @@ in every state, phone and desktop frames.
 **Wiring:** `<Confetti config={…} fireSignal={n} />` — bump `fireSignal` to fire
 (or `autoFire` + `fireDelay`, `loopEvery` to repeat). `intensity` multiplies the
 counts (e.g. by payout). Tokens: **copy JSON tokens**; defaults:
-`CONFETTI_DEFAULT_CONFIG` / `CONFETTI_PRESETS` in `src/components/Confetti.tsx`.
+`CONFETTI_DEFAULT_CONFIG` / `CONFETTI_PRESETS` in `src/components/confetti.config.ts`.
 
 ---
 
@@ -1758,5 +1802,5 @@ for the current viewport.
 | Particle Rain | [src/components/ParticleRain.tsx](src/components/ParticleRain.tsx) | `PARTICLE_DEFAULT_CONFIG` (+ `DAILY_BONUS_CONFIG` in [src/benches/RainBench.tsx](src/benches/RainBench.tsx)) |
 | Gem Reveal | [src/components/GemReveal.tsx](src/components/GemReveal.tsx) | `GEM_DEFAULT_CONFIG` (+ `src/lib/gemTiers.ts` grade colours, `src/lib/buildGemSpec.ts` spec, `src/assets/mp3/` audio) |
 | Gem Wheel | [src/components/GemWheel.tsx](src/components/GemWheel.tsx) | `WHEEL_DEFAULT_CONFIG` (+ `src/lib/buildGemWheelSpec.ts` spec, `src/assets/mp3/drip4.ogg` tick) |
-| Confetti | [src/components/Confetti.tsx](src/components/Confetti.tsx) | `CONFETTI_DEFAULT_CONFIG` + `CONFETTI_PRESETS` (+ `src/lib/buildConfettiSpec.ts`, `src/assets/GOLD_G.svg`) |
-| Gold Reveal | [src/components/GoldReveal.tsx](src/components/GoldReveal.tsx) | `GOLD_DEFAULT_CONFIG` (+ `src/lib/buildGoldRevealSpec.ts` spec, `src/assets/GOLDBAR_X3*.svg`, pile = `ParticleRain`) |
+| Confetti | [src/components/Confetti.tsx](src/components/Confetti.tsx) | `CONFETTI_DEFAULT_CONFIG` + `CONFETTI_PRESETS` + palettes in [src/components/confetti.config.ts](src/components/confetti.config.ts) (+ `src/lib/buildConfettiSpec.ts`, `src/assets/GOLD_G.svg`) |
+| Gold Reveal | [src/components/GoldReveal.tsx](src/components/GoldReveal.tsx) | `GOLD_DEFAULT_CONFIG`, `GOLD_TEASE_LINES`, `GOLD_CLOSING_LINES` + sizing helpers in [src/components/goldReveal.config.ts](src/components/goldReveal.config.ts) (+ `src/lib/buildGoldRevealSpec.ts` spec, `src/assets/GOLDBAR_X3*.svg`, pile = `ParticleRain`) |

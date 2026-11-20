@@ -807,15 +807,18 @@ pile is the Particle Rain engine, sized to fill whatever stage it's in.
 
 | Control | Range | What it changes |
 |---|---|---|
-| `gold amount` | 100–10000 | The gold the player receives (set by the app). |
+| `random amount each run` + `↳ from / to / round to` | | Bench only: a new random amount every run (default 100–10,000, rounded to 10). In the app the amount is the real payout. |
+| `fixed amount (random off)` | 100–10000 | The amount used when random is off. |
 | `count from` | 0–10000 | Where the count-up starts (0, or the old balance). |
 
 ### tease (1)
 
 | Control | Range | What it changes |
 |---|---|---|
-| `headline` + `↳ size (px)` | select | *Ka-ching!* / *Gold incoming.* — pops in first (default 40 px). |
-| `subheader (then)` + `↳ size (px)` | select | *Somebody's buying something nice.* / *Mind your head.* / none — pops in under it (default 20 px). |
+| `line (headline / subheader)` | random each time / one pair | Which tease pair: **random each time** (default — a new pair every run, never the same twice in a row) or pin one of the 8 while tuning: *Ka-ching! / Someone's buying something nice* · *Heads up! / It's raining gold* · *Payday! / Brace yourself* · *Gold rush! / Your pockets are about to get heavy* · *Look out below! / Something shiny is headed your way* · *Big catch! / Hope you brought a bigger wallet* · *Clear some space! / This one's a big one* · *Jackpot! / Get ready to go shopping*. |
+| `headline size (px on phone, shrinks to fit)` / `subheader size (px on phone)` | | Sizes on a 390 px phone (41 / 20). The headline stays on one line and shrinks if it wouldn't fit (e.g. *Clear some space!* on a phone); the subheader wraps onto balanced lines. |
+| `↳ grow on wider screens` / `↳ max × phone size` | 0–1 / 1–3 | Responsive, no breakpoints: both sizes × (1 + (width / 390 − 1) × grow), capped at max (defaults 0.35 / 1.8 → ≈ 1.3× on a tablet, 1.6× on a 1100 px screen). |
+| `subheader max width (px on phone, wraps)` | 100–600 | A subheader longer than this wraps onto two balanced lines (default 240; it grows with the text on wider screens). |
 | `↳ comes in after headline (s)` / `↳ gap under headline (px)` | | When the subheader follows (0.35 s) and the space between the lines (6 px). |
 | `↳ headline slides up over (s)` | 0.05–1.5 | The headline arrives alone at the centre; as the subheader comes in it slides up over this long (0.4 s) so the pair ends up centred together (heights are measured, so a wrapped subheader still centres). |
 | `size (px)` | 12–48 | Text size. |
@@ -896,10 +899,14 @@ pile is the Particle Rain engine, sized to fill whatever stage it's in.
 | Control | Range | What it changes |
 |---|---|---|
 | `block: up from the bottom (px)` | 0–240 | The closing line + shop button are their own block, anchored to the bottom of the screen — this is the padding (default 40, plus the device's safe-area inset). |
-| `closing line` + `↳ size / delay after impact / fade` | | *The Grail Shop is open. Treat yourself.* |
+| `closing line` + `↳ size / delay after the count / fade` | random each time / one line | **random each time** (default, never twice in a row) or pin one: *The Grail Shop is open. Treat yourself.* · *Go on. You've earned it.* · *Your next favourite thing is in the Grail Shop.* · *Time to spend it.* · *Shop's open. Go make it rain.* · *Burning a hole in your pocket? The Grail Shop can help.* · *Treat yourself. We won't tell.* |
 | `↳ max width (px, wraps; 0 = screen)` | 0–600 | A longer closing line wraps onto balanced lines at this width (default 300). |
-| `shop button` + `↳ label / gap under line / delay after the count / size` | | The folded button that sends them to the Grail Shop. |
-| `↳ from scale / from rotate / settled rotate / spring` | | Its pop-in (as the Gem Reveal grade button). |
+| `buttons` | toggle | The two folded buttons under the closing line. **Example only** — the developer builds them from the existing design-system buttons; these show layout, colours, labels and motion. |
+| `top: label` + `↳ colour / text colour / settled tilt` | | **Buy another chest** — gold `#e0b678`, black text, −2°. Fires `onBuy`. |
+| `bottom: label` + `↳ colour / text colour / settled tilt` | | **Check out the shop** — navy `#204c68`, white text, +1°. Fires `onShop`. |
+| `buttons: width (px, ≤ screen)` / `↳ size (text + height, crisp)` | | Width 338 px (capped to the screen) and size 1.4 (≈ 54 px tall, 20 px text) — as the reference. |
+| `↳ gap under line (px)` / `↳ gap between (px, − = overlap)` | | Space under the closing line (20) and between the buttons (8; negative overlaps them — the top one stays above). |
+| `↳ delay after the count (s)` / `↳ second one after (s)` | | The top button springs in 0.85 s after the count, the bottom one 0.12 s later. |
 
 ### sound
 
@@ -910,6 +917,20 @@ pile is the Particle Rain engine, sized to fill whatever stage it's in.
 | `count ticker` | toggle | `GemReveal_ticker.mp3`, looped under the count-up. |
 | `impact (chaChing)` | toggle | `chaChing.mp3` on the impact. |
 | `soundtrack` + `↳ volume / loop / starts on / delay` | | The Gem Reveal music, from **start**, the **drain**, or the **impact** (default: Belt and Braces, 0.5 s after the impact, 0.1 volume). |
+
+### avatar (placeholder) *(Gold Reveal)*
+
+A PNG stand-in for the Rive avatar: he springs up with the side cannons, the gold pours over him, and he slides back out at about half-pour.
+
+| Control | Range | What it changes |
+|---|---|---|
+| `avatar` | toggle | On/off. |
+| `↳ pose` | random / pointing up / fist raised | Which PNG (random = a new pick each run). |
+| `↳ height (× screen)` | 0.15–0.9 | His height as a share of the stage height (0.45; never wider than 80 % of it). |
+| `↳ across (0.5 = centre)` / `↳ feet above bottom (px)` | | Where he stands — his feet are anchored to the bottom edge. |
+| `↳ springs up after Start (s)` + `↳ spring stiffness / damping` | | When he pops up (0.3 s = with the side cannons) and the spring (a little overshoot). |
+| `↳ slides out at pour (share)` / `↳ slide out (s)` | | He slides back down once the pour (+ settle) is this far done (0.5 = halfway), over this long. |
+| `↳ min space below the text (px)` | 0–200 | The least space between the bottom of the tease text and the top of the avatar (56). The text grows on tablet / wide screens; if it would come closer, he sits lower by the difference — the phone layout is unchanged. |
 
 ### confetti — tease / confetti — impact *(Gold Reveal)*
 

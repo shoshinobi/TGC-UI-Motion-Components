@@ -1306,3 +1306,54 @@ body {
   width: auto;
   max-width: 100%;
 }
+/* the tease headline stays on one line — GoldReveal shrinks it to fit a narrow screen */
+.gold-reveal__tease {
+  white-space: nowrap;
+  max-width: none;
+}
+/* shop push CTAs: the folded button with a coloured panel (--cta-fill / --cta-ink set per
+   button from GoldReveal), full width up to buttonWidth, a soft offset shadow */
+.gold-reveal__cta {
+  filter: drop-shadow(-2px 2px 0 rgba(0, 0, 0, 0.16));
+}
+.gold-reveal__cta .banner-fold-btn {
+  width: 100%;
+}
+.gold-reveal__cta .banner-fold-btn::before {
+  background: var(--cta-fill, #fff);
+}
+.gold-reveal__cta .banner-fold-btn__label {
+  color: var(--cta-ink, #000);
+  font-weight: 700;
+}
+/* the folded corner flap (as the reference): a small triangle tucked inside the cut corner,
+   button colour at its inner corner shading to black at the crease, outlined in black on
+   its left + bottom edges with a rounded inner corner */
+.gold-reveal__cta .banner-fold-btn__patch {
+  z-index: 2;
+  box-sizing: border-box;
+  width: calc(var(--gem-btn-fs, 14px) * 1);
+  height: calc(var(--gem-btn-fs, 14px) * 1);
+  border-left: 2px solid #000;
+  border-bottom: 2px solid #000;
+  border-bottom-left-radius: calc(var(--gem-btn-fs, 14px) * 0.3);
+  background: linear-gradient(to top right, var(--cta-fill, #fff) 10%, #000 40%, transparent 50%);
+}
+/* placeholder avatar (PNG) — the box is the figure; the image is offset so his feet sit on
+   the box's bottom (the PNGs are 1440×1193 with him in x 645–1221, y 212–1193) */
+.gold-reveal__avatar {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.gold-reveal__avatar img {
+  position: absolute;
+  max-width: none;
+  width: 250%;
+  left: -111.98%;
+  top: -21.61%;
+  -webkit-user-drag: none;
+}

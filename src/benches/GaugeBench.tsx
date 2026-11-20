@@ -51,7 +51,7 @@ export function GaugeBench() {
   const [nonce, setNonce] = useState(0)
 
   const stage = useControls('Stage', {
-    background: { value: 'dark', options: ['dark', 'light', 'ember'] },
+    background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     paused: false,
   })
 

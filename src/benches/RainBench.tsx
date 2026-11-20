@@ -72,7 +72,7 @@ export function RainBench() {
 
   const stage = useControls('Stage', {
     viewport: { value: initialViewport(), options: ['phone', 'tablet', 'full'] },
-    background: { value: 'dark', options: ['dark', 'light', 'ember'] },
+    background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     paused: false,
   })
 
