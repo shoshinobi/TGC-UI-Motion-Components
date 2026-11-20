@@ -68,7 +68,7 @@ export function BannerBench() {
 
   const stage = useControls('Stage', {
     viewport: { value: 'phone', options: ['phone', 'tablet', 'full'] },
-    background: { value: 'dark', options: ['dark', 'light', 'ember'] },
+    background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     paused: false,
   })
 

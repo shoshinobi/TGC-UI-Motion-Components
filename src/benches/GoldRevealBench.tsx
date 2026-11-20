@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useControls, folder, button, LevaInputs } from 'leva'
+import { GoldReveal } from '@/components/GoldReveal'
 import {
-  GoldReveal,
+  GOLD_CLOSING_LINES,
   GOLD_DEFAULT_CONFIG,
+  GOLD_TEASE_LINES,
   goldPile,
   type GoldRevealConfig,
   type GoldRevealState,
-} from '@/components/GoldReveal'
+} from '@/components/goldReveal.config'
 import { buildGoldRevealJsonSpec, buildGoldRevealWiringSpec } from '@/lib/buildGoldRevealSpec'
 import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
 
@@ -18,12 +20,14 @@ const MUSIC_OPTIONS = {
   'Chasing Quails': 'chasing-quails',
 }
 const STYLE_OPTIONS = { off: 'off', 'side cannons': 'cannons', 'gold rain': 'goldRain', fireworks: 'fireworks' }
-const TEASE_OPTIONS = ['Ka-ching!', 'Gold incoming.']
-const TEASE_SUB_OPTIONS = ['Somebody’s buying something nice.', 'Mind your head.', '']
-/** the tease used to be one line — split an old saved one into headline + subheader */
-const OLD_TEASE: Record<string, [string, string]> = {
-  'Ka-ching! Somebody’s buying something nice.': ['Ka-ching!', 'Somebody’s buying something nice.'],
-  'Gold incoming. Mind your head.': ['Gold incoming.', 'Mind your head.'],
+// 'random each time', or pin one line (by its index) while tuning
+const TEASE_LINE_OPTIONS: Record<string, string> = {
+  'random each time': 'random',
+  ...Object.fromEntries(GOLD_TEASE_LINES.map(([h, s], i) => [`${h} / ${s}`, String(i)])),
+}
+const CLOSING_LINE_OPTIONS: Record<string, string> = {
+  'random each time': 'random',
+  ...Object.fromEntries(GOLD_CLOSING_LINES.map((l, i) => [l, String(i)])),
 }
 
 const SLOT_KEY = 'tgc-bench:gold'
@@ -36,14 +40,8 @@ function savedSettings(): Record<string, number | string | boolean> | null {
     const out: Record<string, number | string | boolean> = {}
     for (const k of Object.keys(D)) if (k in obj) out[k] = obj[k] as number | string | boolean
     // Leva used to turn a colour-name label ("Gold") into a hex code — drop one that got saved
-    for (const k of ['amountLabel', 'headerText', 'closingText', 'buttonText'] as const) {
+    for (const k of ['amountLabel', 'headerText', 'buyText', 'shopText'] as const) {
       if (typeof out[k] === 'string' && /^#[0-9a-f]{3,8}$/i.test(out[k] as string)) out[k] = D[k]
-    }
-    const split = typeof out.teaseText === 'string' ? OLD_TEASE[out.teaseText] : undefined
-    if (split) {
-      out.teaseText = split[0]
-      if (!('teaseSubText' in obj)) out.teaseSubText = split[1]
-      if (!('teaseSize' in obj) || (typeof out.teaseSize === 'number' && out.teaseSize < 30)) out.teaseSize = D.teaseSize
     }
     return out
   } catch {
@@ -72,7 +70,7 @@ export function GoldRevealBench() {
   const [start, setStart] = useState(0)
   const [drain, setDrain] = useState(0)
   const [goldState, setGoldState] = useState<GoldRevealState>('armed')
-  const [shopTaps, setShopTaps] = useState(0)
+  const [shopTaps, setShopTaps] = useState<'' | 'buy' | 'shop'>('')
 
   // replay = back to armed; restart = back to the top AND straight into the tease
   const [autoStart, setAutoStart] = useState(false)
@@ -95,15 +93,21 @@ export function GoldRevealBench() {
 
   const [v, set] = useControls('Gold', () => ({
     amount: folder({
-      amount: { value: D.amount, min: 100, max: 10000, step: 10, label: 'gold amount' },
+      amountRandom: { value: D.amountRandom, label: 'random amount each run' },
+      amountMin: { value: D.amountMin, min: 0, max: 10000, step: 10, label: '↳ from' },
+      amountMax: { value: D.amountMax, min: 100, max: 10000, step: 10, label: '↳ to' },
+      amountStep: { value: D.amountStep, min: 1, max: 1000, step: 1, label: '↳ round to' },
+      amount: { value: D.amount, min: 100, max: 10000, step: 10, label: 'fixed amount (random off)' },
       countFrom: { value: D.countFrom, min: 0, max: 10000, step: 10, label: 'count from' },
     }),
     'tease (1)': folder(
       {
-        teaseText: { value: D.teaseText, options: TEASE_OPTIONS, label: 'headline' },
-        teaseSize: { value: D.teaseSize, min: 12, max: 80, step: 1, label: '↳ size (px)' },
-        teaseSubText: { value: D.teaseSubText, options: TEASE_SUB_OPTIONS, label: 'subheader (then)' },
-        teaseSubSize: { value: D.teaseSubSize, min: 10, max: 48, step: 1, label: '↳ size (px)' },
+        teaseLine: { value: D.teaseLine, options: TEASE_LINE_OPTIONS, label: 'line (headline / subheader)' },
+        teaseSize: { value: D.teaseSize, min: 12, max: 80, step: 1, label: 'headline size (px on phone, shrinks to fit)' },
+        teaseSubSize: { value: D.teaseSubSize, min: 10, max: 48, step: 1, label: 'subheader size (px on phone)' },
+        teaseSizeVsWidth: { value: D.teaseSizeVsWidth, min: 0, max: 1, step: 0.05, label: '↳ grow on wider screens' },
+        teaseSizeMax: { value: D.teaseSizeMax, min: 1, max: 3, step: 0.05, label: '↳ max × phone size' },
+        teaseSubMaxWidth: { value: D.teaseSubMaxWidth, min: 100, max: 600, step: 5, label: 'subheader max width (px on phone, wraps)' },
         teaseSubDelay: { value: D.teaseSubDelay, min: 0, max: 2, step: 0.05, label: '↳ comes in after headline (s)' },
         teaseSubGap: { value: D.teaseSubGap, min: -20, max: 60, step: 1, label: '↳ gap under headline (px)' },
         teaseSlideTime: { value: D.teaseSlideTime, min: 0.05, max: 1.5, step: 0.05, label: '↳ headline slides up over (s)' },
@@ -231,23 +235,48 @@ export function GoldRevealBench() {
     'shop push (6)': folder(
       {
         shopBottom: { value: D.shopBottom, min: 0, max: 240, step: 2, label: 'block: up from the bottom (px)' },
-        closingText: { value: D.closingText, type: LevaInputs.STRING, label: 'closing line' },
+        closingLine: { value: D.closingLine, options: CLOSING_LINE_OPTIONS, label: 'closing line' },
         closingSize: { value: D.closingSize, min: 10, max: 40, step: 1, label: '↳ size (px)' },
 
         closingDelay: { value: D.closingDelay, min: 0, max: 3, step: 0.05, label: '↳ delay after the count (s)' },
         closingFade: { value: D.closingFade, min: 0.05, max: 2, step: 0.05, label: '↳ fade (s)' },
         closingMaxWidth: { value: D.closingMaxWidth, min: 0, max: 600, step: 10, label: '↳ max width (px, wraps; 0 = screen)' },
-        button: { value: D.button, label: 'shop button' },
-        buttonText: { value: D.buttonText, type: LevaInputs.STRING, label: '↳ label' },
+        button: { value: D.button, label: 'buttons' },
+        buyText: { value: D.buyText, type: LevaInputs.STRING, label: 'top: label' },
+        buyColor: { value: D.buyColor, label: '↳ colour' },
+        buyTextColor: { value: D.buyTextColor, label: '↳ text colour' },
+        buyRotate: { value: D.buyRotate, min: -20, max: 20, step: 0.5, label: '↳ settled tilt (°)' },
+        shopText: { value: D.shopText, type: LevaInputs.STRING, label: 'bottom: label' },
+        shopColor: { value: D.shopColor, label: '↳ colour' },
+        shopTextColor: { value: D.shopTextColor, label: '↳ text colour' },
+        shopRotate: { value: D.shopRotate, min: -20, max: 20, step: 0.5, label: '↳ settled tilt (°)' },
+        buttonWidth: { value: D.buttonWidth, min: 120, max: 600, step: 2, label: 'buttons: width (px, ≤ screen)' },
+        buttonSize: { value: D.buttonSize, min: 0.5, max: 3, step: 0.05, label: '↳ size (text + height, crisp)' },
         buttonGap: { value: D.buttonGap, min: 0, max: 120, step: 1, label: '↳ gap under line (px)' },
+        buttonsGap: { value: D.buttonsGap, min: -30, max: 40, step: 1, label: '↳ gap between (px, − = overlap)' },
         buttonDelay: { value: D.buttonDelay, min: 0, max: 3, step: 0.05, label: '↳ delay after the count (s)' },
-        buttonSize: { value: D.buttonSize, min: 0.5, max: 3, step: 0.05, label: '↳ size (crisp)' },
+        buttonStagger: { value: D.buttonStagger, min: 0, max: 1, step: 0.01, label: '↳ second one after (s)' },
         buttonFromScale: { value: D.buttonFromScale, min: 0, max: 2.5, step: 0.05, label: '↳ from scale' },
         buttonFromRotate: { value: D.buttonFromRotate, min: -45, max: 45, step: 1, label: '↳ from rotate (°)' },
-        buttonRotate: { value: D.buttonRotate, min: -20, max: 20, step: 0.5, label: '↳ settled rotate (°)' },
         buttonStiffness: { value: D.buttonStiffness, min: 40, max: 1200, step: 10, label: '↳ spring stiffness' },
         buttonDamping: { value: D.buttonDamping, min: 2, max: 80, step: 1, label: '↳ spring damping' },
         buttonMass: { value: D.buttonMass, min: 0.2, max: 4, step: 0.1, label: '↳ spring mass' },
+      },
+      { collapsed: true },
+    ),
+    'avatar (placeholder)': folder(
+      {
+        avatar: { value: D.avatar, label: 'avatar' },
+        avatarPose: { value: D.avatarPose, options: { random: 'random', 'pointing up': 'pointUp', 'fist raised': 'fistRaise' }, label: '↳ pose' },
+        avatarHeight: { value: D.avatarHeight, min: 0.15, max: 0.9, step: 0.01, label: '↳ height (× screen)' },
+        avatarX: { value: D.avatarX, min: 0, max: 1, step: 0.01, label: '↳ across (0.5 = centre)' },
+        avatarBottom: { value: D.avatarBottom, min: -200, max: 200, step: 2, label: '↳ feet above bottom (px)' },
+        avatarInDelay: { value: D.avatarInDelay, min: 0, max: 3, step: 0.05, label: '↳ springs up after Start (s)' },
+        avatarStiffness: { value: D.avatarStiffness, min: 40, max: 900, step: 10, label: '↳ spring stiffness' },
+        avatarDamping: { value: D.avatarDamping, min: 2, max: 80, step: 1, label: '↳ spring damping' },
+        avatarOutAt: { value: D.avatarOutAt, min: 0, max: 1, step: 0.05, label: '↳ slides out at pour (share)' },
+        avatarOutDuration: { value: D.avatarOutDuration, min: 0.1, max: 2, step: 0.05, label: '↳ slide out (s)' },
+        avatarTextGap: { value: D.avatarTextGap, min: 0, max: 200, step: 2, label: '↳ min space below the text (px)' },
       },
       { collapsed: true },
     ),
@@ -405,7 +434,7 @@ export function GoldRevealBench() {
 
   const runKey = [nonce, config.musicTrack, stage.viewport].join('|')
   // (the reveal reports its own state on mount — 'armed', or 'tease' on a restart)
-  useEffect(() => setShopTaps(0), [runKey])
+  useEffect(() => setShopTaps(''), [runKey])
 
   const frameWidth =
     stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
@@ -443,7 +472,7 @@ export function GoldRevealBench() {
           ⤓ Pull the floor
         </button>
         <div className='stage-state' aria-live='polite'>
-          {shopTaps > 0 ? '→ Grail Shop' : STATE_LABEL[goldState]} · ~{preview.count} bars
+          {shopTaps === 'buy' ? '→ buy another chest' : shopTaps === 'shop' ? '→ the shop' : STATE_LABEL[goldState]} · ~{preview.count} bars
         </div>
         <button
           type='button'
@@ -485,7 +514,8 @@ export function GoldRevealBench() {
               drainSignal={drain}
               autoStart={autoStart}
               onState={setGoldState}
-              onShop={() => setShopTaps((n) => n + 1)}
+              onShop={() => setShopTaps('shop')}
+              onBuy={() => setShopTaps('buy')}
             />
           </div>
         </div>

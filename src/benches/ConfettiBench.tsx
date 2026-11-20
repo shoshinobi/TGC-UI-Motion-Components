@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useControls, folder, button } from 'leva'
-import { Confetti, CONFETTI_DEFAULT_CONFIG, CONFETTI_PRESETS, type ConfettiConfig } from '@/components/Confetti'
+import { Confetti } from '@/components/Confetti'
+import { CONFETTI_DEFAULT_CONFIG, CONFETTI_PRESETS, type ConfettiConfig } from '@/components/confetti.config'
 import { buildConfettiJsonSpec } from '@/lib/buildConfettiSpec'
 import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
 

@@ -96,7 +96,7 @@ export function FlameBench() {
       options: ['looping', 'hidden'],
       label: 'start as',
     },
-    background: { value: 'dark', options: ['dark', 'light', 'ember'] },
+    background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     baseline: true,
     contextRow: { value: true, label: 'context row' },
     paused: false,

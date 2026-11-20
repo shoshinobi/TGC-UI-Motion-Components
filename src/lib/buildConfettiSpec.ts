@@ -1,4 +1,4 @@
-import { CONFETTI_PALETTES, type ConfettiConfig } from '@/components/Confetti'
+import { CONFETTI_PALETTES, type ConfettiConfig } from '@/components/confetti.config'
 
 /** Framework-neutral tokens for the confetti system. */
 export function buildConfettiJsonSpec(c: ConfettiConfig): string {

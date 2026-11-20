@@ -1,16 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { FoldableButton } from '@/components/banner-stubs'
-import { ParticleRain, PARTICLE_DEFAULT_CONFIG, type ParticleRainConfig } from '@/components/ParticleRain'
+import { ParticleRain, type ParticleRainConfig } from '@/components/ParticleRain'
+import { Confetti } from '@/components/Confetti'
 import {
-  Confetti,
-  CONFETTI_DEFAULT_CONFIG,
-  CONFETTI_PRESETS,
-  type ConfettiConfig,
-  type ConfettiPalette,
-} from '@/components/Confetti'
+  GOLD_CLOSING_LINES,
+  GOLD_DEFAULT_CONFIG,
+  GOLD_REFERENCE_WIDTH,
+  GOLD_TEASE_LINES,
+  goldConfettiConfig,
+  goldIconPx,
+  goldPile,
+  type GoldRevealConfig,
+  type GoldRevealState,
+} from '@/components/goldReveal.config'
 import { GEM_MUSIC } from '@/components/GemReveal'
 import { hexToRgba } from '@/lib/gemTiers'
 import goldbarUrl from '@/assets/GOLDBAR_X3.svg'
+// placeholder avatar poses — the production avatar is a Rive file (see the README)
+import avatarFistUrl from '@/assets/fistRaise.png'
+import avatarPointUrl from '@/assets/pointUp.png'
 import pourUrl from '@/assets/mp3/dailyGold.mp3'
 import tickerUrl from '@/assets/mp3/GemReveal_ticker.mp3'
 import chaChingUrl from '@/assets/mp3/chaChing.mp3'
@@ -38,615 +46,6 @@ import chaChingUrl from '@/assets/mp3/chaChing.mp3'
  * push → the gold pile canvas.
  */
 
-export type GoldRevealState = 'armed' | 'tease' | 'pour' | 'piled' | 'drain' | 'count' | 'landed'
-
-export type GoldRevealConfig = {
-  // --- amount ---
-  /** the gold the player receives — set by the app */
-  amount: number
-  /** the count-up starts from this value */
-  countFrom: number
-
-  // --- tease (beat 1) — a headline, then a subheader under it ---
-  /** headline ("Ka-ching!") */
-  teaseText: string
-  teaseSize: number
-  /** subheader under it ('' = none) */
-  teaseSubText: string
-  teaseSubSize: number
-  /** seconds after the headline pops in before the subheader does */
-  teaseSubDelay: number
-  /** px between the two lines */
-  teaseSubGap: number
-  /** seconds the headline takes to slide up from the centre to make room — the pair ends up centred */
-  teaseSlideTime: number
-  /** seconds after start before the line pops in */
-  teaseInDelay: number
-  teaseFade: number
-  /** pop-in: from this scale, springing to 1 */
-  teaseFromScale: number
-  teaseFromRotate: number
-  /** settled tilt, ° — a bit of character */
-  teaseRotate: number
-  teaseStiffness: number
-  teaseDamping: number
-  /** seconds the line is on its own before the gold starts pouring */
-  teaseHold: number
-  /** seconds after the pour starts before the line fades (it's being buried anyway) */
-  teaseOutDelay: number
-
-  // --- pile-up (beat 2) — sized to the stage, Particle Rain physics ---
-  /** how high the settled pile reaches, × the stage height (1 = full screen) */
-  fillLevel: number
-  /** smaller amounts make a smaller pile, up to `fillLevel` at `fullAmount` */
-  fillByAmount: boolean
-  /** the amount (and above) that gets the full `fillLevel` */
-  fullAmount: number
-  /** the smallest pile, × stage height (fillByAmount) */
-  minFillLevel: number
-  /** packing fudge on the computed bar count — raise if the pile comes up short */
-  fillDensity: number
-  /** bar size on a 390px-wide phone, px (longest edge) */
-  barSize: number
-  /** 0–1 — how much bars grow with the stage width (0 = same px everywhere → more bars on wide screens) */
-  barSizeVsWidth: number
-  barAsset: ParticleRainConfig['asset']
-  barScaleMin: number
-  barScaleMax: number
-  /** seconds over which all the bars are released */
-  pourDuration: number
-  /** ease-in on the pour: 1 = steady release, higher = starts as a trickle and builds to a downpour */
-  pourEase: number
-  /** the first bars drop in at this × the drop-in speed, building to full speed (1 = off) */
-  pourSpeedStart: number
-  /** px above the top edge the bars drop in from (randomised) */
-  spawnHeight: number
-  /** m/s² */
-  gravity: number
-  /** bars leave the top already falling at this speed, px/s (randomised between min / max) */
-  dropSpeedMin: number
-  dropSpeedMax: number
-  /** fastest a bar can fall while pouring, px/s */
-  terminalVelocity: number
-  /** 0–1 bounce off the floor + each other */
-  bounce: number
-  /** seconds after the last bar drops in before the pile is frozen as settled */
-  settleTime: number
-
-  // --- drain (beat 3) ---
-  /** pull the floor out automatically once the pile settles (off = wait for the trigger) */
-  autoDrain: boolean
-  /** seconds the settled pile holds before the floor goes */
-  drainDelay: number
-  /** safety cap — drain this long after the pour starts even if the pile hasn't fully settled */
-  drainMaxWait: number
-  /** `smooth` = bars let go bottom → top on a timed front and fall freely (no collisions, no jitter)
-   *  · `physics` = collisions stay on and each bar lets go once nothing holds it (a real collapse, jittery) */
-  drainMode: 'smooth' | 'physics'
-  /** smooth: seconds for the release front to sweep from the bottom of the pile to the top */
-  drainFrontTime: number
-  /** smooth: ease-in power of the front (3 = cubic: creeps off the bottom, then races up) */
-  drainFrontPower: number
-  /** smooth: ± random seconds on each bar's release, so it doesn't go in neat rows */
-  drainReleaseJitter: number
-  /** smooth: random sideways drift as a bar lets go, ± px/s */
-  drainDrift: number
-  /** smooth: random spin as a bar lets go, ± °/s */
-  drainSpin: number
-  /** physics: seconds each layer waits once it loses support — the bottom-up cascade (at the start of the drain) */
-  drainStagger: number
-  /** …easing to this by the end of the ramp (lower = the last layers let go together) */
-  drainStaggerEnd: number
-  /** gravity × this the moment the floor goes — < 1 starts the collapse slowly */
-  drainGravityStart: number
-  /** gravity × this by the end of the ramp — high = the pile is off screen sooner */
-  drainGravityEnd: number
-  /** seconds the ramp takes, start → end */
-  drainRampTime: number
-  /** ease-in power of the ramp (3 = cubic: slow, then sharply faster) */
-  drainRampPower: number
-
-  // --- reveal + count-up (beat 4) — stacked: heading / GOLDBAR_X3 / amount + label ---
-  /** the line above the icon (shown upper-case) */
-  headerText: string
-  headerSize: number
-  headerColor: string
-  /** px between the heading and the icon's top */
-  headerGap: number
-  /** icon size, × the heading's text size (5.4 = the reference proportion) */
-  iconScale: number
-  /** px between the icon's bottom and the amount line */
-  amountGap: number
-  amountSize: number
-  amountColor: string
-  /** the word after the number (shown upper-case) */
-  amountLabel: string
-  labelSize: number
-  labelColor: string
-  /** tilt on the heading + amount lines, ° */
-  textTilt: number
-  /** px — the icon's vertical offset from the stage centre (everything hangs off it) */
-  revealOffsetY: number
-  /** 0–1 — share of the pile that has drained when the icon + text scale in (and the count starts) */
-  revealAtCleared: number
-  /** earliest the reveal can start, seconds after the floor goes */
-  countDelay: number
-  /** seconds the icon + text take to scale in */
-  revealFade: number
-  /** scale they grow from (0 = from nothing) */
-  revealFromScale: number
-  /** ease-out-back overshoot on the scale-in (0 = none) */
-  revealOvershoot: number
-  /** 0–1 — the impact waits until this share of the pile has drained (the count holds its last digits till then) */
-  landAtCleared: number
-  countDuration: number
-  /** ease-out power on the count (higher = slows harder at the end) */
-  countEasePower: number
-
-  // --- impact (with the reveal: flash, ring, starburst, swell, cha-ching — the count runs on past it) ---
-  /** seconds after the text + icon start scaling in before the impact fires */
-  impactDelay: number
-  impact: boolean
-  /** peak size, × resting */
-  impactScale: number
-  impactUp: number
-  impactHold: number
-  impactDown: number
-  /** white radial burst behind the amount (0 = off) */
-  impactFlash: number
-  /** burst radius, × the stage's height */
-  impactFlashSize: number
-  impactFlashDecay: number
-  impactRing: boolean
-  impactRingColor: string
-  impactRingSize: number
-  impactRingWidth: number
-  impactRingOpacity: number
-  impactRingDuration: number
-  /** starburst with the ring: straight strokes flying out from the icon like clock hands (0 = off) */
-  impactStar: number
-  impactStarStrokes: number
-  /** even (clock face) · random */
-  impactStarLayout: 'even' | 'random'
-  /** even: rotate the clock face, ° */
-  impactStarRotate: number
-  /** px the strokes travel out from the icon's edge */
-  impactStarRadius: number
-  impactStarLength: number
-  impactStarWidth: number
-  impactStarDuration: number
-  impactStarColor: string
-  /** warm glow behind the amount, after the impact */
-  glow: boolean
-  glowColor: string
-  /** radius, × the stage's height */
-  glowSize: number
-  glowIntensity: number
-  /** Hz — 0 = steady */
-  glowPulse: number
-  /** after the impact, the gold bars keep pulsing (a looping scale) */
-  iconLoop: boolean
-  /** how much bigger at the top of each pulse (0.08 = +8%) */
-  iconLoopScale: number
-  /** pulses per second */
-  iconLoopSpeed: number
-  /** seconds after the impact swell has settled before it starts (it eases in) */
-  iconLoopDelay: number
-
-  // --- shop push (beat 5) — closing line + button in their own block, anchored to the bottom ---
-  /** px from the bottom of the screen to the bottom of the block (+ the device's safe area) */
-  shopBottom: number
-  closingText: string
-  closingSize: number
-  /** seconds after the impact */
-  closingDelay: number
-  closingFade: number
-  /** px — longer closing lines wrap onto balanced lines (0 = only the screen edge) */
-  closingMaxWidth: number
-  button: boolean
-  buttonText: string
-  /** px below the closing line */
-  buttonGap: number
-  /** seconds after the impact */
-  buttonDelay: number
-  /** real size multiplier (stays crisp) */
-  buttonSize: number
-  buttonFromScale: number
-  buttonFromRotate: number
-  buttonRotate: number
-  buttonStiffness: number
-  buttonDamping: number
-  buttonMass: number
-
-  // --- audio ---
-  sound: boolean
-  volume: number
-  /** dailyGold.mp3 as the bars pour in */
-  pourSound: boolean
-  /** GemReveal_ticker.mp3 under the count-up */
-  countSound: boolean
-  /** chaChing.mp3 on the impact */
-  impactSound: boolean
-  musicTrack: 'off' | 'random' | 'belt-and-braces' | 'chasing-quails'
-  musicVolume: number
-  musicLoop: boolean
-  musicStart: 'start' | 'drain' | 'impact'
-  musicDelay: number
-
-  // --- celebration: two confetti cues (Confetti presets + per-cue tweaks) ---
-  /** confetti as the tease line comes up */
-  teaseConfetti: GoldConfettiStyle
-  /** seconds after the tease line pops in */
-  teaseConfettiDelay: number
-  /** × the piece counts */
-  teaseConfettiAmount: number
-  /** × the launch speed (how far bursts throw / how fast the rain starts) */
-  teaseConfettiSpeed: number
-  /** pop styles: volleys / pops (0 = the style's own) */
-  teaseConfettiBursts: number
-  /** pop styles: cone width, ° (0 = the style's own; 360 = full shell) */
-  teaseConfettiSpread: number
-  /** rain style: seconds it rains (0 = the style's own) */
-  teaseConfettiRain: number
-  /** rain style: keep raining until the reveal is replayed (seconds ignored) */
-  teaseConfettiLoop: boolean
-  /** confetti on the impact */
-  impactConfetti: GoldConfettiStyle
-  /** seconds after the impact */
-  impactConfettiDelay: number
-  impactConfettiAmount: number
-  impactConfettiSpeed: number
-  impactConfettiBursts: number
-  impactConfettiSpread: number
-  impactConfettiRain: number
-  impactConfettiLoop: boolean
-  // shared look + reaction (both cues)
-  /** rain: m/s² */
-  confettiRainGravity: number
-  /** rain: air drag — high = slow, papery float */
-  confettiRainDrag: number
-  /** rain: fades over this bottom share of the height (0 = none) */
-  confettiRainFadeZone: number
-  /** side cannons: m/s² — with light drag, this is what bends the shot into an arc */
-  confettiCannonGravity: number
-  /** side cannons: air drag — low = a long, ballistic arc; high = a punchy stall-and-float (fireworks keep their own) */
-  confettiCannonDrag: number
-  /** side cannons: 0–1 per-piece variation in how fast pieces fall */
-  confettiCannonFallVar: number
-  /** rain: 0–1 per-piece variation in how fast pieces fall */
-  confettiRainFallVar: number
-  /** side cannons: px below the vertical centre (+ = lower) */
-  confettiCannonOffsetY: number
-  /** side cannons aim at the tease line: how far in toward the middle (× half-width, 1 = centre) */
-  confettiCannonAimX: number
-  /** …and how far above (−) / below the line, px */
-  confettiCannonAimY: number
-  /** set the launch angle yourself, or aim at a height (the angle is then worked out) */
-  confettiCannonAimBy: ConfettiConfig['cannonAimBy']
-  /** launch angle, ° above horizontal */
-  confettiCannonAngle: number
-  /** the angle is as on a phone; wider screens keep the same rise (flatter shot) */
-  confettiCannonKeepHeight: boolean
-  /** seconds for the middle of the burst to reach it (shorter = harder, flatter) */
-  confettiCannonTime: number
-  /** 0–1 speed spread — pieces land short of and past the target */
-  confettiCannonSpeedVar: number
-  /** which cannon fires first each volley: together, alternate, random */
-  confettiCannonOrder: ConfettiConfig['cannonOrder']
-  /** seconds between the two cannons in a volley */
-  confettiCannonStagger: number
-  /** ± random seconds on every cannon shot */
-  confettiCannonJitter: number
-  /** flash + starburst position from each cannon mouth, px: x inward (mirrored), y + = lower */
-  confettiFlashOffsetX: number
-  confettiFlashOffsetY: number
-  /** sideways sway once floating, px */
-  confettiFlutter: number
-  /** 0–1 share of pieces that are the gold G */
-  confettiGShare: number
-  confettiGSize: number
-  confettiPalette: ConfettiPalette
-  /** how firework / cannon pieces leave: fade, shrink, both, or off (they just fall and fade at end of life) */
-  confettiPopExit: ConfettiConfig['popExit']
-  /** seconds after launch the exit starts */
-  confettiPopExitStart: number
-  /** seconds it takes */
-  confettiPopExitDuration: number
-  /** 0–1 random spread on the start */
-  confettiPopExitVar: number
-  // origin flash + starburst at each cannon mouth / firework pop (shared)
-  /** white flash intensity (0 = off) */
-  confettiFlash: number
-  /** flash radius, px */
-  confettiFlashSize: number
-  confettiFlashDuration: number
-  /** starburst intensity (0 = off) */
-  confettiStar: number
-  confettiStarStrokes: number
-  /** even (clock face) · random · aimed (a fan along the shot) */
-  confettiStarLayout: ConfettiConfig['starLayout']
-  /** aimed: fan width, ° */
-  confettiStarFan: number
-  /** how far the strokes fly, px */
-  confettiStarRadius: number
-  confettiStarLength: number
-  confettiStarWidth: number
-  confettiStarDuration: number
-  confettiStarColor: string
-}
-
-export type GoldConfettiStyle = 'off' | 'fireworks' | 'cannons' | 'goldRain'
-
-export const GOLD_DEFAULT_CONFIG: GoldRevealConfig = {
-  amount: 5890,
-  countFrom: 0,
-
-  teaseText: 'Ka-ching!',
-  teaseSize: 41,
-  teaseSubText: 'Somebody’s buying something nice.',
-  teaseSubSize: 20,
-  teaseSubDelay: 1,
-  teaseSubGap: 6,
-  teaseSlideTime: 0.4,
-  teaseInDelay: 0.2,
-  teaseFade: 0.25,
-  teaseFromScale: 0.6,
-  teaseFromRotate: -6,
-  teaseRotate: -2,
-  teaseStiffness: 420,
-  teaseDamping: 18,
-  teaseHold: 3,
-  teaseOutDelay: 0.6,
-
-  fillLevel: 0.95,
-  fillByAmount: false,
-  fullAmount: 5000,
-  minFillLevel: 0.35,
-  fillDensity: 1,
-  barSize: 80,
-  barSizeVsWidth: 0.2,
-  barAsset: 'both',
-  barScaleMin: 0.8,
-  barScaleMax: 1.6,
-  pourDuration: 1.4,
-  pourEase: 1.4,
-  pourSpeedStart: 1,
-  spawnHeight: 200,
-  gravity: 16,
-  dropSpeedMin: 950,
-  dropSpeedMax: 1600,
-  terminalVelocity: 2200,
-  bounce: 0.6,
-  settleTime: 1.2,
-
-  autoDrain: true,
-  drainDelay: 0.5,
-  drainMaxWait: 6,
-  drainMode: 'smooth',
-  drainFrontTime: 0.9,
-  drainFrontPower: 3,
-  drainReleaseJitter: 0.06,
-  drainDrift: 40,
-  drainSpin: 60,
-  drainStagger: 0.06,
-  drainStaggerEnd: 0.04,
-  drainGravityStart: 0.1,
-  drainGravityEnd: 2.5,
-  drainRampTime: 1,
-  drainRampPower: 1.2,
-
-  headerText: 'You found gold!',
-  headerSize: 29,
-  headerColor: '#f4efe6',
-  headerGap: 10,
-  iconScale: 5.4,
-  amountGap: 8,
-  amountSize: 56,
-  amountColor: '#ffe269',
-  amountLabel: 'Gold',
-  labelSize: 35,
-  labelColor: '#f4efe6',
-  textTilt: -4,
-  revealOffsetY: -24,
-  revealAtCleared: 0.7,
-  countDelay: 0.2,
-  revealFade: 0.3,
-  revealFromScale: 0.4,
-  revealOvershoot: 1.4,
-  landAtCleared: 0.92,
-  countDuration: 1.4,
-  countEasePower: 3,
-
-  impactDelay: 0,
-  impact: true,
-  impactScale: 1.3,
-  impactUp: 0.25,
-  impactHold: 0.06,
-  impactDown: 0.9,
-  impactFlash: 0.7,
-  impactFlashSize: 0.6,
-  impactFlashDecay: 0.7,
-  impactRing: true,
-  impactRingColor: '#ffe269',
-  impactRingSize: 220,
-  impactRingWidth: 3,
-  impactRingOpacity: 0.8,
-  impactRingDuration: 0.5,
-  impactStar: 1,
-  impactStarStrokes: 16,
-  impactStarLayout: 'even',
-  impactStarRotate: 0,
-  impactStarRadius: 170,
-  impactStarLength: 46,
-  impactStarWidth: 3.5,
-  impactStarDuration: 0.55,
-  impactStarColor: '#ffe269',
-  glow: true,
-  glowColor: '#ff9d00',
-  glowSize: 0.2,
-  glowIntensity: 0.3,
-  glowPulse: 2.5,
-  iconLoop: true,
-  iconLoopScale: 0.06,
-  iconLoopSpeed: 0.8,
-  iconLoopDelay: 0,
-
-  shopBottom: 40,
-  closingText: 'The Grail Shop is open. Treat yourself.',
-  closingSize: 18,
-  closingDelay: 0.5,
-  closingFade: 0.35,
-  closingMaxWidth: 300,
-  button: true,
-  buttonText: 'Go to the Grail Shop',
-  buttonGap: 20,
-  buttonDelay: 0.85,
-  buttonSize: 1.1,
-  buttonFromScale: 1.5,
-  buttonFromRotate: -6,
-  buttonRotate: 2,
-  buttonStiffness: 230,
-  buttonDamping: 38,
-  buttonMass: 2.7,
-
-  sound: false,
-  volume: 0.85,
-  pourSound: true,
-  countSound: true,
-  impactSound: true,
-  musicTrack: 'chasing-quails',
-  musicVolume: 0.1,
-  musicLoop: true,
-  musicStart: 'impact',
-  musicDelay: 0.5,
-
-  teaseConfetti: 'cannons',
-  teaseConfettiDelay: 0.1,
-  teaseConfettiAmount: 1.55,
-  teaseConfettiSpeed: 2,
-  teaseConfettiBursts: 1,
-  teaseConfettiSpread: 43,
-  teaseConfettiRain: 0,
-  teaseConfettiLoop: false,
-  impactConfetti: 'goldRain',
-  impactConfettiDelay: 0,
-  impactConfettiAmount: 0.3,
-  impactConfettiSpeed: 0.2,
-  impactConfettiBursts: 0,
-  impactConfettiSpread: 0,
-  impactConfettiRain: 0,
-  impactConfettiLoop: true,
-  confettiRainGravity: 4.5,
-  confettiRainDrag: 2.6,
-  confettiRainFadeZone: 0.12,
-  confettiCannonGravity: 15.5,
-  confettiCannonDrag: 4.3,
-  confettiCannonFallVar: 0.35,
-  confettiRainFallVar: 0,
-  confettiCannonOffsetY: 0,
-  confettiCannonAimX: 0.58,
-  confettiCannonAimY: 14,
-  confettiCannonAimBy: 'angle',
-  confettiCannonAngle: 60,
-  confettiCannonKeepHeight: true,
-  confettiCannonTime: 0.55,
-  confettiCannonSpeedVar: 0.5,
-  confettiCannonOrder: 'together',
-  confettiCannonStagger: 0.12,
-  confettiCannonJitter: 0.18,
-  confettiFlashOffsetX: 0,
-  confettiFlashOffsetY: 0,
-  confettiFlutter: 18,
-  confettiGShare: 0.35,
-  confettiGSize: 24,
-  confettiPalette: 'grail',
-  confettiPopExit: 'shrink',
-  confettiPopExitStart: 1.1,
-  confettiPopExitDuration: 0.8,
-  confettiPopExitVar: 0.5,
-  confettiFlash: 1,
-  confettiFlashSize: 180,
-  confettiFlashDuration: 0.25,
-  confettiStar: 1,
-  confettiStarStrokes: 6,
-  confettiStarLayout: 'aimed',
-  confettiStarFan: 180,
-  confettiStarRadius: 125,
-  confettiStarLength: 42,
-  confettiStarWidth: 3,
-  confettiStarDuration: 0.75,
-  confettiStarColor: '#ffffff',
-}
-
-/** The Confetti config for one cue: its style's preset, the cue's tweaks, the shared look. Null = off. */
-export function goldConfettiConfig(c: GoldRevealConfig, cue: 'tease' | 'impact'): Partial<ConfettiConfig> | null {
-  const t = cue === 'tease'
-  const style = t ? c.teaseConfetti : c.impactConfetti
-  if (style === 'off') return null
-  const preset = CONFETTI_PRESETS[style]
-  const P = { ...CONFETTI_DEFAULT_CONFIG, ...preset }
-  const speed = t ? c.teaseConfettiSpeed : c.impactConfettiSpeed
-  const bursts = t ? c.teaseConfettiBursts : c.impactConfettiBursts
-  const spread = t ? c.teaseConfettiSpread : c.impactConfettiSpread
-  const rain = t ? c.teaseConfettiRain : c.impactConfettiRain
-  const loop = t ? c.teaseConfettiLoop : c.impactConfettiLoop
-  return {
-    ...preset,
-    autoFire: false,
-    loopEvery: 0,
-    burstSpeedMin: P.burstSpeedMin * speed,
-    burstSpeedMax: P.burstSpeedMax * speed,
-    rainSpeed: P.rainSpeed * speed,
-    bursts: bursts > 0 ? bursts : P.bursts,
-    burstSpread: spread > 0 ? spread : P.burstSpread,
-    rainDuration: rain > 0 ? rain : P.rainDuration,
-    rainLoop: loop,
-    popExit: c.confettiPopExit,
-    popExitStart: c.confettiPopExitStart,
-    popExitDuration: c.confettiPopExitDuration,
-    popExitVar: c.confettiPopExitVar,
-    popFlash: c.confettiFlash,
-    popFlashSize: c.confettiFlashSize,
-    popFlashDuration: c.confettiFlashDuration,
-    starIntensity: c.confettiStar,
-    starStrokes: c.confettiStarStrokes,
-    starLayout: c.confettiStarLayout,
-    starFan: c.confettiStarFan,
-    starRadius: c.confettiStarRadius,
-    starLength: c.confettiStarLength,
-    starWidth: c.confettiStarWidth,
-    starDuration: c.confettiStarDuration,
-    starColor: c.confettiStarColor,
-    rainGravity: c.confettiRainGravity,
-    rainDrag: c.confettiRainDrag,
-    rainFadeZone: c.confettiRainFadeZone,
-    // the cannons get their own arc physics; fireworks keep their preset's stall-and-float
-    ...(style === 'cannons'
-      ? { popGravity: c.confettiCannonGravity, popDrag: c.confettiCannonDrag, popFallVar: c.confettiCannonFallVar }
-      : {}),
-    rainFallVar: c.confettiRainFallVar,
-    cannonY: 0.5,
-    cannonOffsetY: c.confettiCannonOffsetY,
-    cannonAimX: c.confettiCannonAimX,
-    cannonAimY: c.confettiCannonAimY,
-    cannonAimBy: c.confettiCannonAimBy,
-    cannonAngle: c.confettiCannonAngle,
-    cannonKeepHeight: c.confettiCannonKeepHeight,
-    cannonTime: c.confettiCannonTime,
-    cannonSpeedVar: c.confettiCannonSpeedVar,
-    cannonOrder: c.confettiCannonOrder,
-    cannonStagger: c.confettiCannonStagger,
-    cannonJitter: c.confettiCannonJitter,
-    flashOffsetX: c.confettiFlashOffsetX,
-    flashOffsetY: c.confettiFlashOffsetY,
-    cannonPower: speed, // the cue's "launch speed ×" — 1 lands on the target
-    flutterAmp: c.confettiFlutter,
-    gShare: c.confettiGShare,
-    gSize: c.confettiGSize,
-    palette: c.confettiPalette,
-  }
-}
-
 const TAU = Math.PI * 2
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t
@@ -657,39 +56,6 @@ const smooth = (e0: number, e1: number, x: number) => {
 const easeInOut = (t: number) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2)
 const fmt = (n: number) => Math.round(n).toLocaleString('en-US')
 
-/** the icon's px size — a multiple of the heading's text size, so they keep the reference proportion */
-export const goldIconPx = (c: GoldRevealConfig) => c.iconScale * c.headerSize
-
-/** the phone width `barSize` is set at */
-export const GOLD_REFERENCE_WIDTH = 390
-
-/** How high the pile should reach for this config, × stage height. */
-export function goldFillLevel(c: GoldRevealConfig): number {
-  if (!c.fillByAmount) return c.fillLevel
-  const k = clamp(c.amount / Math.max(1, c.fullAmount), 0, 1)
-  return lerp(Math.min(c.minFillLevel, c.fillLevel), c.fillLevel, k)
-}
-
-/**
- * Bar size + count that fill a `w × h` stage to the fill level.
- * Each bar is a collision circle (Particle Rain's `collideRadius` × half its
- * size); a hex-packed circle of radius r takes 2√3·r² of floor area, so
- * count = fillDensity · width · pileHeight / (2√3 · E[r²]).
- */
-export function goldPile(c: GoldRevealConfig, w: number, h: number) {
-  const R = PARTICLE_DEFAULT_CONFIG
-  const widthK = clamp(1 + (w / GOLD_REFERENCE_WIDTH - 1) * c.barSizeVsWidth, 0.5, 3)
-  const size = c.barSize * widthK
-  const a = c.barScaleMin
-  const b = Math.max(a, c.barScaleMax)
-  const meanScale2 = (a * a + a * b + b * b) / 3
-  const r2 = Math.pow((R.collideRadius * size) / 2, 2) * meanScale2
-  const floorW = w - 2 * R.wallInset
-  const pileH = h * goldFillLevel(c) - R.floorInset
-  const count = Math.max(1, Math.round((c.fillDensity * floorW * Math.max(0, pileH)) / (2 * Math.sqrt(3) * r2)))
-  return { size, count }
-}
-
 export type GoldRevealProps = {
   config?: Partial<GoldRevealConfig>
   paused?: boolean
@@ -699,10 +65,35 @@ export type GoldRevealProps = {
   /** pull the floor out now (pour / piled → drain) */
   drainSignal?: number
   onState?: (s: GoldRevealState) => void
-  /** the Grail Shop button was pressed */
+  /** "Check out the shop" was pressed */
   onShop?: () => void
+  /** "Buy another chest" was pressed */
+  onBuy?: () => void
   /** skip `armed` — start the sequence as soon as it mounts (a fresh runKey + this = restart) */
   autoStart?: boolean
+}
+
+// the last random picks, so the same line never comes up twice in a row
+const lastPick = { tease: -1, closing: -1 }
+function pickIndex(n: number, last: number) {
+  if (n <= 1) return 0
+  let i = Math.floor(Math.random() * n)
+  if (i === last) i = (i + 1 + Math.floor(Math.random() * (n - 1))) % n
+  return i
+}
+/** 'random' → the index rolled for this run; otherwise the chosen index, kept in range */
+/** the random amount for a roll u ∈ [0, 1): min…max, rounded to the step */
+function randomAmount(c: GoldRevealConfig, u: number) {
+  const lo = Math.min(c.amountMin, c.amountMax)
+  const hi = Math.max(c.amountMin, c.amountMax)
+  const step = Math.max(1, c.amountStep)
+  return Math.min(hi, Math.max(lo, Math.round((lo + u * (hi - lo)) / step) * step))
+}
+
+function lineIndex(choice: string, rolled: number, n: number) {
+  if (choice === 'random') return rolled
+  const i = Number(choice)
+  return Number.isFinite(i) ? Math.max(0, Math.min(n - 1, Math.round(i))) : 0
 }
 
 export function GoldReveal({
@@ -713,20 +104,29 @@ export function GoldReveal({
   drainSignal = 0,
   onState,
   onShop,
+  onBuy,
   autoStart = false,
 }: GoldRevealProps) {
-  const c: GoldRevealConfig = { ...GOLD_DEFAULT_CONFIG, ...config }
+  const base: GoldRevealConfig = { ...GOLD_DEFAULT_CONFIG, ...config }
+  // prototype: a random amount for every run (a new runKey = a new roll); in the app it's set
+  const amountRoll = useRef<{ key: unknown; u: number } | null>(null)
+  if (!amountRoll.current || amountRoll.current.key !== runKey) amountRoll.current = { key: runKey, u: Math.random() }
+  const c: GoldRevealConfig = base.amountRandom
+    ? { ...base, amount: randomAmount(base, amountRoll.current.u) }
+    : base
   const wrapRef = useRef<HTMLDivElement>(null)
   const fxRef = useRef<HTMLCanvasElement>(null)
   const teaseRef = useRef<HTMLDivElement>(null)
   const teaseSubRef = useRef<HTMLDivElement>(null)
   const headerRef = useRef<HTMLDivElement>(null)
   const iconRef = useRef<HTMLDivElement>(null)
+  const avatarRef = useRef<HTMLDivElement>(null)
   const amountLineRef = useRef<HTMLDivElement>(null)
   const amountRef = useRef<HTMLSpanElement>(null)
   const shopRef = useRef<HTMLDivElement>(null)
   const closingRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLDivElement>(null)
+  const btn2Ref = useRef<HTMLDivElement>(null)
 
   const cfgRef = useRef(c)
   cfgRef.current = c
@@ -741,6 +141,20 @@ export function GoldReveal({
   // the pile: mounted fresh at each pour, sized to the stage at that moment
   const [pile, setPile] = useState<{ run: number; size: number; count: number } | null>(null)
   const [dump, setDump] = useState(0)
+  // a fresh random tease + closing line for every run (a new runKey = a new roll)
+  const roll = useRef<{ key: unknown; tease: number; closing: number; fist: boolean } | null>(null)
+  if (!roll.current || roll.current.key !== runKey) {
+    const tease = pickIndex(GOLD_TEASE_LINES.length, lastPick.tease)
+    const closing = pickIndex(GOLD_CLOSING_LINES.length, lastPick.closing)
+    lastPick.tease = tease
+    lastPick.closing = closing
+    roll.current = { key: runKey, tease, closing, fist: Math.random() < 0.5 }
+  }
+  const [teaseText, teaseSubText] =
+    GOLD_TEASE_LINES[lineIndex(c.teaseLine, roll.current.tease, GOLD_TEASE_LINES.length)]
+  const closingText = GOLD_CLOSING_LINES[lineIndex(c.closingLine, roll.current.closing, GOLD_CLOSING_LINES.length)]
+  const avatarUrl =
+    c.avatarPose === 'fistRaise' || (c.avatarPose === 'random' && roll.current.fist) ? avatarFistUrl : avatarPointUrl
   const [teaseFire, setTeaseFire] = useState(0)
   const [impactFire, setImpactFire] = useState(0)
   const pileEvents = useRef({ settled: false, cleared: false, drained: 0 })
@@ -766,12 +180,14 @@ export function GoldReveal({
     const teaseSubEl = teaseSubRef.current
     const headerEl = headerRef.current
     const iconEl = iconRef.current
+    const avatarEl = avatarRef.current
     const amountLineEl = amountLineRef.current
     const amountEl = amountRef.current
     const shopEl = shopRef.current
     const closingEl = closingRef.current
     const btnEl = btnRef.current
-    if (!shopEl || !wrap || !fx || !teaseEl || !teaseSubEl || !headerEl || !iconEl || !amountLineEl || !amountEl || !closingEl || !btnEl) return
+    const btn2El = btn2Ref.current
+    if (!avatarEl || !btn2El || !shopEl || !wrap || !fx || !teaseEl || !teaseSubEl || !headerEl || !iconEl || !amountLineEl || !amountEl || !closingEl || !btnEl) return
     const ctx = fx.getContext('2d')
     if (!ctx) return
 
@@ -789,13 +205,25 @@ export function GoldReveal({
     }
     resize()
     // the tease lines' real heights (the subheader may wrap) — measured on change, not per frame
-    const teaseH = { head: teaseEl.offsetHeight, sub: teaseSubEl.offsetHeight }
+    // the headline stays on one line and shrinks to fit a narrow screen (e.g. "Clear some space!")
+    // the headline's width per px of font size — so it can be capped to fit the screen
+    let teaseWidthPerPx = 0
+    let teaseFitText = ''
+    const fitTease = () => {
+      const fs = parseFloat(teaseEl.style.fontSize) || cfgRef.current.teaseSize
+      teaseWidthPerPx = teaseEl.scrollWidth / fs
+      teaseFitText = teaseEl.textContent ?? ''
+    }
+    const teaseH = { head: teaseEl.offsetHeight, sub: teaseSubEl.offsetHeight, subW: teaseSubEl.offsetWidth }
     const teaseRo = new ResizeObserver(() => {
+      fitTease()
       teaseH.head = teaseEl.offsetHeight
       teaseH.sub = teaseSubEl.offsetHeight
+      teaseH.subW = teaseSubEl.offsetWidth
     })
     teaseRo.observe(teaseEl)
     teaseRo.observe(teaseSubEl)
+    teaseRo.observe(wrap)
     const ro = new ResizeObserver(resize)
     ro.observe(wrap)
 
@@ -847,6 +275,11 @@ export function GoldReveal({
     let t = 0
     let st = 0 // seconds in the current state (reset in setState)
     let revealAt = -1
+    let teaseAt = -1
+    // avatar slide: 0 = in place, 1 = hidden below the bottom edge
+    let avY = 1
+    let avV = 0
+    let avOutAt = -1
     let impactPendingAt = -1
     let landedAt = -1
     let impactAt = -1
@@ -860,6 +293,7 @@ export function GoldReveal({
       onStateRef.current?.(s)
       const cfg = cfgRef.current
       if (s === 'tease') {
+        teaseAt = t
         if (cfg.musicStart === 'start') startMusic()
         if (cfg.teaseConfetti !== 'off') teaseConfettiAt = t + cfg.teaseInDelay + Math.max(0, cfg.teaseConfettiDelay)
       }
@@ -913,11 +347,8 @@ export function GoldReveal({
     let subSV = 0
     let subR = c0.teaseFromRotate
     let subRV = 0
-    let btnS = c0.buttonFromScale
-    let btnSV = 0
-    let btnR = c0.buttonFromRotate
-    let btnRV = 0
-    let btnO = 0
+    // the two buttons' springs: [0] = buy, [1] = shop
+    const btns = [0, 1].map(() => ({ s: c0.buttonFromScale, sv: 0, r: c0.buttonFromRotate, rv: 0, o: 0 }))
     let shownValue = NaN
 
     // per-frame style writes go through here: a value is only written when it
@@ -990,6 +421,48 @@ export function GoldReveal({
       const cx = size.w / 2
       const cy = size.h / 2 + cfg.revealOffsetY
 
+      // ---- avatar: springs up with the cannons, the gold pours over him, he slides out at ~half-pour ----
+      {
+        const pourLen = Math.max(0.1, cfg.pourDuration + cfg.settleTime)
+        const pourDone = state === 'pour' ? st / pourLen : state === 'tease' || state === 'armed' ? 0 : 1
+        if (avOutAt < 0 && pourDone >= cfg.avatarOutAt && state !== 'armed' && state !== 'tease') avOutAt = t
+        // the figure's box: the PNGs are 1440×1193 with him in x 645–1221, y 212–1193 (feet at the bottom)
+        const aspect = 576 / 981
+        const avH = Math.min(cfg.avatarHeight * size.h, (0.8 * size.w) / aspect)
+        // keep him clear of the tease: measured from the pair's final (centred, two-line) layout,
+        // so he doesn't shift when the subheader arrives; push down if the text has grown into him
+        const hasSubText = (teaseSubEl.textContent ?? '').trim() !== ''
+        // + the tilt: a rotated line's low corner hangs below its straight bottom edge
+        const tiltPad = (Math.abs(Math.sin((cfg.teaseRotate * Math.PI) / 180)) * (hasSubText ? teaseH.subW : 0)) / 2
+        const textBottom = size.h / 2 + (hasSubText ? teaseH.head + cfg.teaseSubGap + teaseH.sub : teaseH.head) / 2 + tiltPad
+        const avTop = size.h + cfg.avatarBottom * -1 - avH // css `bottom` raises the feet; − sinks them
+        const pushDown = Math.max(0, textBottom + cfg.avatarTextGap - avTop)
+        const hidden = avH + Math.max(0, cfg.avatarBottom) + 20
+        if (live) {
+          if (avOutAt >= 0) {
+            // out: ease-in slide back down
+            const u = clamp((t - avOutAt) / Math.max(0.05, cfg.avatarOutDuration), 0, 1)
+            avY = Math.max(avY, u * u)
+            avV = 0
+          } else if (teaseAt >= 0 && t - teaseAt >= cfg.avatarInDelay) {
+            // in: a spring up into place (a little overshoot)
+            const f = -cfg.avatarStiffness * avY - cfg.avatarDamping * avV
+            avV += f * dt
+            avY += avV * dt
+          } else {
+            avY = 1
+            avV = 0
+          }
+        }
+        const show = cfg.avatar && avY < 0.999
+        css(avatarEl, 'opacity', show ? '1' : '0')
+        css(avatarEl, 'left', `${(cfg.avatarX * 100).toFixed(2)}%`)
+        css(avatarEl, 'bottom', `${cfg.avatarBottom}px`)
+        css(avatarEl, 'height', `${avH.toFixed(1)}px`)
+        css(avatarEl, 'width', `${(avH * aspect).toFixed(1)}px`)
+        css(avatarEl, 'transform', `translate(-50%, ${(pushDown + avY * hidden).toFixed(1)}px)`)
+      }
+
       // ---- tease: pops in, buried by the pour, fades ----
       {
         let k = 0
@@ -1029,7 +502,7 @@ export function GoldReveal({
         // The headline arrives alone at the centre; as the subheader comes in it
         // slides up so the pair ends up centred together (measured heights, so a
         // wrapped subheader still centres).
-        const hasSub = cfg.teaseSubText.trim() !== ''
+        const hasSub = (teaseSubEl.textContent ?? '').trim() !== ''
         let slide = 0
         if (hasSub) {
           if (state === 'tease') {
@@ -1041,11 +514,17 @@ export function GoldReveal({
         const headY = -pairShift * slide
         const subY = headY + teaseH.head / 2 + cfg.teaseSubGap + teaseH.sub / 2 + (1 - kSub) * 12 // rises in
         css(teaseEl, 'opacity', k.toFixed(3))
-        css(teaseEl, 'font-size', `${cfg.teaseSize}px`)
+        if ((teaseEl.textContent ?? '') !== teaseFitText) fitTease() // a different line was picked
+        // responsive: grows with the stage width (1× on a 390 px phone, capped), then the
+        // headline is shrunk if it still wouldn't fit on one line
+        const sizeK = clamp(1 + (size.w / GOLD_REFERENCE_WIDTH - 1) * cfg.teaseSizeVsWidth, 1, Math.max(1, cfg.teaseSizeMax))
+        const fitPx = teaseWidthPerPx > 0 ? Math.max(40, size.w - 32) / teaseWidthPerPx : Infinity
+        css(teaseEl, 'font-size', `${Math.min(cfg.teaseSize * sizeK, fitPx).toFixed(1)}px`)
         css(teaseEl, 'transform-origin', 'center center')
         css(teaseEl, 'transform', `translate(-50%, -50%) translate(0px, ${headY.toFixed(1)}px) scale(${teaseS.toFixed(4)}) rotate(${teaseR.toFixed(2)}deg)`)
         css(teaseSubEl, 'opacity', (hasSub ? kSub : 0).toFixed(3))
-        css(teaseSubEl, 'font-size', `${cfg.teaseSubSize}px`)
+        css(teaseSubEl, 'font-size', `${(cfg.teaseSubSize * sizeK).toFixed(1)}px`)
+        css(teaseSubEl, 'max-width', `min(${(cfg.teaseSubMaxWidth * sizeK).toFixed(0)}px, calc(100% - 32px))`)
         css(teaseSubEl, 'transform-origin', 'center center')
         css(teaseSubEl, 'transform', `translate(-50%, -50%) translate(0px, ${subY.toFixed(1)}px) scale(${subS.toFixed(4)}) rotate(${subR.toFixed(2)}deg)`)
       }
@@ -1189,29 +668,43 @@ export function GoldReveal({
         css(closingEl, 'max-width', cfg.closingMaxWidth > 0 ? `min(${cfg.closingMaxWidth}px, 100%)` : '100%')
         css(closingEl, 'transform', `translateY(${((1 - ck) * 8).toFixed(1)}px)`)
 
-        if (cfg.button && sinceLanded >= cfg.buttonDelay) {
-          if (live) {
-            const m = Math.max(0.05, cfg.buttonMass)
-            const fS = -cfg.buttonStiffness * (btnS - 1) - cfg.buttonDamping * btnSV
-            btnSV += (fS / m) * dt
-            btnS += btnSV * dt
-            const fR = -cfg.buttonStiffness * (btnR - cfg.buttonRotate) - cfg.buttonDamping * btnRV
-            btnRV += (fR / m) * dt
-            btnR += btnRV * dt
-            btnO = Math.min(1, btnO + dt / 0.15)
-          }
-        } else if (sinceLanded < 0) {
-          btnS = cfg.buttonFromScale
-          btnR = cfg.buttonFromRotate
-          btnSV = btnRV = 0
-          btnO = 0
-        }
+        // two buttons, staggered, each springing in to its own settled tilt
         const fs = 14 * Math.max(0.2, cfg.buttonSize)
-        css(btnEl, 'margin-top', `${cfg.buttonGap}px`)
-        css(btnEl, '--gem-btn-fs', `${fs.toFixed(2)}px`)
-        css(btnEl, 'opacity', (cfg.button ? btnO : 0).toFixed(3))
-        css(btnEl, 'pointer-events', cfg.button && btnO > 0.5 ? 'auto' : 'none')
-        css(btnEl, 'transform', `scale(${btnS.toFixed(4)}) rotate(${btnR.toFixed(2)}deg)`)
+        const els = [btnEl, btn2El]
+        const tilts = [cfg.buyRotate, cfg.shopRotate]
+        for (let i = 0; i < 2; i++) {
+          const b = btns[i]
+          const at = cfg.buttonDelay + i * Math.max(0, cfg.buttonStagger)
+          if (cfg.button && sinceLanded >= at) {
+            if (live) {
+              const m = Math.max(0.05, cfg.buttonMass)
+              const fS = -cfg.buttonStiffness * (b.s - 1) - cfg.buttonDamping * b.sv
+              b.sv += (fS / m) * dt
+              b.s += b.sv * dt
+              const fR = -cfg.buttonStiffness * (b.r - tilts[i]) - cfg.buttonDamping * b.rv
+              b.rv += (fR / m) * dt
+              b.r += b.rv * dt
+              b.o = Math.min(1, b.o + dt / 0.15)
+            }
+          } else if (sinceLanded < 0) {
+            b.s = cfg.buttonFromScale
+            b.r = cfg.buttonFromRotate
+            b.sv = b.rv = 0
+            b.o = 0
+          }
+          const el = els[i]
+          css(el, 'margin-top', `${i === 0 ? cfg.buttonGap : cfg.buttonsGap}px`)
+          css(el, 'z-index', i === 0 ? '2' : '1') // the top button sits above the bottom one
+          css(el, 'width', `min(${cfg.buttonWidth}px, 100%)`)
+          css(el, '--gem-btn-fs', `${fs.toFixed(2)}px`)
+          css(el, 'opacity', (cfg.button ? b.o : 0).toFixed(3))
+          css(el, 'pointer-events', cfg.button && b.o > 0.5 ? 'auto' : 'none')
+          css(el, 'transform', `scale(${b.s.toFixed(4)}) rotate(${b.r.toFixed(2)}deg)`)
+        }
+        css(btnEl, '--cta-fill', cfg.buyColor)
+        css(btnEl, '--cta-ink', cfg.buyTextColor)
+        css(btn2El, '--cta-fill', cfg.shopColor)
+        css(btn2El, '--cta-ink', cfg.shopTextColor)
       }
 
       raf =requestAnimationFrame(loop)
@@ -1292,6 +785,10 @@ export function GoldReveal({
   return (
     <div ref={wrapRef} className='gold-reveal'>
       <canvas ref={fxRef} className='gold-reveal__fx' />
+      {/* placeholder avatar (PNG) — behind the confetti, the text and the gold pile */}
+      <div ref={avatarRef} className='gold-reveal__avatar' aria-hidden='true'>
+        <img src={avatarUrl} alt='' draggable={false} />
+      </div>
       {teaseConfetti && (
         <Confetti
           key={`${runKey}:tease:${c.teaseConfetti}`}
@@ -1313,10 +810,10 @@ export function GoldReveal({
         />
       )}
       <div ref={teaseRef} className='gold-reveal__text gold-reveal__tease'>
-        {c.teaseText}
+        {teaseText}
       </div>
       <div ref={teaseSubRef} className='gold-reveal__text gold-reveal__tease-sub'>
-        {c.teaseSubText}
+        {teaseSubText}
       </div>
       <div ref={headerRef} className='gold-reveal__piece gold-reveal__caps' style={{ color: c.headerColor }}>
         {c.headerText}
@@ -1343,10 +840,13 @@ export function GoldReveal({
       {/* shop push: its own block, anchored to the bottom of the screen */}
       <div ref={shopRef} className='gold-reveal__shop'>
         <div ref={closingRef} className='gold-reveal__closing'>
-          {c.closingText}
+          {closingText}
         </div>
-        <div ref={btnRef} className='gem-reveal__btn gold-reveal__btn'>
-          <FoldableButton onClick={onShop}>{c.buttonText}</FoldableButton>
+        <div ref={btnRef} className='gem-reveal__btn gold-reveal__btn gold-reveal__cta'>
+          <FoldableButton onClick={onBuy}>{c.buyText}</FoldableButton>
+        </div>
+        <div ref={btn2Ref} className='gem-reveal__btn gold-reveal__btn gold-reveal__cta'>
+          <FoldableButton onClick={onShop}>{c.shopText}</FoldableButton>
         </div>
       </div>
       {pile && rainConfig && (

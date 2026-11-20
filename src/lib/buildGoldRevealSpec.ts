@@ -1,4 +1,4 @@
-import { GOLD_REFERENCE_WIDTH, goldConfettiConfig, goldFillLevel, goldIconPx, goldPile, type GoldRevealConfig } from '@/components/GoldReveal'
+import { GOLD_CLOSING_LINES, GOLD_REFERENCE_WIDTH, GOLD_TEASE_LINES, goldConfettiConfig, goldFillLevel, goldIconPx, goldPile, type GoldRevealConfig } from '@/components/goldReveal.config'
 import { PARTICLE_DEFAULT_CONFIG } from '@/components/ParticleRain'
 
 const r = (v: number) => Math.round(v * 1000) / 1000
@@ -10,20 +10,37 @@ export function buildGoldRevealJsonSpec(c: GoldRevealConfig): string {
   return JSON.stringify(
     {
       name: 'gold-reveal',
-      amount: { value: c.amount, countFrom: c.countFrom, note: 'set by the app' },
+      developerNotes: [
+        'IMPORTANT: integrate the existing avatar system — the avatar here is a placeholder PNG; bring in the real avatar (current avatar system / Rive file) and drive the same beats.',
+        'IMPORTANT: use the existing design system for ALL text, fonts and buttons — every line of copy and both shop-push buttons are CSS stand-ins showing layout, size, colour and motion.',
+        'Audio is temporary — pour, count ticker, cha-ching and music will be replaced in the final release; keep the cue points.',
+        'The amount is random on the bench only — in the app it is the gold the player received.',
+        `Keep the room between the avatar and the text: his top always sits at least ${c.avatarTextGap}px below the bottom of the tease text on every screen size (he moves down rather than crowd it).`,
+      ],
+      amount: {
+        value: 'set by the app — the gold the player actually received',
+        countFrom: c.countFrom,
+        prototype: c.amountRandom
+          ? `the bench rolls a random amount each run (${c.amountMin}–${c.amountMax}, rounded to ${c.amountStep}) — prototype only`
+          : `fixed at ${c.amount} on the bench`,
+      },
       states: ['armed', 'tease', 'pour', 'piled', 'drain', 'count', 'landed'],
       tease: {
-        text: c.teaseText,
-        subheader: c.teaseSubText.trim()
-          ? {
-              text: c.teaseSubText,
+        lines: GOLD_TEASE_LINES.map(([headline, subheader]) => ({ headline, subheader })),
+        pick:
+          c.teaseLine === 'random'
+            ? 'a random pair each time (never the same twice in a row)'
+            : { fixed: GOLD_TEASE_LINES[Number(c.teaseLine)] ?? GOLD_TEASE_LINES[0] },
+        responsive: `sizes × clamp(1 + (w/${GOLD_REFERENCE_WIDTH} − 1)·${c.teaseSizeVsWidth}, 1, ${c.teaseSizeMax}) — 1× on a phone, growing with the width`,
+        headlineFit: `one line, ${c.teaseSize}px on a phone (× the responsive factor), shrunk to fit (width − 32px) if it's longer`,
+        subheader: {
               sizePx: c.teaseSubSize,
+              maxWidthPx: `${c.teaseSubMaxWidth} on a phone × the responsive factor — longer lines wrap onto two balanced lines`,
               afterHeadlineSec: c.teaseSubDelay,
               gapPx: c.teaseSubGap,
               pop: 'same spring as the headline, rising 12px as it fades in',
               layout: `the headline arrives alone at the centre, then slides up by (gap + subheader height) / 2 over ${c.teaseSlideTime}s (easeOutCubic) — the pair ends centred; heights measured, so a wrapped subheader still centres`,
-            }
-          : false,
+            },
         sizePx: c.teaseSize,
         inDelaySec: c.teaseInDelay,
         fadeSec: c.teaseFade,
@@ -173,21 +190,42 @@ export function buildGoldRevealJsonSpec(c: GoldRevealConfig): string {
         : false,
       shopPush: {
         block: `its own container, anchored ${c.shopBottom}px (+ safe-area inset) from the bottom of the screen; line, then the button`,
-        closing: { text: c.closingText, sizePx: c.closingSize, maxWidthPx: c.closingMaxWidth || 'screen', wrap: 'balanced', delayAfterCountSec: c.closingDelay, fadeSec: c.closingFade },
-        button: c.button
+        closing: {
+          lines: GOLD_CLOSING_LINES,
+          pick: c.closingLine === 'random' ? 'a random line each time (never the same twice in a row)' : { fixed: GOLD_CLOSING_LINES[Number(c.closingLine)] ?? GOLD_CLOSING_LINES[0] },
+          sizePx: c.closingSize, maxWidthPx: c.closingMaxWidth || 'screen', wrap: 'balanced', delayAfterCountSec: c.closingDelay, fadeSec: c.closingFade },
+        buttons: c.button
           ? {
-              text: c.buttonText,
-              gapPx: c.buttonGap,
+              note: 'EXAMPLE ONLY — use the existing design-system buttons. The bench draws stand-ins (the FoldableButton stub, recoloured) to show layout, colours, labels + motion; keep the motion and the onBuy / onShop wiring.',
+              style: 'folded button: white edge, black-outlined coloured panel, folded top-right corner, drop shadow (−2, 2, 0, 16% black)',
+              top: { text: c.buyText, fill: c.buyColor, textColor: c.buyTextColor, settledRotateDeg: c.buyRotate, action: 'onBuy — buy another chest' },
+              bottom: { text: c.shopText, fill: c.shopColor, textColor: c.shopTextColor, settledRotateDeg: c.shopRotate, action: 'onShop — open the Grail Shop' },
+              widthPx: `min(${c.buttonWidth}, screen − 32)`,
+              heightPx: Math.round(14 * c.buttonSize * 2.7),
+              fontPx: Math.round(14 * c.buttonSize * 10) / 10,
+              gapUnderLinePx: c.buttonGap,
+              gapBetweenPx: c.buttonsGap,
               delayAfterCountSec: c.buttonDelay,
-              size: c.buttonSize,
+              secondAfterSec: c.buttonStagger,
               fromScale: c.buttonFromScale,
               fromRotateDeg: c.buttonFromRotate,
-              settledRotateDeg: c.buttonRotate,
               spring: { stiffness: c.buttonStiffness, damping: c.buttonDamping, mass: c.buttonMass },
-              action: 'open the Grail Shop',
             }
           : false,
       },
+      avatar: c.avatar
+        ? {
+            note: 'PLACEHOLDER — the production avatar is the Rive file (bring it in with @rive-app/react-canvas or the web runtime, and drive these same beats); the PNGs (pointUp / fistRaise) stand in for the prototype',
+            pose: c.avatarPose,
+            heightXStage: c.avatarHeight,
+            widthCap: '≤ 80% of the stage width',
+            anchor: `feet at ${c.avatarX} × width, ${c.avatarBottom}px above the bottom edge`,
+            in: `${c.avatarInDelay}s after Start (with the side cannons): spring up from below (k ${c.avatarStiffness}, c ${c.avatarDamping})`,
+            buried: 'layered behind the confetti, the tease text and the gold pile — the pour covers him',
+            clearOfText: `keeps at least ${c.avatarTextGap}px between the bottom of the tease (its final two-line layout) and his top; the tease grows on wider screens, so he sits lower by the difference instead of crowding it`,
+            out: `once the pour is ${Math.round(c.avatarOutAt * 100)}% done (time through pour + settle): ease-in slide back below the bottom over ${c.avatarOutDuration}s`,
+          }
+        : false,
       celebration: {
         tease:
           c.teaseConfetti === 'off'
@@ -221,12 +259,22 @@ export function buildGoldRevealJsonSpec(c: GoldRevealConfig): string {
 export function buildGoldRevealWiringSpec(c: GoldRevealConfig): string {
   return `// Gold Reveal — wiring reference
 //
+// IMPORTANT
+//   • Integrate the existing avatar system — the avatar here is a placeholder PNG.
+//   • Use the existing design system for ALL text, fonts and buttons (these are stand-ins).
+//   • Audio is temporary — it will be replaced in the final release; keep the cue points.
+//   • The amount is random on the bench only — pass the real amount.
+//   • Keep the room between the avatar and the text: his top stays ≥ ${c.avatarTextGap}px below the tease on every screen.
+//
 // <GoldReveal
 //   config={{ amount: ${c.amount} }}       // set by the app
 //   startSignal={n}    // armed → tease           (bump a counter)
 //   drainSignal={n}    // pull the floor out now  (${c.autoDrain ? `or automatic, ${c.drainDelay}s after the pile settles` : 'auto drain is OFF — the app must send this'})
 //   onState={(s) => …} // 'armed' | 'tease' | 'pour' | 'piled' | 'drain' | 'count' | 'landed'
-//   onShop={() => openGrailShop()}
+//   (the two shop-push buttons are an EXAMPLE — build them from the existing design-system
+//    buttons; keep the motion + this wiring)
+//   onBuy={() => buyAnotherChest()}     // top button: "Buy another chest"
+//   onShop={() => openGrailShop()}       // bottom button: "Check out the shop"
 // />
 //
 // Timeline (auto): tease ${c.teaseInDelay}s + ${c.teaseHold}s → pour (${c.pourDuration}s release + ${c.settleTime}s settle)
