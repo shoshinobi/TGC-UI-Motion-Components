@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button } from 'leva'
 import {
   BannerStack,
@@ -200,6 +201,7 @@ export function BannerBench() {
   return (
     <>
       <div className='stage' data-bg={stage.background}>
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={() => setNonce((k) => k + 1)}>
           ↻ Replay
         </button>

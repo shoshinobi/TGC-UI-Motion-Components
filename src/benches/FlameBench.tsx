@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button } from 'leva'
 import {
   FlamePictogram,
@@ -266,6 +267,7 @@ export function FlameBench() {
   return (
     <>
       <div className='stage' data-bg={stage.background}>
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={() => setNonce((n) => n + 1)}>
           ↻ Replay
         </button>

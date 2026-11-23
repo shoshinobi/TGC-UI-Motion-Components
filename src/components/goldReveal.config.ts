@@ -1,3 +1,4 @@
+import type { RevealMusicTrack } from '@/components/revealMusic'
 /**
  * Gold Reveal config, defaults, text lists and sizing helpers — kept out of
  * `GoldReveal.tsx` so that file exports only its component (Vite Fast Refresh can
@@ -230,7 +231,7 @@ export type GoldRevealConfig = {
   closingFade: number
   /** px — longer closing lines wrap onto balanced lines (0 = only the screen edge) */
   closingMaxWidth: number
-  /** the two folded buttons under the closing line: "buy another chest" (top) + "check out the shop" */
+  /** the two folded buttons under the closing line: "go to the shop" (top) + "open another chest" */
   button: boolean
   buyText: string
   /** panel fill + text colour of the buy button */
@@ -269,7 +270,7 @@ export type GoldRevealConfig = {
   countSound: boolean
   /** chaChing.mp3 on the impact */
   impactSound: boolean
-  musicTrack: 'off' | 'random' | 'belt-and-braces' | 'chasing-quails'
+  musicTrack: RevealMusicTrack
   musicVolume: number
   musicLoop: boolean
   musicStart: 'start' | 'drain' | 'impact'
@@ -529,14 +530,14 @@ export const GOLD_DEFAULT_CONFIG: GoldRevealConfig = {
   closingFade: 0.35,
   closingMaxWidth: 300,
   button: true,
-  buyText: 'Buy another chest',
-  buyColor: '#e0b678',
-  buyTextColor: '#000000',
-  buyRotate: -2,
-  shopText: 'Check out the shop',
-  shopColor: '#204c68',
-  shopTextColor: '#ffffff',
-  shopRotate: 1,
+  buyText: 'Open another chest',
+  buyColor: '#204c68',
+  buyTextColor: '#ffffff',
+  buyRotate: 1,
+  shopText: 'Go to the shop',
+  shopColor: '#e0b678',
+  shopTextColor: '#000000',
+  shopRotate: -2,
   buttonGap: 20,
   buttonsGap: 0,
   buttonWidth: 338,
@@ -555,7 +556,7 @@ export const GOLD_DEFAULT_CONFIG: GoldRevealConfig = {
   countSound: true,
   impactSound: true,
   musicTrack: 'chasing-quails',
-  musicVolume: 0.1,
+  musicVolume: 0.2,
   musicLoop: true,
   musicStart: 'impact',
   musicDelay: 0.5,

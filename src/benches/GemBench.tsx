@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button, LevaInputs } from 'leva'
 import { GemReveal, GEM_DEFAULT_CONFIG, type GemRevealConfig } from '@/components/GemReveal'
 import { GEM_GRADES } from '@/lib/gemTiers'
@@ -299,6 +300,7 @@ export function GemBench() {
         data-bg={stage.background}
         style={{ '--ember': stage.emberColor, '--ember-spread': `${stage.emberSpread}%` } as CSSProperties}
       >
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={replay}>
           ↻ Replay reveal
         </button>

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button } from 'leva'
 import { ParticleRain, PARTICLE_DEFAULT_CONFIG, type ParticleRainConfig } from '@/components/ParticleRain'
 import { buildParticleLoopSpec, buildParticleJsonSpec } from '@/lib/buildParticleSpec'
@@ -279,6 +280,7 @@ export function RainBench() {
   return (
     <>
       <div className='stage' data-bg={stage.background}>
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={() => setNonce((k) => k + 1)}>
           ↻ Drop again
         </button>

@@ -94,7 +94,8 @@ type Piece = {
   capK: number
 }
 /** a pop / cannon mouth: the flash + starburst drawn there */
-type Flash = { x: number; y: number; age: number; angles: number[] | null }
+/** `pick` (0–1) chooses the flash's palette colour */
+type Flash = { x: number; y: number; age: number; pick: number; angles: number[] | null }
 
 export type ConfettiProps = {
   config?: Partial<ConfettiConfig>
@@ -300,7 +301,7 @@ export function Confetti({
         const lane = (originIdx * 0.37 + 0.18) % 1
         shots.push({
           x: size.w * (0.2 + 0.6 * lane + rand(-0.06, 0.06)),
-          y: size.h * rand(0.18, 0.45),
+          y: size.h * rand(Math.min(cfg.randomTop, cfg.randomBottom), Math.max(cfg.randomTop, cfg.randomBottom)),
           dir: cfg.burstAngle * DEG,
         })
       } else {
@@ -322,7 +323,7 @@ export function Confetti({
             }
           }
           const fx = s.x + cfg.flashOffsetX * (s.inward ?? 1)
-          flashes.push({ x: fx, y: s.y + cfg.flashOffsetY, age: 0, angles })
+          flashes.push({ x: fx, y: s.y + cfg.flashOffsetY, age: 0, pick: Math.random(), angles })
         }
         // a single cannon still fires its half of the volley
         const per = Math.max(1, Math.round(side >= 0 ? n / 2 : n / shots.length))
@@ -342,7 +343,9 @@ export function Confetti({
 
     const fire = (cfg: ConfettiConfig) => {
       if (cfg.mode === 'pop' || cfg.mode === 'both') {
-        const volleys = Math.max(1, Math.round(cfg.bursts))
+        const least = Math.max(1, Math.round(cfg.bursts))
+        const most = Math.max(least, Math.round(cfg.burstsMax))
+        const volleys = least + Math.floor(Math.random() * (most - least + 1))
         if (cfg.burstOrigin === 'sides' && (cfg.cannonOrder !== 'together' || cfg.cannonJitter > 0)) {
           // each cannon gets its own shot time: an order (which side leads), a
           // stagger between the two, and ± jitter on every shot
@@ -459,16 +462,22 @@ export function Confetti({
         ctx.globalCompositeOperation = 'lighter'
         ctx.lineCap = 'round'
         for (const f of flashes) {
-          // white flash: a soft radial bloom that swells a little as it fades
+          // flash (white, or this pop's palette colour): a soft radial bloom that swells a little as it fades
           const fu = f.age / Math.max(0.01, cfg.popFlashDuration)
           if (cfg.popFlash > 0 && fu < 1) {
             const k = 1 - fu
             const r = cfg.popFlashSize * (0.5 + 0.5 * (1 - k * k))
             const a = Math.min(1, cfg.popFlash * k * k)
             const grd = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, r)
-            grd.addColorStop(0, `rgba(255,255,255,${a.toFixed(3)})`)
-            grd.addColorStop(0.4, `rgba(255,255,255,${(a * 0.45).toFixed(3)})`)
-            grd.addColorStop(1, 'rgba(255,255,255,0)')
+            let rgb = '255,255,255'
+            if (cfg.popFlashColor === 'palette') {
+              const pal = CONFETTI_PALETTES[cfg.palette] ?? CONFETTI_PALETTES.gold
+              const n = parseInt(pal[Math.floor(f.pick * pal.length)].slice(1), 16)
+              rgb = `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`
+            }
+            grd.addColorStop(0, `rgba(${rgb},${a.toFixed(3)})`)
+            grd.addColorStop(0.4, `rgba(${rgb},${(a * 0.45).toFixed(3)})`)
+            grd.addColorStop(1, `rgba(${rgb},0)`)
             ctx.globalAlpha = 1
             ctx.fillStyle = grd
             ctx.fillRect(f.x - r, f.y - r, r * 2, r * 2)

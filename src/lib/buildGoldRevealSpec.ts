@@ -198,8 +198,8 @@ export function buildGoldRevealJsonSpec(c: GoldRevealConfig): string {
           ? {
               note: 'EXAMPLE ONLY — use the existing design-system buttons. The bench draws stand-ins (the FoldableButton stub, recoloured) to show layout, colours, labels + motion; keep the motion and the onBuy / onShop wiring.',
               style: 'folded button: white edge, black-outlined coloured panel, folded top-right corner, drop shadow (−2, 2, 0, 16% black)',
-              top: { text: c.buyText, fill: c.buyColor, textColor: c.buyTextColor, settledRotateDeg: c.buyRotate, action: 'onBuy — buy another chest' },
-              bottom: { text: c.shopText, fill: c.shopColor, textColor: c.shopTextColor, settledRotateDeg: c.shopRotate, action: 'onShop — open the Grail Shop' },
+              top: { text: c.shopText, fill: c.shopColor, textColor: c.shopTextColor, settledRotateDeg: c.shopRotate, action: 'onShop — open the Grail Shop' },
+              bottom: { text: c.buyText, fill: c.buyColor, textColor: c.buyTextColor, settledRotateDeg: c.buyRotate, action: 'onBuy — open another chest' },
               widthPx: `min(${c.buttonWidth}, screen − 32)`,
               heightPx: Math.round(14 * c.buttonSize * 2.7),
               fontPx: Math.round(14 * c.buttonSize * 10) / 10,
@@ -273,8 +273,8 @@ export function buildGoldRevealWiringSpec(c: GoldRevealConfig): string {
 //   onState={(s) => …} // 'armed' | 'tease' | 'pour' | 'piled' | 'drain' | 'count' | 'landed'
 //   (the two shop-push buttons are an EXAMPLE — build them from the existing design-system
 //    buttons; keep the motion + this wiring)
-//   onBuy={() => buyAnotherChest()}     // top button: "Buy another chest"
-//   onShop={() => openGrailShop()}       // bottom button: "Check out the shop"
+//   onBuy={() => buyAnotherChest()}     // bottom button: "${c.buyText}"
+//   onShop={() => openGrailShop()}       // top button: "${c.shopText}"
 // />
 //
 // Timeline (auto): tease ${c.teaseInDelay}s + ${c.teaseHold}s → pour (${c.pourDuration}s release + ${c.settleTime}s settle)

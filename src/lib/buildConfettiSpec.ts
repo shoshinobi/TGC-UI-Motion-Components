@@ -11,7 +11,7 @@ export function buildConfettiJsonSpec(c: ConfettiConfig): string {
       trigger: c.autoFire ? { autoFireAfterSec: c.fireDelay, loopEverySec: c.loopEvery || false } : 'fireSignal',
       pop: pop
         ? {
-            bursts: c.bursts,
+            bursts: c.burstsMax > c.bursts ? { min: c.bursts, max: c.burstsMax, pick: 'random per volley' } : c.bursts,
             intervalSec: c.burstInterval,
             origin: c.burstOrigin,
             originNote:
@@ -49,7 +49,7 @@ export function buildConfettiJsonSpec(c: ConfettiConfig): string {
             },
             originFlash:
               c.popFlash > 0
-                ? { intensity: c.popFlash, radiusPx: c.popFlashSize, fadeSec: c.popFlashDuration, draw: 'white radial gradient, swells 0.5 → 1 × radius as it fades (k²)' }
+                ? { intensity: c.popFlash, color: c.popFlashColor === 'palette' ? 'a random colour from the palette per pop' : 'white', radiusPx: c.popFlashSize, fadeSec: c.popFlashDuration, draw: 'radial gradient, swells 0.5 → 1 × radius as it fades (k²)' }
                 : false,
             originStarburst:
               c.starIntensity > 0

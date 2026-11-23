@@ -1,4 +1,6 @@
+import { REVEAL_MUSIC_OPTIONS } from '@/components/revealMusic'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button, LevaInputs } from 'leva'
 import { GoldReveal } from '@/components/GoldReveal'
 import {
@@ -13,12 +15,7 @@ import { buildGoldRevealJsonSpec, buildGoldRevealWiringSpec } from '@/lib/buildG
 import { SpecCard, stringifyConfig, useLiveCopy } from '@/components/SpecCard'
 
 const D = GOLD_DEFAULT_CONFIG
-const MUSIC_OPTIONS = {
-  off: 'off',
-  random: 'random',
-  'Belt and Braces': 'belt-and-braces',
-  'Chasing Quails': 'chasing-quails',
-}
+const MUSIC_OPTIONS = REVEAL_MUSIC_OPTIONS
 const STYLE_OPTIONS = { off: 'off', 'side cannons': 'cannons', 'gold rain': 'goldRain', fireworks: 'fireworks' }
 // 'random each time', or pin one line (by its index) while tuning
 const TEASE_LINE_OPTIONS: Record<string, string> = {
@@ -242,14 +239,14 @@ export function GoldRevealBench() {
         closingFade: { value: D.closingFade, min: 0.05, max: 2, step: 0.05, label: '↳ fade (s)' },
         closingMaxWidth: { value: D.closingMaxWidth, min: 0, max: 600, step: 10, label: '↳ max width (px, wraps; 0 = screen)' },
         button: { value: D.button, label: 'buttons' },
-        buyText: { value: D.buyText, type: LevaInputs.STRING, label: 'top: label' },
-        buyColor: { value: D.buyColor, label: '↳ colour' },
-        buyTextColor: { value: D.buyTextColor, label: '↳ text colour' },
-        buyRotate: { value: D.buyRotate, min: -20, max: 20, step: 0.5, label: '↳ settled tilt (°)' },
-        shopText: { value: D.shopText, type: LevaInputs.STRING, label: 'bottom: label' },
+        shopText: { value: D.shopText, type: LevaInputs.STRING, label: 'top: label' },
         shopColor: { value: D.shopColor, label: '↳ colour' },
         shopTextColor: { value: D.shopTextColor, label: '↳ text colour' },
         shopRotate: { value: D.shopRotate, min: -20, max: 20, step: 0.5, label: '↳ settled tilt (°)' },
+        buyText: { value: D.buyText, type: LevaInputs.STRING, label: 'bottom: label' },
+        buyColor: { value: D.buyColor, label: '↳ colour' },
+        buyTextColor: { value: D.buyTextColor, label: '↳ text colour' },
+        buyRotate: { value: D.buyRotate, min: -20, max: 20, step: 0.5, label: '↳ settled tilt (°)' },
         buttonWidth: { value: D.buttonWidth, min: 120, max: 600, step: 2, label: 'buttons: width (px, ≤ screen)' },
         buttonSize: { value: D.buttonSize, min: 0.5, max: 3, step: 0.05, label: '↳ size (text + height, crisp)' },
         buttonGap: { value: D.buttonGap, min: 0, max: 120, step: 1, label: '↳ gap under line (px)' },
@@ -449,6 +446,7 @@ export function GoldRevealBench() {
         data-bg={stage.background}
         style={{ '--ember': stage.emberColor, '--ember-spread': `${stage.emberSpread}%` } as CSSProperties}
       >
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={replay}>
           ↻ Replay
         </button>
@@ -472,7 +470,7 @@ export function GoldRevealBench() {
           ⤓ Pull the floor
         </button>
         <div className='stage-state' aria-live='polite'>
-          {shopTaps === 'buy' ? '→ buy another chest' : shopTaps === 'shop' ? '→ the shop' : STATE_LABEL[goldState]} · ~{preview.count} bars
+          {shopTaps === 'buy' ? '→ open another chest' : shopTaps === 'shop' ? '→ the shop' : STATE_LABEL[goldState]} · ~{preview.count} bars
         </div>
         <button
           type='button'

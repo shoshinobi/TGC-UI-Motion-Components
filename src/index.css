@@ -1357,3 +1357,141 @@ body {
   top: -21.61%;
   -webkit-user-drag: none;
 }
+
+/* ---------- Cosmetic Reveal ---------- */
+
+.cosmetic-reveal {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  user-select: none;
+  touch-action: none; /* the horizontal swipe spins the carousel */
+}
+.cosmetic-reveal__fx {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+/* the camera flashes sit over everything (they light the scene) */
+.cosmetic-reveal__fx--front {
+  z-index: 6;
+}
+/* the single firework from the revealed item: above the cards (z 1–3) */
+.cosmetic-reveal__firework {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+.cosmetic-reveal__strip {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+/* a card: transparent, a thin rounded border; the item is fitted inside by its visible box */
+.cosmetic-card {
+  position: absolute;
+  left: 0;
+  top: 0;
+  box-sizing: border-box;
+  border-style: solid;
+  opacity: 0;
+  will-change: transform, opacity;
+}
+.cosmetic-card img {
+  position: absolute;
+  max-width: none;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+/* the tier sticker (Rare / Grail) — slapped on the winner's top-right corner */
+.cosmetic-card__sticker {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 2;
+  opacity: 0;
+  padding: 0.38em 0.85em;
+  border: 0.22em solid #fff;
+  border-radius: 0.65em;
+  box-shadow: 0 0 0 2px #000, -2px 2px 0 rgba(0, 0, 0, 0.16);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: var(--sticker-fs, 13px);
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+  will-change: transform;
+}
+.cosmetic-reveal__prompt {
+  width: max-content;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #e4e4e7;
+}
+.cosmetic-reveal__line {
+  z-index: 5; /* stays readable over the firework */
+  width: max-content;
+  font-weight: 600;
+  text-wrap: balance;
+}
+/* placeholder avatar (pose PNGs are 1867×1222 with him in x 848–1389, y 169–1222) */
+.cosmetic-reveal__avatar {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+  will-change: transform;
+}
+.cosmetic-reveal__avatar img {
+  position: absolute;
+  max-width: none;
+  -webkit-user-drag: none;
+}
+
+/* ---------- Developer specs toggle (every bench) ---------- */
+
+/* the spec boxes are hidden unless the developer opens them (SpecsToggle) */
+html:not([data-specs='open']) .dock {
+  display: none;
+}
+/* the copy-icon button — bottom-left, beside the speaker icon where there is one */
+.stage-specs {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 5;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid #3f3f46;
+  background: #1c1c1fcc;
+  backdrop-filter: blur(6px);
+  color: #8b8b93;
+  cursor: pointer;
+}
+.stage-specs:has(~ .stage-audio) {
+  left: 58px;
+}
+.stage-specs[data-on='true'] {
+  color: #e4e4e7;
+  border-color: #52525b;
+}
+.stage-specs:hover {
+  background: #27272a;
+  border-color: #52525b;
+}
+.stage-specs:active {
+  transform: scale(0.94);
+}

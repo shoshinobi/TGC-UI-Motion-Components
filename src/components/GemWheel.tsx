@@ -463,7 +463,7 @@ export const WHEEL_DEFAULT_CONFIG: GemWheelConfig = {
   tickPitchMax: 1.4,
   tickMaxRate: 18,
   musicTrack: G.musicTrack, // as Gem Reveal: Belt and Braces
-  musicVolume: 0.1,
+  musicVolume: 0.25,
   musicLoop: G.musicLoop,
   musicStart: 'land',
   musicDelay: 0.5, // after the landing, as the winner comes through

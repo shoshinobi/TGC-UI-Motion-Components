@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button, LevaInputs } from 'leva'
 import {
   GemWheel,
@@ -384,6 +385,7 @@ export function GemWheelBench() {
         data-bg={stage.background}
         style={{ '--ember': stage.emberColor, '--ember-spread': `${stage.emberSpread}%` } as CSSProperties}
       >
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={replay}>
           ↻ Replay
         </button>

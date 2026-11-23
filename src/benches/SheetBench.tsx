@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button } from 'leva'
 import {
   FeedbackSheet,
@@ -164,6 +165,7 @@ export function SheetBench() {
   return (
     <>
       <div className='stage' data-bg='dark'>
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={() => setNonce((n) => n + 1)}>
           ↻ Replay
         </button>

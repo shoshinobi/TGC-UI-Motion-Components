@@ -16,12 +16,17 @@ export type ConfettiConfig = {
 
   // --- pop (firework bursts) ---
   bursts: number
+  /** above `bursts` = each volley rolls a random count from `bursts` to this (0 = always `bursts`) */
+  burstsMax: number
   /** seconds between bursts */
   burstInterval: number
   burstOrigin: ConfettiOrigin
   /** centre origin: 0–1 of the stage width / height */
   originX: number
   originY: number
+  /** random origin: bursts land between these heights, × the stage height from the top */
+  randomTop: number
+  randomBottom: number
   burstPieces: number
   burstSpeedMin: number
   burstSpeedMax: number
@@ -59,8 +64,10 @@ export type ConfettiConfig = {
   cannonStagger: number
   /** ± random seconds on every cannon shot — loosens the rhythm */
   cannonJitter: number
-  /** white flash at each pop / cannon mouth — intensity (0 = off) */
+  /** flash at each pop / cannon mouth — intensity (0 = off) */
   popFlash: number
+  /** flash colour: `white`, or a random colour from the piece `palette` for each pop */
+  popFlashColor: 'white' | 'palette'
   /** flash radius, px */
   popFlashSize: number
   /** seconds the flash takes to fade */
@@ -177,10 +184,13 @@ export const CONFETTI_DEFAULT_CONFIG: ConfettiConfig = {
   loopEvery: 0,
 
   bursts: 3,
+  burstsMax: 0,
   burstInterval: 0.35,
   burstOrigin: 'random',
   originX: 0.5,
   originY: 0.4,
+  randomTop: 0.18,
+  randomBottom: 0.45,
   burstPieces: 90,
   burstSpeedMin: 350,
   burstSpeedMax: 1500,
@@ -188,11 +198,12 @@ export const CONFETTI_DEFAULT_CONFIG: ConfettiConfig = {
   burstAngle: -90,
   burstFill: 'sphere',
   popFlash: 0.6,
-  popFlashSize: 90,
+  popFlashColor: 'palette',
+  popFlashSize: 110,
   popFlashDuration: 0.35,
-  starIntensity: 0,
+  starIntensity: 1,
   starStrokes: 12,
-  starLayout: 'aimed',
+  starLayout: 'even',
   starFan: 150,
   starRadius: 120,
   starLength: 34,
@@ -264,6 +275,7 @@ export const CONFETTI_PRESETS: Record<'fireworks' | 'cannons' | 'goldRain', Part
   fireworks: {
     mode: 'pop',
     bursts: 3,
+    burstsMax: 0,
     burstInterval: 0.35,
     burstOrigin: 'random',
     burstSpread: 360,
@@ -273,11 +285,17 @@ export const CONFETTI_PRESETS: Record<'fireworks' | 'cannons' | 'goldRain', Part
     burstSpeedMax: 1500,
     popGravity: 5,
     popDrag: 2.8,
+    // a flash in a palette colour + white radial streaks, all the way round (stated here so they don't carry over from another preset)
     popFlash: 0.6,
+    popFlashColor: 'palette',
+    popFlashSize: 110,
+    starIntensity: 1,
+    starLayout: 'even',
   },
   cannons: {
     mode: 'pop',
     bursts: 2,
+    burstsMax: 0,
     burstInterval: 0.25,
     burstOrigin: 'sides',
     burstSpread: 34,
@@ -290,8 +308,10 @@ export const CONFETTI_PRESETS: Record<'fireworks' | 'cannons' | 'goldRain', Part
     popGravity: 9,
     popDrag: 1,
     popFlash: 0.8,
+    popFlashColor: 'white',
     popFlashSize: 110,
     starIntensity: 1,
+    starLayout: 'aimed',
   },
   goldRain: {
     mode: 'rain',

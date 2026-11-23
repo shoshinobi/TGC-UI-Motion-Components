@@ -9,6 +9,7 @@ import { GemBench } from '@/benches/GemBench'
 import { GemWheelBench } from '@/benches/GemWheelBench'
 import { GoldRevealBench } from '@/benches/GoldRevealBench'
 import { ConfettiBench } from '@/benches/ConfettiBench'
+import { CosmeticRevealBench } from '@/benches/CosmeticRevealBench'
 import { StatsHud } from '@/components/StatsHud'
 
 const COMPONENTS = [
@@ -21,6 +22,7 @@ const COMPONENTS = [
   'Gem Wheel',
   'Gold Reveal',
   'Confetti',
+  'Cosmetic Reveal',
 ] as const
 
 const SLUG_OF: Record<string, string> = {
@@ -33,6 +35,7 @@ const SLUG_OF: Record<string, string> = {
   'Gem Wheel': 'wheel',
   'Gold Reveal': 'gold',
   Confetti: 'confetti',
+  'Cosmetic Reveal': 'cosmetic',
 }
 
 function initialComponent(): string {
@@ -41,6 +44,7 @@ function initialComponent(): string {
   if (c.startsWith('sheet') || c.startsWith('feedback')) return 'Feedback Sheet'
   if (c.startsWith('gauge') || c.startsWith('meter')) return 'Gauge'
   if (c.startsWith('banner') || c.startsWith('stack') || c.startsWith('carousel')) return 'Banner Stack'
+  if (c.startsWith('cosmetic') || c.startsWith('carousel-reveal')) return 'Cosmetic Reveal'
   if (c.startsWith('confetti') || c.startsWith('firework')) return 'Confetti'
   if (c.startsWith('rain') || c.startsWith('particle')) return 'Particle Rain'
   if (c.startsWith('gold') || c.startsWith('payday')) return 'Gold Reveal'
@@ -98,6 +102,8 @@ export function App() {
         <GoldRevealBench key='gold' />
       ) : component === 'Confetti' ? (
         <ConfettiBench key='confetti' />
+      ) : component === 'Cosmetic Reveal' ? (
+        <CosmeticRevealBench key='cosmetic' />
       ) : (
         <FlameBench key='flame' />
       )}

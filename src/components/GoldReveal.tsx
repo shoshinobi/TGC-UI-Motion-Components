@@ -13,7 +13,7 @@ import {
   type GoldRevealConfig,
   type GoldRevealState,
 } from '@/components/goldReveal.config'
-import { GEM_MUSIC } from '@/components/GemReveal'
+import { REVEAL_MUSIC } from '@/components/revealMusic'
 import { hexToRgba } from '@/lib/gemTiers'
 import goldbarUrl from '@/assets/GOLDBAR_X3.svg'
 // placeholder avatar poses — the production avatar is a Rive file (see the README)
@@ -65,9 +65,9 @@ export type GoldRevealProps = {
   /** pull the floor out now (pour / piled → drain) */
   drainSignal?: number
   onState?: (s: GoldRevealState) => void
-  /** "Check out the shop" was pressed */
+  /** "Go to the shop" was pressed */
   onShop?: () => void
-  /** "Buy another chest" was pressed */
+  /** "Open another chest" was pressed */
   onBuy?: () => void
   /** skip `armed` — start the sequence as soon as it mounts (a fresh runKey + this = restart) */
   autoStart?: boolean
@@ -243,14 +243,14 @@ export function GoldReveal({
       el.play().catch(() => {})
     }
     const c0 = cfgRef.current
-    const musicKeys = Object.keys(GEM_MUSIC) as (keyof typeof GEM_MUSIC)[]
+    const musicKeys = Object.keys(REVEAL_MUSIC) as (keyof typeof REVEAL_MUSIC)[]
     const musicKey =
       c0.musicTrack === 'off'
         ? null
         : c0.musicTrack === 'random'
           ? musicKeys[Math.floor(Math.random() * musicKeys.length)]
           : c0.musicTrack
-    const music = musicKey ? mk(GEM_MUSIC[musicKey].url, c0.musicLoop) : null
+    const music = musicKey ? mk(REVEAL_MUSIC[musicKey].url, c0.musicLoop) : null
     musicRef.current = { el: music, playing: false }
     let musicTimer = 0
     // confetti cues, on the loop's clock (so `paused` holds them too)
@@ -261,12 +261,12 @@ export function GoldReveal({
       window.clearTimeout(musicTimer)
       musicTimer = window.setTimeout(() => {
         const cfg = cfgRef.current
-        if (!cfg.sound) return
+        // the cue has been reached: if muted now, unmuting brings the music in
+        musicRef.current.playing = true
         music.volume = clamp(cfg.musicVolume, 0, 1)
         music.loop = cfg.musicLoop
         music.currentTime = 0
-        music.play().catch(() => {})
-        musicRef.current.playing = true
+        if (cfg.sound) music.play().catch(() => {})
       }, Math.max(0, cfgRef.current.musicDelay) * 1000)
     }
 
@@ -670,8 +670,9 @@ export function GoldReveal({
 
         // two buttons, staggered, each springing in to its own settled tilt
         const fs = 14 * Math.max(0.2, cfg.buttonSize)
-        const els = [btnEl, btn2El]
-        const tilts = [cfg.buyRotate, cfg.shopRotate]
+        // top → bottom: "Go to the shop", then "Open another chest" (colours stay with each button)
+        const els = [btn2El, btnEl]
+        const tilts = [cfg.shopRotate, cfg.buyRotate]
         for (let i = 0; i < 2; i++) {
           const b = btns[i]
           const at = cfg.buttonDelay + i * Math.max(0, cfg.buttonStagger)
@@ -842,11 +843,11 @@ export function GoldReveal({
         <div ref={closingRef} className='gold-reveal__closing'>
           {closingText}
         </div>
-        <div ref={btnRef} className='gem-reveal__btn gold-reveal__btn gold-reveal__cta'>
-          <FoldableButton onClick={onBuy}>{c.buyText}</FoldableButton>
-        </div>
         <div ref={btn2Ref} className='gem-reveal__btn gold-reveal__btn gold-reveal__cta'>
           <FoldableButton onClick={onShop}>{c.shopText}</FoldableButton>
+        </div>
+        <div ref={btnRef} className='gem-reveal__btn gold-reveal__btn gold-reveal__cta'>
+          <FoldableButton onClick={onBuy}>{c.buyText}</FoldableButton>
         </div>
       </div>
       {pile && rainConfig && (

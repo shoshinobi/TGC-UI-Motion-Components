@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button } from 'leva'
 import { Confetti } from '@/components/Confetti'
 import { CONFETTI_DEFAULT_CONFIG, CONFETTI_PRESETS, type ConfettiConfig } from '@/components/confetti.config'
@@ -51,10 +52,13 @@ export function ConfettiBench() {
     'pop (firework)': folder(
       {
         bursts: { value: D.bursts, min: 1, max: 10, step: 1, label: 'bursts' },
+        burstsMax: { value: D.burstsMax, min: 0, max: 10, step: 1, label: '↳ random up to (0 = fixed)' },
         burstInterval: { value: D.burstInterval, min: 0, max: 2, step: 0.05, label: 'between bursts (s)' },
         burstOrigin: { value: D.burstOrigin, options: ['random', 'center', 'sides', 'bottom'], label: 'from' },
         originX: { value: D.originX, min: 0, max: 1, step: 0.01, label: '↳ centre x (× width)' },
         originY: { value: D.originY, min: 0, max: 1, step: 0.01, label: '↳ centre y (× height)' },
+        randomTop: { value: D.randomTop, min: 0, max: 1, step: 0.01, label: '↳ random: top (× height)' },
+        randomBottom: { value: D.randomBottom, min: 0, max: 1, step: 0.01, label: '↳ random: bottom (× height)' },
         burstPieces: { value: D.burstPieces, min: 5, max: 300, step: 1, label: 'pieces per burst' },
         burstSpeedMin: { value: D.burstSpeedMin, min: 0, max: 3000, step: 25, label: 'speed min (px/s)' },
         burstSpeedMax: { value: D.burstSpeedMax, min: 100, max: 4000, step: 25, label: 'speed max (px/s)' },
@@ -63,7 +67,8 @@ export function ConfettiBench() {
         burstFill: { value: D.burstFill, options: ['sphere', 'ring'], label: 'shape' },
         flashOffsetX: { value: D.flashOffsetX, min: -150, max: 200, step: 2, label: 'flash + star: offset x (px, inward for cannons)' },
         flashOffsetY: { value: D.flashOffsetY, min: -200, max: 200, step: 2, label: 'flash + star: offset y (px, + = lower)' },
-        popFlash: { value: D.popFlash, min: 0, max: 2, step: 0.05, label: 'white flash at origin (0 = off)' },
+        popFlash: { value: D.popFlash, min: 0, max: 2, step: 0.05, label: 'flash at origin (0 = off)' },
+        popFlashColor: { value: D.popFlashColor, options: { 'random from palette': 'palette', white: 'white' }, label: '↳ colour' },
         popFlashSize: { value: D.popFlashSize, min: 10, max: 400, step: 5, label: '↳ radius (px)' },
         popFlashDuration: { value: D.popFlashDuration, min: 0.05, max: 1.5, step: 0.05, label: '↳ fade (s)' },
         starIntensity: { value: D.starIntensity, min: 0, max: 1.5, step: 0.05, label: 'starburst at origin (0 = off)' },
@@ -214,6 +219,7 @@ export function ConfettiBench() {
         data-bg={stage.background}
         style={{ '--ember': stage.emberColor, '--ember-spread': `${stage.emberSpread}%` } as CSSProperties}
       >
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={replay}>
           ↻ Clear + replay
         </button>

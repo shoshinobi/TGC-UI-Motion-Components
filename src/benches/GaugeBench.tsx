@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SpecsToggle } from '@/components/SpecsToggle'
 import { useControls, folder, button } from 'leva'
 import { Gauge, GAUGE_DEFAULT_CONFIG, type GaugeMotionConfig } from '@/components/Gauge'
 import { buildGaugeJsxSpec, buildGaugeJsonSpec } from '@/lib/buildGaugeSpec'
@@ -183,6 +184,7 @@ export function GaugeBench() {
   return (
     <>
       <div className='stage' data-bg={stage.background}>
+        <SpecsToggle />
         <button type='button' className='stage-replay' onClick={() => setNonce((n) => n + 1)}>
           ↻ Replay
         </button>
