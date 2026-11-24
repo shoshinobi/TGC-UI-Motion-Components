@@ -6,6 +6,7 @@ import { CosmeticReveal } from '@/components/CosmeticReveal'
 import {
   COSMETIC_CLOSING_LINES,
   COSMETIC_DEFAULT_CONFIG,
+  COSMETIC_RARITY_LINES,
   COSMETIC_TEASE_LINES,
   type CosmeticRevealConfig,
   type CosmeticRevealState,
@@ -25,6 +26,14 @@ const TEASE_OPTIONS: Record<string, string> = {
 const CLOSING_OPTIONS: Record<string, string> = {
   'random each time': 'random',
   ...Object.fromEntries(COSMETIC_CLOSING_LINES.map(([h, s], i) => [`${h} / ${s}`, String(i)])),
+}
+
+const RARITY_LINE_OPTIONS: Record<string, string> = {
+  'preset: the tier’s line': 'tier',
+  'random (from the tier’s list)': 'random',
+  ...Object.fromEntries(
+    Object.entries(COSMETIC_RARITY_LINES).flatMap(([t, lines]) => lines.map((l) => [`${t}: ${l}`, l])),
+  ),
 }
 
 function savedSettings(): Record<string, number | string | boolean> | null {
@@ -84,7 +93,7 @@ export function CosmeticRevealBench() {
   const [v, set] = useControls('Cosmetic', () => ({
     result: folder({
       winnerItem: { value: D.winnerItem, options: WINNER_OPTIONS, label: 'item they get' },
-      winnerTier: { value: D.winnerTier, options: { 'random (prototype)': 'random', common: 'common', rare: 'rare', grail: 'grail' }, label: 'tier' },
+      winnerTier: { value: D.winnerTier, options: { 'random (prototype)': 'random', common: 'common', rare: 'rare', grail: 'grail' }, label: 'tier (when no odds are set)' },
       itemCount: { value: D.itemCount, min: 3, max: 30, step: 1, label: 'cards in the carousel' },
       teaserItems: { value: D.teaserItems, type: LevaInputs.STRING, label: 'other cards (names, comma-sep; blank = random)' },
       autoSpinAfter: { value: D.autoSpinAfter, min: 0, max: 15, step: 0.1, label: 'no swipe? auto-spin after (s, 0 = never)' },
@@ -242,16 +251,25 @@ export function CosmeticRevealBench() {
     ),
     'rarity (5)': folder(
       {
+        oddsSticker: { value: D.oddsSticker, label: 'sticker: odds (off = tier name)' },
+        odds: { value: D.odds, min: 0, max: 1000000, step: 1, label: '↳ 1 in … (sets the tier; 0 = random)' },
+        oddsFormat: { value: D.oddsFormat, type: LevaInputs.STRING, label: '↳ reads ({odds})' },
+        oddsRareFrom: { value: D.oddsRareFrom, min: 2, max: 100000, step: 1, label: '↳ Rare from 1 in …' },
+        oddsGrailFrom: { value: D.oddsGrailFrom, min: 2, max: 1000000, step: 1, label: '↳ Grail from 1 in …' },
+        rarityLine: { value: D.rarityLine, options: RARITY_LINE_OPTIONS, label: 'line under the item' },
+        rarityLineText: { value: D.rarityLineText, type: LevaInputs.STRING, label: '↳ or write one (blank = use the choice above)' },
         stickerDelay: { value: D.stickerDelay, min: 0, max: 2, step: 0.05, label: 'sticker after (s)' },
-        stickerSize: { value: D.stickerSize, min: 0.5, max: 3, step: 0.05, label: 'sticker size' },
+        stickerSize: { value: D.stickerSize, min: 0.25, max: 3, step: 0.05, label: 'sticker size' },
         stickerRotate: { value: D.stickerRotate, min: -30, max: 30, step: 1, label: 'sticker tilt (°)' },
+        commonColor: { value: D.commonColor, label: 'Common: sticker colour (odds only)' },
+        commonTextColor: { value: D.commonTextColor, label: '↳ text colour' },
         rareColor: { value: D.rareColor, label: 'Rare: sticker colour' },
         rareTextColor: { value: D.rareTextColor, label: '↳ text colour' },
         grailColor: { value: D.grailColor, label: 'Grail: sticker colour' },
         grailTextColor: { value: D.grailTextColor, label: '↳ text colour' },
-        commonLine: { value: D.commonLine, type: LevaInputs.STRING, label: 'Common: line (blank = none)' },
-        rareLine: { value: D.rareLine, type: LevaInputs.STRING, label: 'Rare: line' },
-        grailLine: { value: D.grailLine, type: LevaInputs.STRING, label: 'Grail: line' },
+        commonLine: { value: D.commonLine, type: LevaInputs.STRING, label: 'Common: preset line (blank = none)' },
+        rareLine: { value: D.rareLine, type: LevaInputs.STRING, label: 'Rare: preset line' },
+        grailLine: { value: D.grailLine, type: LevaInputs.STRING, label: 'Grail: preset line' },
         lineSize: { value: D.lineSize, min: 10, max: 40, step: 1, label: 'line size (px)' },
         lineGap: { value: D.lineGap, min: -400, max: 300, step: 1, label: '↳ below the card (px, − = up)' },
         lineOffsetX: { value: D.lineOffsetX, min: -200, max: 200, step: 1, label: '↳ left / right (px)' },
@@ -337,6 +355,23 @@ export function CosmeticRevealBench() {
       {
         sound: { value: D.sound, label: 'sound on' },
         volume: { value: D.volume, min: 0, max: 1, step: 0.05, label: 'SFX volume' },
+        crowdSound: { value: D.crowdSound, options: ['random', 'oooh', 'aaah', 'off'], label: 'crowd (with the flashes)' },
+        crowdVolume: { value: D.crowdVolume, min: 0, max: 2, step: 0.05, label: '↳ volume' },
+        crowdDelay: { value: D.crowdDelay, min: 0, max: 3, step: 0.05, label: '↳ delay (s)' },
+        spotPopSound: { value: D.spotPopSound, label: 'spotlight firework' },
+        spotPopSoundVolume: { value: D.spotPopSoundVolume, min: 0, max: 2, step: 0.05, label: '↳ volume' },
+        fireworksSound: { value: D.fireworksSound, label: 'end fireworks' },
+        fireworksSoundVolume: { value: D.fireworksSoundVolume, min: 0, max: 1.5, step: 0.01, label: '↳ volume' },
+        fireworksSoundFadeTo: { value: D.fireworksSoundFadeTo, min: 0, max: 1, step: 0.05, label: '↳ settle to × volume' },
+        fireworksSoundFadeTime: { value: D.fireworksSoundFadeTime, min: 0, max: 30, step: 0.5, label: '↳ settle over (s)' },
+        fireworksSoundMuffle: { value: D.fireworksSoundMuffle, min: 300, max: 20000, step: 100, label: '↳ muffle (Hz, lower = duller)' },
+        fireworksSoundLength: { value: D.fireworksSoundLength, min: 0, max: 3, step: 0.1, label: '↳ tail length (s, 0 = full)' },
+        fireworksSoundShare: { value: D.fireworksSoundShare, min: 0, max: 1, step: 0.05, label: '↳ share with a sound' },
+        fireworksSoundMax: { value: D.fireworksSoundMax, min: 1, max: 16, step: 1, label: '↳ most at once' },
+        fireworksSoundGap: { value: D.fireworksSoundGap, min: 0, max: 2, step: 0.02, label: '↳ shortest gap (s)' },
+        fireworksSoundVolumeVar: { value: D.fireworksSoundVolumeVar, min: 0, max: 1, step: 0.05, label: '↳ volume ±' },
+        fireworksSoundPitchVar: { value: D.fireworksSoundPitchVar, min: 0, max: 0.5, step: 0.01, label: '↳ pitch ±' },
+        fireworksSoundPan: { value: D.fireworksSoundPan, min: 0, max: 1, step: 0.05, label: '↳ left / right' },
         shutterVolume: { value: D.shutterVolume, min: 0, max: 1.5, step: 0.05, label: 'camera shutters' },
         tickVolume: { value: D.tickVolume, min: 0, max: 1, step: 0.05, label: 'carousel ticks' },
         revealSound: { value: D.revealSound, label: 'reveal hit' },

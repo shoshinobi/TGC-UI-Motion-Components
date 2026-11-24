@@ -209,7 +209,23 @@ export type CosmeticRevealConfig = {
   spotPopStreakDuration: number
   spotPopStreakColor: string
 
-  // --- rarity: sticker + line, and how much bigger the moment gets per tier ---
+  // --- rarity: sticker + line ---
+  /** true = the sticker shows the item's odds ("1 in 100"); false = its tier name */
+  oddsSticker: boolean
+  /** the item's odds, 1 in this many — set by the app with the item, and it sets the tier (0 = random, prototype) */
+  odds: number
+  /** how the odds read: {odds} is filled in */
+  oddsFormat: string
+  /** odds of 1 in this many or longer = Rare (shorter = Common) */
+  oddsRareFrom: number
+  /** odds of 1 in this many or longer = Grail */
+  oddsGrailFrom: number
+  /** the line under the item: 'tier' = the tier's preset, 'random' = one from the tier's list, or the line itself */
+  rarityLine: string
+  /** a line written for this item — replaces `rarityLine` ('' = don't) */
+  rarityLineText: string
+  commonColor: string
+  commonTextColor: string
   /** seconds after the spotlight before the sticker slaps on */
   stickerDelay: number
   /** sticker size multiplier (crisp) */
@@ -320,6 +336,36 @@ export type CosmeticRevealConfig = {
   // --- audio (temporary) ---
   sound: boolean
   volume: number
+  /** the crowd as the flashes start: a random `oooh` / `aaah`, one of them, or off */
+  crowdSound: 'random' | 'oooh' | 'aaah' | 'off'
+  /** × SFX volume */
+  crowdVolume: number
+  /** seconds after the first flash */
+  crowdDelay: number
+  /** one random `fireworks*` clip on the spotlight's single firework */
+  spotPopSound: boolean
+  spotPopSoundVolume: number
+  /** a random `fireworks*` clip on each end firework */
+  fireworksSound: boolean
+  fireworksSoundVolume: number
+  /** 0–1 — share of the fireworks that make a sound */
+  fireworksSoundShare: number
+  /** most clips sounding at once; a firework past that is silent */
+  fireworksSoundMax: number
+  /** shortest time between two sounds, s */
+  fireworksSoundGap: number
+  /** low-pass cutoff, Hz — lower = duller, further away (20000 = off) */
+  fireworksSoundMuffle: number
+  /** each clip fades out by this many seconds (0 = full length) */
+  fireworksSoundLength: number
+  /** they settle to this × volume … */
+  fireworksSoundFadeTo: number
+  /** … over this many seconds from the first one */
+  fireworksSoundFadeTime: number
+  fireworksSoundVolumeVar: number
+  fireworksSoundPitchVar: number
+  /** 0–1 — how far each sound follows its firework left / right */
+  fireworksSoundPan: number
   /** camera shutters (camSFX/*.wav), × SFX volume */
   shutterVolume: number
   /** a tick per card passing the centre */
@@ -461,8 +507,17 @@ export const COSMETIC_DEFAULT_CONFIG: CosmeticRevealConfig = {
   spotPopStreakDuration: 0.8,
   spotPopStreakColor: '#ffffff',
 
+  oddsSticker: true,
+  odds: 0,
+  oddsFormat: '1 in {odds}',
+  oddsRareFrom: 100,
+  oddsGrailFrom: 1000,
+  rarityLine: 'random',
+  rarityLineText: '',
+  commonColor: '#f4efe6',
+  commonTextColor: '#000000',
   stickerDelay: 0.25,
-  stickerSize: 1,
+  stickerSize: 1.5,
   stickerRotate: 8,
   rareColor: '#974edb',
   rareTextColor: '#ffffff',
@@ -540,11 +595,28 @@ export const COSMETIC_DEFAULT_CONFIG: CosmeticRevealConfig = {
 
   sound: true,
   volume: 0.85,
+  crowdSound: 'random',
+  crowdVolume: 0.7,
+  crowdDelay: 0,
+  spotPopSound: true,
+  spotPopSoundVolume: 0.6,
+  fireworksSound: true,
+  fireworksSoundVolume: 0.81,
+  fireworksSoundShare: 1,
+  fireworksSoundMax: 5,
+  fireworksSoundGap: 0.08,
+  fireworksSoundMuffle: 4000,
+  fireworksSoundLength: 1.8,
+  fireworksSoundFadeTo: 0.5,
+  fireworksSoundFadeTime: 6,
+  fireworksSoundVolumeVar: 0.3,
+  fireworksSoundPitchVar: 0.08,
+  fireworksSoundPan: 0.6,
   shutterVolume: 0.6,
   tickVolume: 0.35,
   revealSound: true,
   musicTrack: 'vogue',
-  musicVolume: 0.25,
+  musicVolume: 0.2,
   musicLoop: true,
   musicStart: 'spotlight',
   musicDelay: 0.4,
@@ -649,6 +721,50 @@ export function cosmeticSpotFireworkConfig(c: CosmeticRevealConfig, originY: num
     starDuration: c.spotPopStreakDuration,
     starColor: c.spotPopStreakColor,
   }
+}
+
+/** The lines a developer can pick from per tier — how hard the item is to find ({odds} = its odds). */
+export const COSMETIC_RARITY_LINES: Record<CosmeticTier, string[]> = {
+  common: ['Nice find!', 'Good pull!', 'A crowd favorite.', 'One for the collection.'],
+  rare: ['Not many players have this one!', 'Now that’s a rare find.', 'Hard to come by.', 'A 1 in {odds} find.'],
+  grail: ['Only a few players have this one!', 'Almost impossible to find.', 'Hardly anyone pulls this.', 'You beat 1 in {odds} odds.'],
+}
+
+/** prototype only: what random odds are picked from */
+const RANDOM_ODDS = [5, 10, 20, 50, 100, 200, 250, 500, 1000, 2500, 5000, 10000]
+
+/** Easy to find = Common, harder = Rare, extremely hard = Grail. */
+export function tierFromOdds(c: CosmeticRevealConfig, odds: number): CosmeticTier {
+  return odds >= c.oddsGrailFrom ? 'grail' : odds >= c.oddsRareFrom ? 'rare' : 'common'
+}
+
+/** this run's dice (each 0–1) for whatever is left on random, and the line to avoid repeating */
+export type RarityRoll = { odds: number; line: number; prevLine: string }
+
+/**
+ * The sticker + line for an item. Its odds set its tier; with no odds set
+ * (prototype) `tier` is used and odds that fit it are rolled.
+ */
+export function rarityOf(c: CosmeticRevealConfig, tier: CosmeticTier, roll: RarityRoll) {
+  const at = <T,>(list: T[], u: number) => list[Math.min(list.length - 1, Math.floor(u * list.length))]
+  const set = Math.round(c.odds)
+  const t = set > 0 ? tierFromOdds(c, set) : tier
+  const fits = RANDOM_ODDS.filter((o) => tierFromOdds(c, o) === t)
+  const edge = t === 'grail' ? c.oddsGrailFrom : t === 'rare' ? c.oddsRareFrom : Math.max(2, c.oddsRareFrom - 1)
+  const odds = set > 0 ? set : fits.length ? at(fits, roll.odds) : edge
+  const fill = (text: string) => text.replace(/\{odds\}/g, odds.toLocaleString('en-US'))
+
+  const base = tierOf(c, t)
+  const sticker = c.oddsSticker
+    ? { text: fill(c.oddsFormat), color: base.sticker?.color ?? c.commonColor, ink: base.sticker?.ink ?? c.commonTextColor }
+    : base.sticker
+  let line = base.line
+  if (c.rarityLineText.trim()) line = c.rarityLineText
+  else if (c.rarityLine === 'random') {
+    const fresh = COSMETIC_RARITY_LINES[t].filter((l) => l !== roll.prevLine)
+    line = at(fresh, roll.line)
+  } else if (c.rarityLine !== 'tier') line = c.rarityLine
+  return { sticker, line: fill(line), lineKey: line }
 }
 
 /** Per-tier numbers for a config. */

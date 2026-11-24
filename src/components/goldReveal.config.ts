@@ -264,8 +264,64 @@ export type GoldRevealConfig = {
   // --- audio ---
   sound: boolean
   volume: number
-  /** dailyGold.mp3 as the bars pour in */
+  /** 0–1 — evens out the clips' loudness (0 = as recorded, 1 = all the same peak) */
+  sfxLevelMatch: number
+  /** a random `confetti*` clip on each side-cannon shot, panned to its side */
+  cannonSound: boolean
+  cannonSoundVolume: number
+  /** random clips layered on each shot */
+  cannonSoundLayers: number
+  /** ± random pitch */
+  cannonSoundPitchVar: number
+  /** `dailyGoldCheer.mp3`: the crowd, with the cannons */
+  cheeringSound: boolean
+  cheeringVolume: number
+  /** seconds after the cannons' cue */
+  cheeringDelay: number
+  /** `dailyGoldCounter.mp3`: the dings, from the first gold-bar hit */
+  counterSound: boolean
+  counterVolume: number
+  /** seconds after that first hit */
+  counterDelay: number
+  /** the pile-up: random `goldbar*` clips as the bars pour in — a few, then building */
   pourSound: boolean
+  pileVolume: number
+  /** how many hits across the pile-up */
+  pileHits: number
+  /** seconds after the pour starts before the first hit (the first bars are still falling) */
+  pileDelay: number
+  /** seconds from the first hit to the thick of it */
+  pileDuration: number
+  /** 1 = evenly spread, higher = a few at first, then denser and denser */
+  pileRamp: number
+  /** × volume of the first hits (they build to 1) */
+  pileVolumeStart: number
+  /** stragglers after the peak, as the last bars settle */
+  pileTailHits: number
+  pileTailTime: number
+  /** gold bars: ± random pitch */
+  barPitchVar: number
+  /** gold bars: ± random loudness */
+  barVolumeVar: number
+  /** gold bars: 0–1 — how far left / right the hits are scattered */
+  barPan: number
+  /** the crowd as the pile-up begins: a random `oooh` / `aaah`, one of them, or off */
+  pileCrowdSound: 'random' | 'oooh' | 'aaah' | 'off'
+  pileCrowdVolume: number
+  /** seconds into the pile-up (from the first gold-bar hit) */
+  pileCrowdDelay: number
+  /** fades out by this many seconds (0 = full length) */
+  pileCrowdLength: number
+  /** the spill: more `goldbar*` clips as the floor goes and the bars fall out */
+  drainSound: boolean
+  drainVolume: number
+  drainHits: number
+  /** 0–1 — share of those hits as the bars break loose; the rest follow the bars leaving the screen */
+  drainLooseShare: number
+  /** 0–1 — how far the pitch sinks over the spill */
+  drainPitchDrop: number
+  /** × volume by the time the pile is gone (leaves room for the count) */
+  drainVolumeEnd: number
   /** GemReveal_ticker.mp3 under the count-up */
   countSound: boolean
   /** chaChing.mp3 on the impact */
@@ -427,7 +483,7 @@ export const GOLD_DEFAULT_CONFIG: GoldRevealConfig = {
   teaseRotate: -2,
   teaseStiffness: 420,
   teaseDamping: 18,
-  teaseHold: 3,
+  teaseHold: 2,
   teaseOutDelay: 0.6,
 
   fillLevel: 0.95,
@@ -552,7 +608,39 @@ export const GOLD_DEFAULT_CONFIG: GoldRevealConfig = {
 
   sound: true,
   volume: 0.85,
+  sfxLevelMatch: 0.75,
+  cannonSound: true,
+  cannonSoundVolume: 0.8,
+  cannonSoundLayers: 2,
+  cannonSoundPitchVar: 0.06,
+  cheeringSound: true,
+  cheeringVolume: 1,
+  cheeringDelay: 0,
+  counterSound: true,
+  counterVolume: 1,
+  counterDelay: 0,
   pourSound: true,
+  pileVolume: 0.3,
+  pileHits: 28,
+  pileDelay: 0.15,
+  pileDuration: 1.2,
+  pileRamp: 2.4,
+  pileVolumeStart: 1.35,
+  pileTailHits: 6,
+  pileTailTime: 0.45,
+  barPitchVar: 0.5,
+  barVolumeVar: 0.15,
+  barPan: 0.6,
+  pileCrowdSound: 'random',
+  pileCrowdVolume: 0.6,
+  pileCrowdDelay: 1.15,
+  pileCrowdLength: 0,
+  drainSound: true,
+  drainVolume: 0.25,
+  drainHits: 32,
+  drainLooseShare: 0.3,
+  drainPitchDrop: 0,
+  drainVolumeEnd: 0.5,
   countSound: true,
   impactSound: true,
   musicTrack: 'chasing-quails',

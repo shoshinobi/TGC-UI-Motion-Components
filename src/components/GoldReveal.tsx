@@ -19,9 +19,14 @@ import goldbarUrl from '@/assets/GOLDBAR_X3.svg'
 // placeholder avatar poses — the production avatar is a Rive file (see the README)
 import avatarFistUrl from '@/assets/fistRaise.png'
 import avatarPointUrl from '@/assets/pointUp.png'
-import pourUrl from '@/assets/mp3/dailyGold.mp3'
 import tickerUrl from '@/assets/mp3/GemReveal_ticker.mp3'
+import aaahUrl from '@/assets/revealSFX/aaah.mp3'
+import ooohUrl from '@/assets/revealSFX/oooh.mp3'
+import cheerUrl from '@/assets/mp3/dailyGoldCheer.mp3'
+import counterUrl from '@/assets/mp3/dailyGoldCounter.mp3'
 import chaChingUrl from '@/assets/mp3/chaChing.mp3'
+import { GOLD_BAR_SFX, GOLD_CONFETTI_SFX } from '@/components/goldSfx'
+import { createSfxBus } from '@/lib/sfxBank'
 
 /**
  * Gold Reveal — "a balance update turned into a payday".
@@ -138,6 +143,8 @@ export function GoldReveal({
   onStateRef.current = onState
   const musicRef = useRef<{ el: HTMLAudioElement | null; playing: boolean }>({ el: null, playing: false })
 
+  const cannonShot = useRef<((side: number) => void) | null>(null)
+
   // the pile: mounted fresh at each pour, sized to the stage at that moment
   const [pile, setPile] = useState<{ run: number; size: number; count: number } | null>(null)
   const [dump, setDump] = useState(0)
@@ -234,7 +241,57 @@ export function GoldReveal({
       el.loop = loop
       return el
     }
-    const sfx = { pour: mk(pourUrl), ticker: mk(tickerUrl, true), chaChing: mk(chaChingUrl) }
+    const sfx = { ticker: mk(tickerUrl, true), chaChing: mk(chaChingUrl) }
+    // layered one-shots: the cannons, the crowd, the gold bars
+    const bus = createSfxBus()
+    const bars = bus.group(GOLD_BAR_SFX)
+    const pops = bus.group(GOLD_CONFETTI_SFX)
+    const around = (v: number) => 1 + (Math.random() * 2 - 1) * v
+    const barHit = (volume: number, rate = 1) => {
+      const cfg = cfgRef.current
+      bars.play({
+        volume: volume * around(cfg.barVolumeVar),
+        rate: rate * around(cfg.barPitchVar),
+        pan: (Math.random() * 2 - 1) * cfg.barPan,
+        delay: Math.random() * 0.03, // off the frame grid
+        levelMatch: cfg.sfxLevelMatch,
+      })
+    }
+    cannonShot.current = (side) => {
+      const cfg = cfgRef.current
+      if (!cfg.cannonSound) return
+      for (let i = 0; i < Math.max(1, Math.round(cfg.cannonSoundLayers)); i++) {
+        pops.play({
+          volume: cfg.cannonSoundVolume,
+          rate: around(cfg.cannonSoundPitchVar),
+          pan: side === 0 ? -0.6 : side === 1 ? 0.6 : 0,
+          delay: i === 0 ? 0 : Math.random() * 0.05,
+          levelMatch: cfg.sfxLevelMatch,
+        })
+      }
+    }
+    const cheer = bus.group([cheerUrl])
+    const counter = bus.group([counterUrl])
+    const crowd = { random: bus.group([ooohUrl, aaahUrl]), oooh: bus.group([ooohUrl]), aaah: bus.group([aaahUrl]) }
+    // the pile-up: hit times (seconds into the pour), thin at first and building, then a few stragglers
+    let pileHits: { at: number; k: number }[] = []
+    const composePile = (cfg: GoldRevealConfig) => {
+      const n = Math.max(0, Math.round(cfg.pileHits))
+      const hits = Array.from({ length: n }, (_, i) => {
+        // the first hit lands exactly on the cue; the rest are scattered
+        const u = i === 0 ? 0 : Math.pow((i + Math.random()) / n, 1 / Math.max(0.2, cfg.pileRamp))
+        return { at: cfg.pileDelay + u * cfg.pileDuration, k: lerp(cfg.pileVolumeStart, 1, u) }
+      })
+      const tail = Math.max(0, Math.round(cfg.pileTailHits))
+      for (let i = 0; i < tail; i++) {
+        const u = (i + Math.random()) / tail
+        hits.push({ at: cfg.pileDelay + cfg.pileDuration + u * cfg.pileTailTime, k: lerp(0.8, 0.3, u) })
+      }
+      return hits.sort((a, b) => b.at - a.at) // soonest last, so it can be popped
+    }
+    let pileClock = 0 // seconds since the pour started
+    let drainClock = -1 // seconds since the floor went (-1 = it hasn't)
+    let drainPlayed = 0
     const play = (el: HTMLAudioElement, on: boolean) => {
       const cfg = cfgRef.current
       if (!cfg.sound || !on) return
@@ -255,6 +312,9 @@ export function GoldReveal({
     let musicTimer = 0
     // confetti cues, on the loop's clock (so `paused` holds them too)
     let teaseConfettiAt = -1
+    let cheerAt = -1
+    let counterAt = -1
+    let crowdAt = -1
     let impactConfettiAt = -1
     const startMusic = () => {
       if (!music) return
@@ -295,17 +355,28 @@ export function GoldReveal({
       if (s === 'tease') {
         teaseAt = t
         if (cfg.musicStart === 'start') startMusic()
-        if (cfg.teaseConfetti !== 'off') teaseConfettiAt = t + cfg.teaseInDelay + Math.max(0, cfg.teaseConfettiDelay)
+        const cue = t + cfg.teaseInDelay + Math.max(0, cfg.teaseConfettiDelay)
+        if (cfg.teaseConfetti !== 'off') teaseConfettiAt = cue
+        if (cfg.cheeringSound) cheerAt = cue + Math.max(0, cfg.cheeringDelay)
       }
       if (s === 'pour') {
         const p = goldPile(cfg, size.w, size.h)
         pileRun++
         pileEvents.current = { settled: false, cleared: false, drained: 0 }
         setPile({ run: pileRun, ...p })
-        play(sfx.pour, cfg.pourSound)
+        // the counter starts with the first gold-bar hit
+        if (cfg.counterSound) counterAt = t + cfg.pileDelay + Math.max(0, cfg.counterDelay)
+        if (cfg.pileCrowdSound !== 'off') crowdAt = t + cfg.pileDelay + Math.max(0, cfg.pileCrowdDelay)
+        pileClock = 0
+        pileHits = cfg.pourSound ? composePile(cfg) : []
       }
       if (s === 'drain') {
         setDump((d) => d + 1)
+        pileHits = [] // pulled early: the pile-up is over
+        counterAt = -1
+        crowdAt = -1
+        drainClock = 0
+        drainPlayed = 0
         if (cfg.musicStart === 'drain') startMusic()
       }
       if (s === 'count') {
@@ -395,6 +466,40 @@ export function GoldReveal({
       if (teaseConfettiAt >= 0 && t >= teaseConfettiAt) {
         teaseConfettiAt = -1
         setTeaseFire((n) => n + 1)
+      }
+      if (cheerAt >= 0 && t >= cheerAt) {
+        cheerAt = -1
+        cheer.play({ volume: cfg.cheeringVolume })
+      }
+      if (crowdAt >= 0 && t >= crowdAt) {
+        crowdAt = -1
+        // level-matched: the two clips were recorded ~10 dB apart
+        if (cfg.pileCrowdSound !== 'off')
+          crowd[cfg.pileCrowdSound].play({ volume: cfg.pileCrowdVolume, levelMatch: cfg.sfxLevelMatch, length: cfg.pileCrowdLength })
+      }
+      if (counterAt >= 0 && t >= counterAt) {
+        counterAt = -1
+        counter.play({ volume: cfg.counterVolume })
+      }
+
+      // ---- gold-bar sounds ----
+      bus.setLevel(cfg.sound ? cfg.volume : 0)
+      if (live) {
+        if (pileHits.length) {
+          pileClock += dt
+          while (pileHits.length && pileHits[pileHits.length - 1].at <= pileClock) barHit(cfg.pileVolume * pileHits.pop()!.k)
+        }
+        if (drainClock >= 0 && cfg.drainSound) {
+          drainClock += dt
+          // a share of the hits as the bars break loose (building), the rest as they leave the screen
+          const gone = drained()
+          const loose = clamp(drainClock / Math.max(0.1, cfg.drainFrontTime), 0, 1)
+          const due = cfg.drainHits * (cfg.drainLooseShare * loose * loose + (1 - cfg.drainLooseShare) * gone)
+          while (drainPlayed < Math.floor(due + 1e-6)) {
+            drainPlayed++
+            barHit(cfg.drainVolume * lerp(1, cfg.drainVolumeEnd, gone), 1 - cfg.drainPitchDrop * gone)
+          }
+        }
       }
       if (impactConfettiAt >= 0 && t >= impactConfettiAt) {
         impactConfettiAt = -1
@@ -726,6 +831,8 @@ export function GoldReveal({
         music.src = ''
       }
       musicRef.current = { el: null, playing: false }
+      cannonShot.current = null
+      bus.dispose()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runKey])
@@ -798,6 +905,7 @@ export function GoldReveal({
           fireSignal={teaseFire}
           paused={paused}
           intensity={c.teaseConfettiAmount}
+          onBurst={(side) => cannonShot.current?.(side)}
         />
       )}
       {impactConfetti && (

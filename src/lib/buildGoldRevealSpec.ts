@@ -13,7 +13,7 @@ export function buildGoldRevealJsonSpec(c: GoldRevealConfig): string {
       developerNotes: [
         'IMPORTANT: integrate the existing avatar system — the avatar here is a placeholder PNG; bring in the real avatar (current avatar system / Rive file) and drive the same beats.',
         'IMPORTANT: use the existing design system for ALL text, fonts and buttons — every line of copy and both shop-push buttons are CSS stand-ins showing layout, size, colour and motion.',
-        'Audio is temporary — pour, count ticker, cha-ching and music will be replaced in the final release; keep the cue points.',
+        'Audio is temporary — cannons, cheering, gold bars, counter, count ticker, cha-ching and music will be replaced in the final release; keep the cue points.',
         'The amount is random on the bench only — in the app it is the gold the player received.',
         `Keep the room between the avatar and the text: his top always sits at least ${c.avatarTextGap}px below the bottom of the tease text on every screen size (he moves down rather than crowd it).`,
       ],
@@ -240,7 +240,34 @@ export function buildGoldRevealJsonSpec(c: GoldRevealConfig): string {
       audio: c.sound
         ? {
             volume: c.volume,
-            pour: c.pourSound ? 'dailyGold.mp3 on pour' : false,
+            levelMatch: `${c.sfxLevelMatch} — random clips start on their hit (leading silence trimmed) and are brought this far toward the same peak; all one-shots share one limiter`,
+            cannons: c.cannonSound
+              ? { clips: 'revealSFX/confetti*', perShot: c.cannonSoundLayers, volume: c.cannonSoundVolume, pitchVar: c.cannonSoundPitchVar, when: 'on each cannon shot, panned to its side', pick: 'random, every clip once before a repeat' }
+              : false,
+            cheering: c.cheeringSound ? { clip: 'dailyGoldCheer.mp3', volume: c.cheeringVolume, afterCannonsSec: c.cheeringDelay } : false,
+            counter: c.counterSound ? { clip: 'dailyGoldCounter.mp3', volume: c.counterVolume, afterFirstGoldBarSec: c.counterDelay } : false,
+            pileUp: c.pourSound
+              ? {
+                  clips: 'revealSFX/goldbar* (random, every clip once before a repeat)',
+                  hits: c.pileHits,
+                  firstAfterPourSec: c.pileDelay,
+                  buildsOverSec: c.pileDuration,
+                  timing: `hit i of n at u = ((i + random) / n)^(1/${c.pileRamp}) of the build — a few first, then denser; not tied to collisions`,
+                  volume: `${c.pileVolume} × (${c.pileVolumeStart} → 1)`,
+                  settling: `${c.pileTailHits} softer hits over ${c.pileTailTime}s`,
+                }
+              : false,
+            crowdWithPileUp: c.pileCrowdSound === 'off' ? false : { clip: c.pileCrowdSound === 'random' ? 'random per run: revealSFX/oooh.mp3 or aaah.mp3' : `revealSFX/${c.pileCrowdSound}.mp3`, volume: c.pileCrowdVolume, afterFirstGoldBarSec: c.pileCrowdDelay, fadeOutBySec: c.pileCrowdLength || 'full length' },
+            spill: c.drainSound
+              ? {
+                  clips: 'the same gold bars',
+                  hits: c.drainHits,
+                  timing: `${Math.round(c.drainLooseShare * 100)}% as the bars break loose (∝ time², over drainFrontTime), the rest in step with the share of bars that have left the screen`,
+                  volume: `${c.drainVolume} × (1 → ${c.drainVolumeEnd})`,
+                  pitch: `sinks ${Math.round(c.drainPitchDrop * 100)}% by the end`,
+                }
+              : false,
+            goldBars: { pitchVar: c.barPitchVar, volumeVar: c.barVolumeVar, pan: c.barPan },
             count: c.countSound ? 'GemReveal_ticker.mp3 (looped) during the count' : false,
             impact: c.impactSound ? 'chaChing.mp3 on impact' : false,
             music:

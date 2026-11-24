@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { FoldableButton } from '@/components/banner-stubs'
 import { Confetti } from '@/components/Confetti'
+import { FIREWORK_SFX } from '@/components/fireworkSfx'
 import { REVEAL_MUSIC } from '@/components/revealMusic'
 import { hexToRgba, shiftHue } from '@/lib/gemTiers'
+import { createSfxBus } from '@/lib/sfxBank'
 import {
   cosmeticFireworksConfig,
   cosmeticSpotFireworkConfig,
@@ -12,7 +14,8 @@ import {
   COSMETIC_TEASE_LINES,
   buildCarousel,
   fitItem,
-  tierOf,
+  rarityOf,
+  type RarityRoll,
   type CosmeticRevealConfig,
   type CosmeticRevealState,
   type CosmeticTier,
@@ -22,6 +25,8 @@ import pose1Url from '@/assets/avatarPose1.png'
 import pose2Url from '@/assets/avatarPose2.png'
 import pose3Url from '@/assets/avatarPose3.png'
 import tickUrl from '@/assets/mp3/drip4.ogg'
+import aaahUrl from '@/assets/revealSFX/aaah.mp3'
+import ooohUrl from '@/assets/revealSFX/oooh.mp3'
 import revealUrl from '@/assets/mp3/GemReveal_punch.mp3'
 
 /**
@@ -84,7 +89,7 @@ const POSE_BOX = { x0: 848, y0: 169, x1: 1389, y1: 1222, w: 1867 }
 const POSE_ASPECT = (POSE_BOX.x1 - POSE_BOX.x0) / (1222 - POSE_BOX.y0)
 
 const TIERS: CosmeticTier[] = ['common', 'rare', 'grail']
-const last = { tease: -1, closing: -1, pose: -1, tier: -1 }
+const last = { tease: -1, closing: -1, pose: -1, tier: -1, line: '' }
 function pick(n: number, prev: number) {
   if (n <= 1) return 0
   let i = Math.floor(Math.random() * n)
@@ -143,6 +148,8 @@ export function CosmeticReveal({
 
   const cfgRef = useRef(c)
   cfgRef.current = c
+  const fireworkSound = useRef<((x: number) => void) | null>(null)
+  const spotFireworkSound = useRef<(() => void) | null>(null)
   const musicRef = useRef<{ el: HTMLAudioElement | null; playing: boolean }>({ el: null, playing: false })
   const pausedRef = useRef(paused)
   pausedRef.current = paused
@@ -151,8 +158,9 @@ export function CosmeticReveal({
   const autoStartRef = useRef(autoStart)
   autoStartRef.current = autoStart
 
+  const rarityRef = useRef<ReturnType<typeof rarityOf>>({ sticker: null, line: '', lineKey: '' })
   // one roll per run: the carousel, the lines, the pose, the tier (when 'random')
-  const roll = useRef<{ key: unknown; tease: number; closing: number; pose: number; tier: number; carousel: ReturnType<typeof buildCarousel> } | null>(null)
+  const roll = useRef<{ key: unknown; tease: number; closing: number; pose: number; tier: number; rarity: RarityRoll; carousel: ReturnType<typeof buildCarousel> } | null>(null)
   const carouselKey = `${runKey}|${c.winnerItem}|${c.itemCount}|${c.teaserItems}`
   if (!roll.current || roll.current.key !== carouselKey) {
     const keepLines = roll.current && String(roll.current.key).split('|')[0] === String(runKey)
@@ -160,7 +168,10 @@ export function CosmeticReveal({
     const closing = keepLines ? roll.current!.closing : pick(COSMETIC_CLOSING_LINES.length, last.closing)
     const pose = keepLines ? roll.current!.pose : pick(POSES.length, last.pose)
     const rolledTier = keepLines ? roll.current!.tier : pick(TIERS.length, last.tier)
-    roll.current = { key: carouselKey, tease, closing, pose, tier: rolledTier, carousel: buildCarousel(c, Math.random) }
+    const rarityRoll: RarityRoll = keepLines
+      ? roll.current!.rarity
+      : { odds: Math.random(), line: Math.random(), prevLine: last.line }
+    roll.current = { key: carouselKey, tease, closing, pose, tier: rolledTier, rarity: rarityRoll, carousel: buildCarousel(c, Math.random) }
   }
   // remembered once the run is on screen (not while rendering — dev mode renders twice), so nothing repeats back to back
   useEffect(() => {
@@ -169,6 +180,7 @@ export function CosmeticReveal({
     last.closing = roll.current.closing
     last.pose = roll.current.pose
     last.tier = roll.current.tier
+    last.line = rarityRef.current.lineKey
   }, [carouselKey])
   const { items, winnerSlot } = roll.current.carousel
   const [teaseText, teaseSubText] = COSMETIC_TEASE_LINES[lineIndex(c.teaseLine, roll.current.tease, COSMETIC_TEASE_LINES.length)]
@@ -176,9 +188,9 @@ export function CosmeticReveal({
   const poseUrl = POSES[roll.current.pose]
   // the app sets the tier; 'random' (prototype) uses this run's roll
   const winnerTier: CosmeticTier = c.winnerTier === 'random' ? TIERS[roll.current.tier] : c.winnerTier
-  const winnerTierRef = useRef(winnerTier)
-  winnerTierRef.current = winnerTier
-  const tier = tierOf(c, winnerTier)
+  // its sticker (odds or tier name) and the line under it
+  const tier = rarityOf(c, winnerTier, roll.current.rarity)
+  rarityRef.current = tier
 
   const [confettiFire, setConfettiFire] = useState(0)
   const [spotPopFire, setSpotPopFire] = useState(0)
@@ -288,6 +300,35 @@ export function CosmeticReveal({
     const shutter = (loud: number) => {
       if (!shutterBufs.length) return
       playBuf(shutterBufs[Math.floor(Math.random() * shutterBufs.length)], cfgRef.current.shutterVolume * loud, 0.94 + Math.random() * 0.14)
+    }
+    // the crowd, with the first camera flash: level-matched (the two clips differ by ~10 dB)
+    const bus = createSfxBus()
+    const crowd = { random: bus.group([ooohUrl, aaahUrl]), oooh: bus.group([ooohUrl]), aaah: bus.group([aaahUrl]) }
+    let crowdAt = -1
+    // the fireworks: the end ones sit in the background (muffled, capped, fading down)
+    const booms = bus.group(FIREWORK_SFX)
+    const spotBoom = bus.group(FIREWORK_SFX)
+    let firstBoomAt = -1
+    let lastBoomAt = -Infinity
+    fireworkSound.current = (x) => {
+      const cfg = cfgRef.current
+      if (firstBoomAt < 0) firstBoomAt = t
+      if (!cfg.fireworksSound || Math.random() >= cfg.fireworksSoundShare) return
+      if (t - lastBoomAt < cfg.fireworksSoundGap || booms.playing() >= cfg.fireworksSoundMax) return
+      lastBoomAt = t
+      const settle = cfg.fireworksSoundFadeTime > 0 ? clamp((t - firstBoomAt) / cfg.fireworksSoundFadeTime, 0, 1) : 1
+      booms.play({
+        volume: cfg.fireworksSoundVolume * lerp(1, cfg.fireworksSoundFadeTo, settle) * (1 + (Math.random() * 2 - 1) * cfg.fireworksSoundVolumeVar),
+        rate: 1 + (Math.random() * 2 - 1) * cfg.fireworksSoundPitchVar,
+        pan: x * cfg.fireworksSoundPan,
+        levelMatch: 0.75,
+        lowpass: cfg.fireworksSoundMuffle,
+        length: cfg.fireworksSoundLength,
+      })
+    }
+    spotFireworkSound.current = () => {
+      const cfg = cfgRef.current
+      if (cfg.spotPopSound) spotBoom.play({ volume: cfg.spotPopSoundVolume, levelMatch: 0.75 })
     }
     const revealSfx = new Audio(revealUrl)
     const c0 = cfgRef.current
@@ -416,6 +457,7 @@ export function CosmeticReveal({
         teaseAt = t
         ensureAudio()
         nextFlashAt = t + cfg.teaseInDelay
+        if (cfg.crowdSound !== 'off') crowdAt = nextFlashAt + Math.max(0, cfg.crowdDelay)
         if (cfg.musicStart === 'start') startMusic()
       }
       if (s === 'carousel') carouselAt = t
@@ -455,6 +497,8 @@ export function CosmeticReveal({
     let spotV = 0
     let sticker = 0
     let stickerV = 0
+    let stickerKey = ''
+    let stickerW = 0
 
     let dragging = false
     let dragPhi0 = 0
@@ -585,8 +629,13 @@ export function CosmeticReveal({
           setState('spinning')
         }
       }
-      const tr = tierOf(cfg, winnerTierRef.current)
+      bus.setLevel(cfg.sound ? cfg.volume : 0)
+      const tr = rarityRef.current
       if (live) {
+        if (crowdAt >= 0 && t >= crowdAt) {
+          crowdAt = -1
+          if (cfg.crowdSound !== 'off') crowd[cfg.crowdSound].play({ volume: cfg.crowdVolume, levelMatch: 0.75 })
+        }
         if (!spotPopFired && spotAt >= 0 && t >= spotAt + Math.max(0, cfg.spotPopDelay)) {
           spotPopFired = true
           if (cfg.spotPop) setSpotPopFire((n) => n + 1)
@@ -718,8 +767,18 @@ export function CosmeticReveal({
       const stickerEl = cards[winnerSlot]?.querySelector<HTMLElement>('.cosmetic-card__sticker')
       if (stickerEl) {
         css(stickerEl, 'opacity', tr.sticker && sinceSpot >= cfg.stickerDelay ? '1' : '0')
-        css(stickerEl, 'transform', `translate(50%, -50%) rotate(${cfg.stickerRotate}deg) scale(${Math.max(0, sticker).toFixed(4)})`)
-        css(stickerEl, '--sticker-fs', `${(13 * cfg.stickerSize * sizeK).toFixed(1)}px`)
+        const fs = `${(11.5 * cfg.stickerSize * sizeK).toFixed(1)}px`
+        css(stickerEl, '--sticker-fs', fs)
+        // long odds are nudged in so they never run off the screen (its width is re-read only when it changes)
+        const key = `${fs}|${stickerEl.textContent}`
+        if (key !== stickerKey) {
+          stickerKey = key
+          stickerW = stickerEl.offsetWidth
+        }
+        // drawn at its final size and the card's scale undone, so the text stays sharp
+        const k = cfg.focusScale * cfg.spotScale
+        const over = Math.max(0, size.w / 2 + (k * card) / 2 + stickerW / 2 - (size.w - 12)) / Math.max(0.1, k)
+        css(stickerEl, 'transform', `translate(50%, -50%) translate(${(-over).toFixed(1)}px, 0px) rotate(${cfg.stickerRotate}deg) scale(${(Math.max(0, sticker) / Math.max(0.1, k)).toFixed(4)})`)
       }
 
       // ---- prompt + rarity line ----
@@ -998,6 +1057,9 @@ export function CosmeticReveal({
         music.src = ''
       }
       musicRef.current = { el: null, playing: false }
+      fireworkSound.current = null
+      spotFireworkSound.current = null
+      bus.dispose()
       actx?.close().catch(() => {})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1030,6 +1092,7 @@ export function CosmeticReveal({
           fireSignal={confettiFire}
           paused={paused}
           intensity={c.confettiAmount}
+          onBurst={(_side, x) => fireworkSound.current?.(x)}
         />
       )}
       {/* placeholder avatar, "wearing" the item — the real one comes from the avatar system */}
@@ -1089,6 +1152,7 @@ export function CosmeticReveal({
             fireSignal={spotPopFire}
             paused={paused}
             intensity={c.spotPopAmount}
+            onBurst={() => spotFireworkSound.current?.()}
           />
         </div>
       )}

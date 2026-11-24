@@ -914,7 +914,18 @@ pile is the Particle Rain engine, sized to fill whatever stage it's in.
 | Control | Range / options | What it changes |
 |---|---|---|
 | `sound on` / `SFX volume` | | Master (= the 🔊 stage icon) and SFX level. |
-| `pour (dailyGold)` | toggle | `dailyGold.mp3` as the bars pour in. |
+| `even out clip loudness` | 0–1 | How far the clips are brought to the same peak (0 = as recorded; default 0.75). |
+| `cannons (confetti clips)` + `↳ volume / clips per shot / pitch ±` | | A random `confetti*` clip on each cannon shot, panned to its side. |
+| `cheering (with the cannons)` + `↳ volume / delay` | | `dailyGoldCheer.mp3`, from the cannons. |
+| `counter (with the first gold bar)` + `↳ volume / delay` | | `dailyGoldCounter.mp3`, the dings, from the first gold-bar hit. |
+| `pile-up (gold bars)` + `↳ volume / how many hits` | | Random `goldbar*` clips as the bars pour in (default 28 hits). |
+| `↳ first hit after` / `↳ builds over` / `↳ ramp (1 = even)` / `↳ first hits × volume` | | The shape: a few hits at first, then denser and louder. Higher ramp = sparser start, busier finish. |
+| `↳ settling hits` / `↳ settling time` | | Softer stragglers after the peak. |
+| `gold bars: pitch ± / volume ± / left / right` | | Variety of every gold-bar hit (pile-up and spill). |
+| `crowd (with the pile-up)` + `↳ volume / starts this far into the pile-up / fade out by` | random / oooh / aaah / off | A random *oooh* / *aaah* this long after the first gold-bar hit (default 1.15 s). |
+| `spill (gold bars)` + `↳ volume / how many hits` | | The same clips as the floor goes (default 32 hits). |
+| `↳ share as they break loose` | 0–1 | Hits before bars leave the screen; the rest follow the bars leaving. |
+| `↳ pitch sinks by` / `↳ last hits × volume` | | How far the spill falls away in pitch (default 0 = not at all) and level (default 0.5), leaving room for the count. |
 | `count ticker` | toggle | `GemReveal_ticker.mp3`, looped under the count-up. |
 | `impact (chaChing)` | toggle | `chaChing.mp3` on the impact. |
 | `soundtrack` + `↳ volume / loop / starts on / delay` | | Chasing Quails / Vogue / Belt and Braces (or random), from **start**, the **drain**, or the **impact** (default: **Chasing Quails**, 0.5 s after the impact, 0.2 volume). |
@@ -1077,9 +1088,9 @@ Paparazzi tease → swipeable carousel → controlled stop on the chosen item �
 | `speed lines (3)` | The Gem Wheel's warp, **horizontal**, behind the cards while the carousel spins (they speed up and slow down with it, in the same direction): on / off · count (24) · speed × carousel (1.5) + variation · length (255 px) · width (2 px) · colour + variation · opacity (0.24) + variation · fade in / out (0.2 s) · band height (0.35 × screen). |
 | `spotlight (4)` | Winner scale + spring · others fade · white burst · shockwave ring (colour, travel, width, opacity, duration) — as the Gold Reveal's `impact (5)` (gold `#ffe269`) · **tapered star** in front of the item, like the camera flashes' glint (points, length 260 px, thickness, rotate, duration, **when it starts fading** — 0.6 × its duration, colour). |
 | `single firework (4)` | One firework (the end fireworks' look, its own settings) exploding **from the centre of the revealed item**, in front of the cards: on / off · start after the reveal (0 s) · colour palette (goldWhite) · radius (465 px) · particle size — gold G (32 px), paper (24 px), random ± · particles × · fade after · flash (intensity, colour, radius, fade) · streaks (intensity, how many, radius, length, width, duration, colour). |
-| `rarity (5)` | Sticker timing / size / tilt · **Rare** + **Grail** sticker colours · the line per tier (Common blank = none) · line size, **position** (below the card 48 px, left / right) + timing. |
+| `rarity (5)` | **sticker: odds** (on by default; off = tier name) + **1 in …** (the item's odds; they set the tier; 0 = random, prototype), how they **read** (`1 in {odds}`) and where **Rare** (100) and **Grail** (1,000) start · **line under the item** — the tier's preset, random from the tier's list (default), one chosen line, or **write one** (`{odds}` fills in) · sticker timing / size / tilt · **Common** (odds only) / **Rare** / **Grail** sticker colours · the preset line per tier (Common blank = none) · line size, **position** (below the card 48 px, left / right) + timing. |
 | `fireworks (4–6)` | The Confetti component's fireworks, **the same for every tier**: on / off · **start after the reveal** (3 s) · **colour palette** (grail) · **firework radius** (325 px) · **particle size** — gold G (18 px), paper (16 px), random ± · particles per firework × · **fireworks per volley** (random 3–4, rolled each volley) · new volley every (1.8 s) · particles fade after (0.7 s) · the band they burst in (6–30 % of the height, above the item) · **flash** (intensity, colour — random from the palette or white — radius) · **white streaks** (intensity, how many, radius, length, width). |
 | `outro (6)` | **Starts after the reveal** (2.2 s, every tier) · cards slide off · **avatar** (placeholder, random pose) height / **centre height** (0.42 — slightly above the middle) / across / timing / spring · closing pair (random / pin one of 4) — sits **just above the buttons** (gap), sizes, timing. |
 | `buttons (6)` | *Try the item on* (gold, top) + *Buy another chest* (navy, bottom) — labels, colours, tilts, width, size, gaps, timing, spring. **Example only** — the developer uses the design-system buttons. |
-| `sound (temporary)` | Master + SFX volume · camera shutters · carousel ticks · reveal hit · soundtrack (default **Vogue**; also Chasing Quails / Belt and Braces / random). |
+| `sound (temporary)` | Master + SFX volume · **crowd** with the first flash (random *oooh* / *aaah*, either one, or off; volume; delay) · **spotlight firework** (one random clip; volume) · **end fireworks** (a random clip per firework; limits: volume, *settle to* / *over* (get quieter as they go on), *muffle* (low-pass), *tail length*, *share with a sound*, *most at once*, *shortest gap*; variety: volume ±, pitch ±, left / right) · camera shutters · carousel ticks · reveal hit · soundtrack (default **Vogue**; also Chasing Quails / Belt and Braces / random). |
 
