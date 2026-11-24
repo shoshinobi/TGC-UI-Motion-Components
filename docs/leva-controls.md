@@ -5,6 +5,9 @@ preview and nothing else — the values it produces are what the **Export**
 buttons copy out. Adjusting a control never touches the deliverable; it just
 changes what you see so you can dial in numbers to hand back.
 
+- **It starts hidden**, so a shared link shows only the component. The **sliders icon**
+  (bottom-left of the stage) shows / hides it; the arrow in its title bar also puts it
+  away. Open stays open through reloads of that tab; a new tab starts hidden.
 - **Folders** group related controls. Some open collapsed — click the folder name.
 - **Sliders** drag or type a number. **Selects** are dropdowns. **Toggles** are
   checkboxes. **Colour** swatches open a picker.
@@ -24,7 +27,10 @@ changes what you see so you can dial in numbers to hand back.
 | `ember spread (%)` *(Gem)* | 10–140 | How far the ember gradient reaches — small = a tight glow at the bottom, large = the colour fills most of the frame (near-flat wash). |
 | `paused` | toggle | Freezes the animation / simulation in place. |
 | `start as` *(Flame Pictogram)* | select `looping` / `hidden` | `looping` — visible and looping from the start (default). `hidden` — starts at scale 0, invisible, loop not running, until the first **🔥 Daily Streak**. |
-| `viewport` | select `phone` / `tablet` / `full` | *(Feedback Sheet, Banner Stack, Particle Rain)* Frames the preview at a device width (≈390 / ≈640–720 / full). For Particle Rain it also feeds the responsive auto-scale, so you see real per-size counts. |
+
+### Viewport buttons (top-left of the screen)
+
+**Phone / tablet / full** frame the preview at a device width (≈390 / ≈640–720 / full). On Feedback Sheet, Banner Stack, Particle Rain, Gem Wheel, Gold Reveal, Confetti and Cosmetic Reveal. The choice carries across them and is added to the link (`?vp=`). Particle Rain also feeds it to the responsive auto-scale, so you see real per-size counts.
 
 ### Export folder (buttons)
 

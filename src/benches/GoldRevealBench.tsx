@@ -1,6 +1,7 @@
 import { REVEAL_MUSIC_OPTIONS } from '@/components/revealMusic'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { SpecsToggle } from '@/components/SpecsToggle'
+import { useViewport } from '@/lib/viewport'
 import { useControls, folder, button, LevaInputs } from 'leva'
 import { GoldReveal } from '@/components/GoldReveal'
 import {
@@ -46,12 +47,6 @@ function savedSettings(): Record<string, number | string | boolean> | null {
   }
 }
 
-function initialViewport(): string {
-  if (typeof window === 'undefined') return 'phone'
-  const vp = new URLSearchParams(window.location.search).get('vp')?.toLowerCase() ?? ''
-  return vp === 'phone' || vp === 'tablet' || vp === 'full' ? vp : 'phone'
-}
-
 const STATE_LABEL: Record<GoldRevealState, string> = {
   armed: 'armed — press Start',
   tease: 'tease',
@@ -80,8 +75,8 @@ export function GoldRevealBench() {
     setNonce((k) => k + 1)
   }
 
+  const viewport = useViewport()
   const stage = useControls('Stage', {
-    viewport: { value: initialViewport(), options: ['phone', 'tablet', 'full'] },
     background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     emberColor: { value: '#3a1512', label: 'ember colour' },
     emberSpread: { value: 60, min: 10, max: 140, step: 2, label: 'ember spread (%)' },
@@ -461,15 +456,15 @@ export function GoldRevealBench() {
     'copy config (for defaults)': button(copy('config')),
   }, { order: 3 }) // Export stays last, whichever bench creates it first
 
-  const runKey = [nonce, config.musicTrack, stage.viewport].join('|')
+  const runKey = [nonce, config.musicTrack, viewport].join('|')
   // (the reveal reports its own state on mount — 'armed', or 'tease' on a restart)
   useEffect(() => setShopTaps(''), [runKey])
 
   const frameWidth =
-    stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
+    viewport === 'phone' ? '390px' : viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
 
   // live readout: bars for a 760-tall frame at this width
-  const preview = goldPile(config, stage.viewport === 'phone' ? 390 : stage.viewport === 'tablet' ? 720 : 1100, 760)
+  const preview = goldPile(config, viewport === 'phone' ? 390 : viewport === 'tablet' ? 720 : 1100, 760)
 
   return (
     <>
@@ -534,7 +529,7 @@ export function GoldRevealBench() {
           </svg>
         </button>
         <div className='gold-stage-inner'>
-          <div className='gold-frame' style={{ width: frameWidth }} data-viewport={stage.viewport}>
+          <div className='gold-frame' style={{ width: frameWidth }} data-viewport={viewport}>
             <GoldReveal
               key={runKey}
               runKey={runKey}

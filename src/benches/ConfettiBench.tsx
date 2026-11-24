@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { SpecsToggle } from '@/components/SpecsToggle'
+import { useViewport } from '@/lib/viewport'
 import { useControls, folder, button } from 'leva'
 import { Confetti } from '@/components/Confetti'
 import { CONFETTI_DEFAULT_CONFIG, CONFETTI_PRESETS, type ConfettiConfig } from '@/components/confetti.config'
@@ -22,20 +23,14 @@ function savedSettings(): Record<string, number | string | boolean> | null {
   }
 }
 
-function initialViewport(): string {
-  if (typeof window === 'undefined') return 'phone'
-  const vp = new URLSearchParams(window.location.search).get('vp')?.toLowerCase() ?? ''
-  return vp === 'phone' || vp === 'tablet' || vp === 'full' ? vp : 'phone'
-}
-
 export function ConfettiBench() {
   const [nonce, setNonce] = useState(0)
   const [fire, setFire] = useState(0)
   const [stop, setStop] = useState(0)
   const replay = () => setNonce((k) => k + 1)
 
+  const viewport = useViewport()
   const stage = useControls('Stage', {
-    viewport: { value: initialViewport(), options: ['phone', 'tablet', 'full'] },
     background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     emberColor: { value: '#3a1512', label: 'ember colour' },
     emberSpread: { value: 60, min: 10, max: 140, step: 2, label: 'ember spread (%)' },
@@ -208,9 +203,9 @@ export function ConfettiBench() {
     'copy config (for defaults)': button(copy('config')),
   }, { order: 3 }) // Export stays last, whichever bench creates it first
 
-  const runKey = [nonce, stage.viewport].join('|')
+  const runKey = [nonce, viewport].join('|')
   const frameWidth =
-    stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
+    viewport === 'phone' ? '390px' : viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
 
   return (
     <>
@@ -236,7 +231,7 @@ export function ConfettiBench() {
           Gold rain
         </button>
         <div className='confetti-stage-inner'>
-          <div className='confetti-frame' style={{ width: frameWidth }} data-viewport={stage.viewport}>
+          <div className='confetti-frame' style={{ width: frameWidth }} data-viewport={viewport}>
             <Confetti key={runKey} runKey={runKey} config={config} paused={stage.paused} fireSignal={fire} stopSignal={stop} />
           </div>
         </div>
