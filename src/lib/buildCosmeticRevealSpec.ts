@@ -3,6 +3,7 @@ import {
   COSMETIC_CLOSING_LINES,
   COSMETIC_REFERENCE_WIDTH,
   COSMETIC_TEASE_LINES,
+  COSMETIC_RARITY_LINES,
   tierOf,
   type CosmeticRevealConfig,
 } from '@/components/cosmeticReveal.config'
@@ -11,18 +12,19 @@ const DEV_NOTES = [
   'IMPORTANT: use the existing design system for ALL text, fonts and buttons — the copy, the tier sticker and both buttons are CSS stand-ins showing layout, size, colour and motion.',
   'IMPORTANT: integrate the existing avatar system — the avatar here is a placeholder PNG pose; the real avatar should appear WEARING the revealed item.',
   'Audio is temporary (camera shutters, ticks, reveal sound, music) — it will be replaced in the final release; keep the cue points.',
-  'The winning item + tier are set by the app; the other carousel items can be set (to show what else is out there) or left random.',
+  'The winning item + its odds are set by the app (the component only displays them); the other carousel items can be set (to show what else is out there) or left random.',
 ]
 
 /** Framework-neutral tokens for the Cosmetic Reveal sequence. */
 export function buildCosmeticRevealJsonSpec(c: CosmeticRevealConfig): string {
   const tiers = (['common', 'rare', 'grail'] as const).map((t) => {
     const tr = tierOf(c, t)
-    return {
-      tier: t,
-      sticker: tr.sticker ? { text: tr.sticker.text.toUpperCase(), fill: tr.sticker.color, ink: tr.sticker.ink } : 'none',
-      line: tr.line || 'none',
-    }
+    const sticker = c.oddsSticker
+      ? { text: `the item's odds: ${c.oddsFormat.toUpperCase()}`, fill: tr.sticker?.color ?? c.commonColor, ink: tr.sticker?.ink ?? c.commonTextColor }
+      : tr.sticker
+        ? { text: tr.sticker.text.toUpperCase(), fill: tr.sticker.color, ink: tr.sticker.ink }
+        : 'none'
+    return { tier: t, sticker, presetLine: tr.line || 'none', randomLines: COSMETIC_RARITY_LINES[t] }
   })
   return JSON.stringify(
     {
@@ -32,6 +34,10 @@ export function buildCosmeticRevealJsonSpec(c: CosmeticRevealConfig): string {
       result: {
         winner: c.winnerItem === 'random' ? 'set by the app (random on the bench)' : c.winnerItem,
         tier: c.winnerTier === 'random' ? 'set by the app (random on the bench)' : c.winnerTier,
+        odds: c.odds > 0 ? `1 in ${c.odds}` : 'set by the app per item (random on the bench)',
+        tierFromOdds: `1 in ${c.oddsGrailFrom} or longer = grail; 1 in ${c.oddsRareFrom} or longer = rare; otherwise common. Sets the sticker colour and the line; the tier above is used only when no odds are set`,
+        sticker: c.oddsSticker ? `shows the odds: ${c.oddsFormat}` : 'shows the tier name (none for common)',
+        rarityLine: c.rarityLineText.trim() || (c.rarityLine === 'tier' ? 'the tier’s preset line (or set by the app per item)' : c.rarityLine === 'random' ? 'random from the tier’s list, never twice in a row' : c.rarityLine),
         carouselItems: c.itemCount,
         otherItems: c.teaserItems.trim() ? c.teaserItems.split(',').map((s) => s.trim()).filter(Boolean) : 'random from the pool (can be set)',
         winnerPlacement: 'already one of the cards, at a random slot',
@@ -149,6 +155,17 @@ export function buildCosmeticRevealJsonSpec(c: CosmeticRevealConfig): string {
       audio: c.sound
         ? {
             note: 'TEMPORARY — replaced in the final release',
+            crowd: c.crowdSound === 'off' ? false : { clip: c.crowdSound === 'random' ? 'random per run: revealSFX/oooh.mp3 or aaah.mp3' : `revealSFX/${c.crowdSound}.mp3`, volume: c.crowdVolume, afterFirstFlashSec: c.crowdDelay },
+            spotlightFirework: c.spotPopSound ? { clip: 'one random revealSFX/fireworks*', volume: c.spotPopSoundVolume } : false,
+            endFireworks: c.fireworksSound
+              ? {
+                  clip: 'a random revealSFX/fireworks* per firework (every clip once before a repeat), on the burst itself',
+                  volume: `${c.fireworksSoundVolume}, settling to × ${c.fireworksSoundFadeTo} over ${c.fireworksSoundFadeTime}s (± ${c.fireworksSoundVolumeVar})`,
+                  limits: { shareWithSound: c.fireworksSoundShare, mostAtOnce: c.fireworksSoundMax, shortestGapSec: c.fireworksSoundGap, tailSec: c.fireworksSoundLength, lowpassHz: c.fireworksSoundMuffle },
+                  pitchVar: c.fireworksSoundPitchVar,
+                  panFollows: c.fireworksSoundPan,
+                }
+              : false,
             shutters: `camSFX/*.wav (7), random per flash, × ${c.shutterVolume}`,
             tick: `drip4.ogg per card passing the centre, × ${c.tickVolume}`,
             reveal: c.revealSound ? 'GemReveal_punch.mp3 on the spotlight' : false,
@@ -173,7 +190,11 @@ export function buildCosmeticRevealWiringSpec(c: CosmeticRevealConfig): string {
 // <CosmeticReveal
 //   config={{
 //     winnerItem: 'Crown Regal',          // the item they got (set by the app)
-//     winnerTier: '${c.winnerTier === 'random' ? 'grail' : c.winnerTier}',             // set by the app: 'common' | 'rare' | 'grail'
+//     winnerTier: '${c.winnerTier === 'random' ? 'grail' : c.winnerTier}',             // 'common' | 'rare' | 'grail' — only used when odds is 0
+//     odds: ${c.odds > 0 ? c.odds : 100},                          // this item's odds, 1 in this many — sets the tier (grail from ${c.oddsGrailFrom}, rare from ${c.oddsRareFrom})
+//     oddsSticker: ${c.oddsSticker},                  // true = "1 in 100" on the sticker, false = the tier name
+//     rarityLine: '${c.rarityLine === 'tier' || c.rarityLine === 'random' ? c.rarityLine : 'tier'}',             // 'tier' = the tier's preset, 'random' = from the tier's list, or the line itself ({odds} fills in)
+//     rarityLineText: '',              // optional: a line written for this item (wins over rarityLine)
 //     itemCount: ${c.itemCount},
 //     teaserItems: 'Halo, Grail Hoodie',  // optional: what else is out there (rest random)
 //   }}
@@ -202,7 +223,7 @@ function planStop(phi, omega, w, N) {
 ${(['common', 'rare', 'grail'] as const)
   .map((t) => {
     const tr = tierOf(c, t)
-    return `// ${t.padEnd(6)} sticker ${tr.sticker ? tr.sticker.text.toUpperCase() : '—'}${tr.line ? `, line "${tr.line}"` : ''}`
+    return `// ${t.padEnd(6)} sticker ${c.oddsSticker ? c.oddsFormat.toUpperCase() : tr.sticker ? tr.sticker.text.toUpperCase() : '—'}${tr.line ? `, line "${tr.line}"` : ''}`
   })
   .join('\n')}
 `

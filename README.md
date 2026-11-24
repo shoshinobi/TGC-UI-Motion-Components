@@ -1452,7 +1452,7 @@ show the amount, then points the player straight to the **Grail Shop**.
 |---|---|---|
 | `armed` | nothing on screen | `startSignal` (bench **▶ Start**) |
 | `tease` | a playful two-part line **pops in** with a springy scale + tilt — a **random pair each run** (`GOLD_TEASE_LINES`, never the same twice in a row): the headline first (*Ka-ching!*, *Heads up!*, *Payday!*, *Gold rush!*, *Look out below!*, *Big catch!*, *Clear some space!*, *Jackpot!* — one line, shrunk to fit a narrow screen; both lines grow with the screen width — ≈ 1.3× on a tablet, 1.6× at 1100 px, `teaseSizeVsWidth` / `teaseSizeMax`), then its subheader rises in underneath while the headline **slides up from the centre** so the pair ends up centred | after `teaseInDelay + teaseHold` |
-| `pour` | gold bars **pour in from the top and pile up until they fill the screen** — the **Particle Rain** engine (approved burst + bounce floor + walls + collisions). The tease is *under* the pile: it gets buried, and fades out `teaseOutDelay` after the pour starts. `dailyGold.mp3` plays | once the pile has settled (`settleTime` after the last bar drops in) |
+| `pour` | gold bars **pour in from the top and pile up until they fill the screen** — the **Particle Rain** engine (approved burst + bounce floor + walls + collisions). The tease is *under* the pile: it gets buried, and fades out `teaseOutDelay` after the pour starts. Random **gold-bar clips** build under it | once the pile has settled (`settleTime` after the last bar drops in) |
 | `piled` | the full pile holds a beat | after `drainDelay` (0.5 s) — or the bench **⤓ Pull the floor** / `drainSignal` at any point in `pour` / `piled`. `autoDrain` off = wait for the signal |
 | `drain` | **the floor is pulled out** (Particle Rain's `dumpSignal`) and the pile sweeps off the bottom | once `revealAtCleared` (70 %) of the bars have gone (and ≥ `countDelay`) |
 | `count` | near the end of the drain, with the last bars still falling past, the stacked reveal **scales in** (0.3 s, ease-out-back from 0.4×): ***YOU FOUND GOLD!*** / **`GOLDBAR_X3.svg`** / the amount, e.g. ***5,890 GOLD*** — and **the impact fires with it** (`impactDelay` 0): white burst, shockwave ring, gold **starburst**, the icon swell + warm glow, `chaChing.mp3`, the impact confetti. The amount **counts up** (2 s, ease-out, `GemReveal_ticker.mp3`) and keeps going past the effects | when the count is done **and** `landAtCleared` (92 %) of the bars have gone |
@@ -1490,9 +1490,26 @@ callbacks — the reveal reads the drain share to time the count and the impact.
   Keep the behaviour: the amount uses tabular numerals and is sized to its final
   value so it doesn't shift while counting; the tease headline stays on one line
   and shrinks to fit; the subheader wraps at its max width.
-- **Audio is temporary** — `dailyGold.mp3` (pour), `GemReveal_ticker.mp3`
-  (count), `chaChing.mp3` (impact) and the music bed are placeholders; final
-  sounds come later. Keep the cues, not the files.
+- **Audio is temporary** — the clips and the music bed are placeholders; final
+  sounds come later. Keep the cues, not the files:
+  - **cannons** — two random `revealSFX/confetti*` clips per shot, on the shot itself
+    (`<Confetti onBurst>`), panned to its side, with the **cheering**
+    (`dailyGoldCheer.mp3`);
+  - **counter** — `dailyGoldCounter.mp3`, the dings, from the first gold-bar hit.
+    (Both are split out of `dailyGoldChime.mp3`, so they can be timed apart;
+    neither has the cha-ching, which plays only on the impact);
+  - **pile-up** — 28 random `revealSFX/goldbar*` hits, pitch ±50 %: the first 0.15 s into the
+    pour, a few louder ones at first, then denser over 1.2 s, then 6 softer ones
+    as it settles. Timed to the pour, not to collisions;
+  - **crowd** — a random `oooh` / `aaah`, 1.15 s after the first gold-bar hit (`pileCrowdDelay`);
+  - **spill** — 32 more when the floor goes: 30 % as the bars break loose, the
+    rest in step with the bars leaving the screen, dropping in level
+    to make room for the count;
+  - **count** `GemReveal_ticker.mp3`, **impact** `chaChing.mp3`.
+
+  The one-shots go through `src/lib/sfxBank.ts` (Web Audio): every clip is used
+  once before any repeats, starts on its hit (leading silence trimmed) and is
+  level-matched; one limiter; live mute.
 - **The avatar is a placeholder — integrate the existing avatar system** (the
   current avatar / Rive file); you'll need to find the best way to bring it in. The bench uses
   two PNGs (`pointUp.png`, `fistRaise.png`; random pose each run) to show the
@@ -1526,8 +1543,8 @@ callbacks — the reveal reads the drain share to time the count and the impact.
   Particle Rain gained the matching `dumpMode: 'sequenced'` (+ sequence time /
   power / jitter / drift / spin) and `dumpGravityStart / End`, `dumpRampTime`,
   `dumpRampPower`, `dumpStaggerEnd` — defaults leave the Rain bench unchanged.
-- **Timing** at the defaults: tease 0.2 s → pour 3.2 s → piled ≈ 5.8 s → floor
-  ≈ 6.3 s → scale-in + count + impact ≈ 7.8 s → buttons ≈ 10.7 s.
+- **Timing** at the defaults: tease 0.2 s → pour 2.2 s → piled ≈ 4.9 s → floor
+  ≈ 5.4 s → scale-in + count + impact ≈ 6.7 s → buttons ≈ 9.5 s.
 - **Confetti, two cues:** **side cannons** fire 0.1 s after the tease line pops
   in, from the side edges at mid-height — **both together, ± 0.18 s jitter** per shot
   (`cannonOrder / Stagger / Jitter`) — launched at **60°** (drag 4.3,
@@ -1568,7 +1585,7 @@ callbacks — the reveal reads the drain share to time the count and the impact.
 >    buttons are CSS stand-ins showing layout, size, colour and motion.
 > 2. **Integrate the existing avatar system.** The avatar is a placeholder PNG
 >    pose (random of 3); in the app he should appear **wearing the revealed item**.
-> 3. **The audio is temporary** (camera shutters, ticks, reveal hit, music) —
+> 3. **The audio is temporary** (crowd *ooh* / *aah* with the first flash, camera shutters, fireworks, ticks, reveal hit, music) —
 >    keep the cue points; the files will be replaced for the final release.
 > 4. **The item and its tier come from the app.** The other carousel cards can
 >    be set (to show what else is out there) or left random.
@@ -1582,18 +1599,29 @@ Make the rarity known, so they feel lucky and want to show it off.
 | `carousel` | the tease fades and a **horizontal, looping strip of cards** flies in from the right. Cards are transparent with a thin rounded border; every item is **fitted by its visible box**, so they all take the same space whatever their PNG padding. The winner is **already one of the cards** (random slot); the others are the named teaser items or random | when they've arrived |
 | `ready` | *Swipe to spin* pulses under it; the centre card is a touch bigger | a **horizontal swipe either way**, `spinSignal`, or — if they haven't swiped — **`autoSpinAfter`** (2.5 s; 0 = swipe only) |
 | `spinning` → `stopping` | the Gem Wheel's spin + **controlled stop**, sideways — it always eases onto the predetermined item (it **hesitates**: drifts 0.4 of a card past, hangs 0.25 s, then springs back); the Gem Wheel's **speed lines**, horizontal, stream behind the cards | lands → `spotlight` |
-| `spotlight` | the winner **scales up** (1.55×, a fast, snappy spring) with the Gold Reveal's impact — white burst and gold shockwave ring — with one gold **tapered star** (the camera flashes' glint) over the item, plus a **single firework** exploding from the centre of the item; the others fade. **Rare / Grail** get a **tier sticker** slapped on the corner (Common gets none), and every tier gets a line under the card (*Nice find!* / *Not many players have this one!* / *Only a few players have this one!*). Every tier holds **2.2 s** (`revealHold`). **Fireworks** — the Confetti component's, with a flash in a random palette colour + white radial streaks, **the same for every tier** — start **3 s after the reveal** (`fireworksDelay`), burst in the band up top (6–30 % down), a random **3–4 per volley**, and keep going through the outro, each burst fading within ~1 s so they stay up top | after the hold |
+| `spotlight` | the winner **scales up** (1.55×, a fast, snappy spring) with the Gold Reveal's impact — white burst and gold shockwave ring — with one gold **tapered star** (the camera flashes' glint) over the item, plus a **single firework** exploding from the centre of the item; the others fade. A **sticker** is slapped on the corner — the item's **odds** (*1 in 100*) by default, or its tier name — and a line comes in under the card (a preset or a random one). Every tier holds **2.2 s** (`revealHold`). **Fireworks** — the Confetti component's, with a flash in a random palette colour + white radial streaks, **the same for every tier** — start **3 s after the reveal** (`fireworksDelay`), burst in the band up top (6–30 % down), a random **3–4 per volley**, and keep going through the outro, each burst fading within ~1 s so they stay up top | after the hold |
 | `outro` | all the cards **slide off to the left**; the **avatar** (wearing the item — placeholder pose) springs up to **just above the middle** (`avatarCenterY` 0.42), with the **fireworks** still going above it and no camera flashes; a random closing pair (*Looking good. / Go show it off.* …, 4) pops in **just above the buttons**, as the Gold Reveal's closing line; **Try the item on** (gold, top) + **Buy another chest** (navy, under it) spring in at the bottom (`onTry` / `onBuy`) | — |
 
 **Rarity** changes only the sticker and the line. The hold, the single firework and the
 fireworks are the same for every tier. The bench picks a random tier each run
-(never the same twice in a row); **in the app the developer sets the item and the tier**
-(`winnerItem`, `winnerTier`) — there are no odds in the component.
+(never the same twice in a row); **in the app the developer sets the item and its odds**
+(`winnerItem`, `odds`). The component only displays the odds; it doesn't decide the prize.
+
+- **Odds** (`odds`): set by the developer with the item — 100 = *1 in 100* — and they set
+  the tier, so the sticker colour and the line follow: under 1 in 100 **Common**, from
+  1 in 100 **Rare** (`oddsRareFrom`), from 1 in 1,000 **Grail** (`oddsGrailFrom`). 0 =
+  random odds that fit `winnerTier` (prototype).
+- **Sticker** (`oddsSticker`, on by default): shows the odds (`oddsFormat`); every tier
+  gets one. Off = the tier name (Rare / Grail; Common has none). Drawn at its final
+  size (11.5 px on a phone × `stickerSize`, 1.5 by default), so the text stays sharp.
+- **Line** (`rarityLine`): `'tier'` = the tier's preset, `'random'` (default) = one from the tier's
+  list (`COSMETIC_RARITY_LINES`, 4 each, never twice in a row), or the line itself.
+  `rarityLineText` is a line written for one item and wins over both. `{odds}` fills in.
 
 **Layers**, back → front: back canvas (speed lines, white burst, ring) → fireworks → avatar →
 cards + tier sticker → single firework → rarity line → front canvas (camera flashes, tapered star).
 
-**Soundtrack:** *Vogue* (`src/assets/Vogue.mp3`, volume 0.25, looping) 0.4 s after the item is
+**Soundtrack:** *Vogue* (`src/assets/Vogue.mp3`, volume 0.2, looping) 0.4 s after the item is
 revealed — *Chasing Quails* and *Belt and Braces* are the other choices
 (`src/components/revealMusic.ts`). The 🔊 icon mutes it live.
 
@@ -1836,7 +1864,7 @@ bottom-right. **Swipe the wheel vertically** to spin it.
 | reveal + count (4) | heading + size / colour / gap · icon size × heading text · amount gap · number size / colour · label + size / colour · text tilt · icon offset from centre · **scale in once drained + scale-in time / from scale / overshoot** · fade in · count after floor goes · count / impact once drained (share) · count duration · ease-out power |
 | impact (5) | swell on/off · peak size · ease out / hold / ease back · white burst + radius / fade · shockwave ring + colour / travel / width / opacity / duration · warm glow + colour / radius / intensity / pulse · icon pulse loop + size / speed / start |
 | shop push (6) | closing line + size / gap / delay / fade · shop button + label / gap / delay / size / from scale / rotate / settled rotate / spring |
-| sound | sound on · SFX volume · pour / count ticker / impact · soundtrack + volume / loop / starts on (start / drain / impact) / delay |
+| sound | sound on · SFX volume · even out clip loudness · **cannons** (volume / clips per shot / pitch) · **cheering** (volume / delay) · **counter** (volume / delay) · **pile-up** (volume / hits / first hit / build / ramp / first-hit level / settling) · gold bars (pitch / volume / left-right) · **crowd, with the pile-up** (clip / volume / how far in / fade out) · **spill** (volume / hits / break-loose share / pitch sink / last-hit level) · count ticker / impact · soundtrack + volume / loop / starts on (start / drain / impact) / delay |
 | Export | ★ save settings · reset to code default · replay · restart (replay + start) · start · pull the floor out · copy JSON tokens / wiring / config |
 
 Stage buttons (top-right): **▶ Start**, **↻ Restart** (back to the top and
@@ -1864,11 +1892,11 @@ for the current viewport.
 | speed lines (3) | on/off · count · speed × carousel + variation · length / width · colour + variation · opacity + variation · fade · band height |
 | spotlight (4) | winner scale + spring · others fade · white burst · ring · **tapered star** (points / length / thickness / rotate / duration / starts fading at / colour) |
 | single firework (4) | on/off · start · palette · radius · particle sizes · particles × · fade after · flash · streaks |
-| rarity (5) | sticker timing / size / tilt / colours · line per tier · line size / position / timing |
+| rarity (5) | **sticker: odds** on / off + 1 in … / format / Rare + Grail thresholds · **line under the item** (tier's preset / random / a chosen line / write one) · sticker timing / size / tilt / colours · line per tier · line size / position / timing |
 | fireworks (4–6) | on/off · start · palette · radius · particle sizes · particles × · per volley (random from / to) · new volley every · fade after · band · flash · streaks |
 | outro (6) | **starts after the reveal** · cards slide off · avatar · closing pair |
 | buttons (6) | labels · colours · tilts · width · size · gaps · timing · spring |
-| sound (temporary) | sound on · SFX volume · shutters · ticks · reveal hit · soundtrack + volume / loop / starts on / delay |
+| sound (temporary) | sound on · SFX volume · **crowd** (random ooh / aah · volume · delay) · **spotlight firework** (volume) · **end fireworks** (volume · settle to / over · muffle · tail length · share with a sound · most at once · shortest gap · volume / pitch ± · left-right) · shutters · ticks · reveal hit · soundtrack + volume / loop / starts on / delay |
 | Export | ★ save settings · reset to code default · replay · restart · start · spin · copy JSON tokens / wiring / config |
 
 ## File map
@@ -1884,6 +1912,8 @@ for the current viewport.
 | Gem Wheel | [src/components/GemWheel.tsx](src/components/GemWheel.tsx) | `WHEEL_DEFAULT_CONFIG` (+ `src/lib/buildGemWheelSpec.ts` spec, `src/assets/mp3/drip4.ogg` tick) |
 | Cosmetic Reveal | [src/components/CosmeticReveal.tsx](src/components/CosmeticReveal.tsx) | `COSMETIC_DEFAULT_CONFIG`, lines + tiers in [src/components/cosmeticReveal.config.ts](src/components/cosmeticReveal.config.ts); items in the generated `src/components/cosmeticItems.ts` (`scripts/cosmetic-manifest.py`); `src/lib/buildCosmeticRevealSpec.ts`; assets `cosmeticThumbs/`, `avatarPose1–3.png`, `camSFX/` |
 | Confetti | [src/components/Confetti.tsx](src/components/Confetti.tsx) | `CONFETTI_DEFAULT_CONFIG` + `CONFETTI_PRESETS` + palettes in [src/components/confetti.config.ts](src/components/confetti.config.ts) (+ `src/lib/buildConfettiSpec.ts`, `src/assets/GOLD_G.svg`) |
+| Cosmetic Reveal firework sounds | [src/components/fireworkSfx.ts](src/components/fireworkSfx.ts) | `src/assets/revealSFX/fireworks*` |
+| Gold Reveal sound effects | [src/components/goldSfx.ts](src/components/goldSfx.ts) (clip sets) + [src/lib/sfxBank.ts](src/lib/sfxBank.ts) (player) | `src/assets/revealSFX/` |
 | Reveal soundtracks (Gold + Cosmetic) | [src/components/revealMusic.ts](src/components/revealMusic.ts) | `REVEAL_MUSIC` |
 | Developer specs toggle (every bench) | [src/components/SpecsToggle.tsx](src/components/SpecsToggle.tsx) | — |
 | Gold Reveal | [src/components/GoldReveal.tsx](src/components/GoldReveal.tsx) | `GOLD_DEFAULT_CONFIG`, `GOLD_TEASE_LINES`, `GOLD_CLOSING_LINES` + sizing helpers in [src/components/goldReveal.config.ts](src/components/goldReveal.config.ts) (+ `src/lib/buildGoldRevealSpec.ts` spec, `src/assets/GOLDBAR_X3*.svg`, pile = `ParticleRain`) |

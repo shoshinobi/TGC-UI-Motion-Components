@@ -108,6 +108,8 @@ export type ConfettiProps = {
   stopSignal?: number
   /** stage-wide count multiplier (e.g. scale with a payout) */
   intensity?: number
+  /** a pop / cannon just fired. side: 0 = left cannon, 1 = right, −1 = the whole burst; x: −1 left … 1 right */
+  onBurst?: (side: number, x: number) => void
 }
 
 /**
@@ -126,6 +128,7 @@ export function Confetti({
   fireSignal = 0,
   stopSignal = 0,
   intensity = 1,
+  onBurst,
 }: ConfettiProps) {
   const c: ConfettiConfig = { ...CONFETTI_DEFAULT_CONFIG, ...config }
   const wrapRef = useRef<HTMLDivElement>(null)
@@ -136,6 +139,8 @@ export function Confetti({
   pausedRef.current = paused
   const intensityRef = useRef(intensity)
   intensityRef.current = intensity
+  const onBurstRef = useRef(onBurst)
+  onBurstRef.current = onBurst
   const wakeRef = useRef<() => void>(() => {})
 
   const sig = useRef({ fire: 0, stop: 0 })
@@ -339,6 +344,9 @@ export function Confetti({
           spawn(cfg, s.x, s.y, Math.cos(a) * sp, Math.sin(a) * sp, true)
         }
       }
+      // where it went off, −1 left … 1 right
+      const mid = shots.reduce((sum, s) => sum + s.x, 0) / Math.max(1, shots.length)
+      return size.w > 0 ? (mid / size.w) * 2 - 1 : 0
     }
 
     const fire = (cfg: ConfettiConfig) => {
@@ -399,7 +407,8 @@ export function Confetti({
         if (nextLoopAt >= 0 && t >= nextLoopAt) fire(cfg)
         for (let i = queue.length - 1; i >= 0; i--) {
           if (t >= queue[i].at) {
-            burst(cfg, queue[i].origin, queue[i].side)
+            const x = burst(cfg, queue[i].origin, queue[i].side)
+            onBurstRef.current?.(queue[i].side, x)
             queue[i] = queue[queue.length - 1]
             queue.pop()
           }
