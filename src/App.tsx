@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Leva, useControls } from 'leva'
 import { FlameBench } from '@/benches/FlameBench'
 import { SheetBench } from '@/benches/SheetBench'
@@ -11,6 +11,9 @@ import { GoldRevealBench } from '@/benches/GoldRevealBench'
 import { ConfettiBench } from '@/benches/ConfettiBench'
 import { CosmeticRevealBench } from '@/benches/CosmeticRevealBench'
 import { StatsHud } from '@/components/StatsHud'
+import { ViewportButtons } from '@/components/ViewportButtons'
+import type { Viewport } from '@/lib/viewport'
+import { setPanelOpen, usePanelOpen } from '@/lib/panelOpen'
 
 const COMPONENTS = [
   'Flame Pictogram',
@@ -38,6 +41,17 @@ const SLUG_OF: Record<string, string> = {
   'Cosmetic Reveal': 'cosmetic',
 }
 
+/** the components framed at a device width, and the one each starts at */
+const START_VIEWPORT: Record<string, Viewport> = {
+  'Feedback Sheet': 'phone',
+  'Banner Stack': 'phone',
+  'Particle Rain': 'full',
+  'Gem Wheel': 'phone',
+  'Gold Reveal': 'phone',
+  Confetti: 'phone',
+  'Cosmetic Reveal': 'phone',
+}
+
 function initialComponent(): string {
   if (typeof window === 'undefined') return COMPONENTS[0]
   const c = new URLSearchParams(window.location.search).get('c')?.toLowerCase() ?? ''
@@ -55,15 +69,8 @@ function initialComponent(): string {
 }
 
 export function App() {
-  // Start the Leva panel collapsed on small screens so it doesn't cover the stage.
-  const [panelCollapsed, setPanelCollapsed] = useState(
-    () => typeof window !== 'undefined' && window.innerWidth < 720,
-  )
-  useEffect(() => {
-    const onResize = () => setPanelCollapsed(window.innerWidth < 720)
-    window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
-  }, [])
+  // the controls start hidden behind the sliders icon on the stage (SpecsToggle)
+  const panelOpen = usePanelOpen()
 
   const { component } = useControls({
     component: { value: initialComponent(), options: COMPONENTS as unknown as string[] },
@@ -79,10 +86,12 @@ export function App() {
   }, [component])
 
   return (
-    <div className='shell' data-panel={panelCollapsed ? 'collapsed' : 'expanded'}>
+    <div className='shell' data-panel={panelOpen ? 'expanded' : 'collapsed'} data-viewports={component in START_VIEWPORT}>
       <Leva
         titleBar={{ title: component }}
-        collapsed={{ collapsed: panelCollapsed, onChange: setPanelCollapsed }}
+        hidden={!panelOpen}
+        // the title bar's arrow puts the panel away
+        collapsed={{ collapsed: false, onChange: (c) => c && setPanelOpen(false) }}
         theme={{ sizes: { rootWidth: 'min(340px, calc(100vw - 20px))' } }}
       />
 
@@ -108,6 +117,7 @@ export function App() {
         <FlameBench key='flame' />
       )}
 
+      {component in START_VIEWPORT && <ViewportButtons fallback={START_VIEWPORT[component]} />}
       <StatsHud />
     </div>
   )

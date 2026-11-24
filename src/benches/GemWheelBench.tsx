@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { SpecsToggle } from '@/components/SpecsToggle'
+import { useViewport } from '@/lib/viewport'
 import { useControls, folder, button, LevaInputs } from 'leva'
 import {
   GemWheel,
@@ -41,12 +42,6 @@ function savedSettings(): Record<string, number | string | boolean> | null {
   }
 }
 
-function initialViewport(): string {
-  if (typeof window === 'undefined') return 'phone'
-  const vp = new URLSearchParams(window.location.search).get('vp')?.toLowerCase() ?? ''
-  return vp === 'phone' || vp === 'tablet' || vp === 'full' ? vp : 'phone'
-}
-
 const STATE_LABEL: Record<WheelState, string> = {
   armed: 'armed — press Start',
   found: 'found',
@@ -67,8 +62,8 @@ export function GemWheelBench() {
 
   const replay = () => setNonce((k) => k + 1)
 
+  const viewport = useViewport()
   const stage = useControls('Stage', {
-    viewport: { value: initialViewport(), options: ['phone', 'tablet', 'full'] },
     background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     emberColor: { value: '#3a1512', label: 'ember colour' },
     emberSpread: { value: 60, min: 10, max: 140, step: 2, label: 'ember spread (%)' },
@@ -369,14 +364,14 @@ export function GemWheelBench() {
     config.gcHolyGrail,
     config.foundColor,
     config.musicTrack,
-    stage.viewport,
+    viewport,
   ].join('|')
 
   // a remount starts back at 'armed'
   useEffect(() => setWheelState('armed'), [runKey])
 
   const frameWidth =
-    stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
+    viewport === 'phone' ? '390px' : viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
 
   return (
     <>
@@ -454,7 +449,7 @@ export function GemWheelBench() {
           </svg>
         </button>
         <div className='wheel-stage-inner'>
-          <div className='wheel-frame' style={{ width: frameWidth }} data-viewport={stage.viewport}>
+          <div className='wheel-frame' style={{ width: frameWidth }} data-viewport={viewport}>
             <GemWheel
               key={runKey}
               runKey={runKey}

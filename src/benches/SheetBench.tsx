@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { SpecsToggle } from '@/components/SpecsToggle'
+import { useViewport } from '@/lib/viewport'
 import { useControls, folder, button } from 'leva'
 import {
   FeedbackSheet,
@@ -104,8 +105,8 @@ function layerFolder(key: SheetLayerKey) {
 export function SheetBench() {
   const [nonce, setNonce] = useState(0)
 
+  const viewport = useViewport()
   const stage = useControls('Stage', {
-    viewport: { value: 'phone', options: ['phone', 'tablet', 'full'] },
     scrim: true,
     paused: false,
   })
@@ -159,7 +160,7 @@ export function SheetBench() {
     'copy config (for defaults)': button(copy('config')),
   }, { order: 3 }) // Export stays last, whichever bench creates it first
 
-  const frameWidth = stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
+  const frameWidth = viewport === 'phone' ? '390px' : viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
   const animKey = `${nonce}-${JSON.stringify(config)}`
 
   return (

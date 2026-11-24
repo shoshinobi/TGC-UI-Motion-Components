@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { SpecsToggle } from '@/components/SpecsToggle'
+import { useViewport } from '@/lib/viewport'
 import { useControls, folder, button } from 'leva'
 import { ParticleRain, PARTICLE_DEFAULT_CONFIG, type ParticleRainConfig } from '@/components/ParticleRain'
 import { buildParticleLoopSpec, buildParticleJsonSpec } from '@/lib/buildParticleSpec'
@@ -61,18 +62,12 @@ function savedSettings(): Record<string, number | string | boolean> | null {
   }
 }
 
-function initialViewport(): string {
-  if (typeof window === 'undefined') return 'full'
-  const vp = new URLSearchParams(window.location.search).get('vp')?.toLowerCase() ?? ''
-  return vp === 'phone' || vp === 'tablet' || vp === 'full' ? vp : 'full'
-}
-
 export function RainBench() {
   const [nonce, setNonce] = useState(0)
   const [dump, setDump] = useState(0)
 
+  const viewport = useViewport('full')
   const stage = useControls('Stage', {
-    viewport: { value: initialViewport(), options: ['phone', 'tablet', 'full'] },
     background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     paused: false,
   })
@@ -266,7 +261,7 @@ export function RainBench() {
     config.burstWindow,
     config.spawnRate,
     config.streamDuration,
-    stage.viewport,
+    viewport,
     config.autoScale,
     config.referenceWidth,
     config.countScale,
@@ -275,7 +270,7 @@ export function RainBench() {
   ].join('|')
 
   const frameWidth =
-    stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
+    viewport === 'phone' ? '390px' : viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
 
   return (
     <>
@@ -295,7 +290,7 @@ export function RainBench() {
           🪙 Daily Gold
         </button>
         <div className='rain-stage-inner'>
-          <div className='rain-frame' style={{ width: frameWidth }} data-viewport={stage.viewport}>
+          <div className='rain-frame' style={{ width: frameWidth }} data-viewport={viewport}>
             <ParticleRain
               key={runKey}
               config={config}

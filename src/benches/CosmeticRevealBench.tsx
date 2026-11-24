@@ -1,6 +1,7 @@
 import { REVEAL_MUSIC_OPTIONS } from '@/components/revealMusic'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { SpecsToggle } from '@/components/SpecsToggle'
+import { useViewport } from '@/lib/viewport'
 import { useControls, folder, button, LevaInputs } from 'leva'
 import { CosmeticReveal } from '@/components/CosmeticReveal'
 import {
@@ -49,12 +50,6 @@ function savedSettings(): Record<string, number | string | boolean> | null {
   }
 }
 
-function initialViewport(): string {
-  if (typeof window === 'undefined') return 'phone'
-  const vp = new URLSearchParams(window.location.search).get('vp')?.toLowerCase() ?? ''
-  return vp === 'phone' || vp === 'tablet' || vp === 'full' ? vp : 'phone'
-}
-
 const STATE_LABEL: Record<CosmeticRevealState, string> = {
   armed: 'armed — press Start',
   tease: 'paparazzi',
@@ -82,8 +77,8 @@ export function CosmeticRevealBench() {
     setNonce((k) => k + 1)
   }
 
+  const viewport = useViewport()
   const stage = useControls('Stage', {
-    viewport: { value: initialViewport(), options: ['phone', 'tablet', 'full'] },
     background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     emberColor: { value: '#3a1512', label: 'ember colour' },
     emberSpread: { value: 60, min: 10, max: 140, step: 2, label: 'ember spread (%)' },
@@ -431,9 +426,9 @@ export function CosmeticRevealBench() {
     'copy config (for defaults)': button(copy('config')),
   }, { order: 3 }) // Export stays last, whichever bench creates it first
 
-  const runKey = [nonce, config.musicTrack, stage.viewport].join('|')
+  const runKey = [nonce, config.musicTrack, viewport].join('|')
   useEffect(() => setTapped(''), [runKey])
-  const frameWidth = stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
+  const frameWidth = viewport === 'phone' ? '390px' : viewport === 'tablet' ? '720px' : 'min(1100px, 100%)'
 
   return (
     <>
@@ -476,7 +471,7 @@ export function CosmeticRevealBench() {
           </svg>
         </button>
         <div className='gold-stage-inner'>
-          <div className='gold-frame' style={{ width: frameWidth }} data-viewport={stage.viewport}>
+          <div className='gold-frame' style={{ width: frameWidth }} data-viewport={viewport}>
             <CosmeticReveal
               key={runKey}
               runKey={runKey}

@@ -10,8 +10,8 @@ the finished spec in the format you need.
 
 ## Components
 
-Switch with the **`component`** dropdown at the top of the Leva panel, or
-deep-link with `?c=`.
+Deep-link with `?c=`, or open the controls (the **sliders icon**, bottom-left of the
+stage) and use the **`component`** dropdown at the top.
 
 | Component | Open | Approved spec | Status |
 |---|---|---|---|
@@ -33,8 +33,10 @@ npm install
 npm run dev      # http://localhost:5173
 ```
 
-Single screen: **stage** (top), **Leva panel** (right, collapses under 720px),
-**spec dock** (bottom). Every component tab has **Export** buttons that print the
+Single screen: **stage** (top), **Leva panel** (right; starts hidden — the sliders icon
+bottom-left shows / hides it, and the panel's title-bar arrow puts it away),
+**spec dock** (bottom). The **phone / tablet / full** buttons are top-left on the components
+framed at a device width; the choice carries across them and is added to the link (`?vp=`). Every component tab has **Export** buttons that print the
 exact spec locked in below — `copy Framer Motion`, `copy JSON tokens`, and
 `copy config`.
 
@@ -1068,8 +1070,8 @@ rest of the responsive block) is identical to the burst config.
 }
 ```
 
-**Tuning on the bench.** **Stage → viewport** (phone ≈ 390 / tablet ≈ 720 / full)
-frames the canvas so you can watch the auto-scale at each width; `?c=rain&vp=phone`
+**Tuning on the bench.** The **viewport buttons** (top-left: phone ≈ 390 / tablet ≈ 720 / full)
+frame the canvas so you can watch the auto-scale at each width; `?c=rain&vp=phone`
 deep-links a viewport. **Export → ★ save settings** stashes the current panel in
 `localStorage` so an in-progress tune survives a reload; **copy config** emits the
 JSON above with your changes — send that back to lock it in; **reset to code
@@ -1710,7 +1712,8 @@ default on every component. Click the **copy icon** at the bottom-left of the st
 (beside the 🔊 icon where there is one) to show them; click again to hide. The
 choice is remembered. The Export panel's copy buttons work either way.
 
-Pick the component from the `component` dropdown at the top of the Leva panel.
+Open the controls with the sliders icon (bottom-left of the stage); pick the component
+from the `component` dropdown at the top.
 `↻ Replay` sits on the stage, just below the Stats HUD (FPS / heap / bundle size,
 top-left). The dock's spec cards start collapsed — click a header to expand.
 
@@ -1734,7 +1737,7 @@ top-left). The dock's spec cards start collapsed — click a header to expand.
 
 | Group | Controls |
 |---|---|
-| Stage | viewport (phone / tablet / full), scrim, paused |
+| Stage | scrim, paused |
 | Layers | one folder per layer (sheet · gradient · icon · heading · body · button); each has `type`, `from opac.`, `from Y`, `from scale`, `delay`, `wait for all`, and sub-folders **spring** (stiffness / damping / mass), **tween** (duration / ease), **shake** (rotate° / shift px / swings / duration / decay) |
 | Export | reset defaults · replay · copy Framer Motion · copy JSON tokens · copy config |
 
@@ -1753,7 +1756,7 @@ top-left). The dock's spec cards start collapsed — click a header to expand.
 
 | Group | Controls |
 |---|---|
-| Stage | viewport (phone / tablet / **full — reference only, see [note above](#bring-this-over--one-config-per-viewport)**), background, paused |
+| Stage | background, paused |
 | drag / release | commit distance (px), flick velocity (px/s), snap-back stiffness / damping |
 | fly-out (on release) | distance out (px), toward swipe direction, rotate out (°), duration out (s), ease out |
 | stack fan-out | visible cards, gap X / gap Y, scale − per step, opacity − per step, fan rotate per step, front card tilt (°), darken cards behind |
@@ -1762,7 +1765,7 @@ top-left). The dock's spec cards start collapsed — click a header to expand.
 | CTA button | scale in, delay, from scale / opacity, transform origin, type; **ctaTween**, **ctaSpring** |
 | Export | next banner ▸ · **★ save as approved (this viewport)** · reset this viewport to code default · replay · copy Framer Motion / JSON tokens / config |
 
-Switching **Stage → viewport** loads that viewport's approved config into the
+Switching the viewport (buttons, top-left) loads that viewport's approved config into the
 panel (unsaved tweaks for the one you leave are discarded).
 **★ save as approved (this viewport)** persists the current panel as that
 viewport's config (per-viewport `localStorage`); **reset this viewport to code
@@ -1776,7 +1779,7 @@ physics sub-folders **sway** / **spin**. Labels are trimmed to fit the panel.
 
 | Group | Controls |
 |---|---|
-| Stage | **viewport (phone / tablet / full)**, background (dark / light / ember), paused |
+| Stage | background (dark / light / ember), paused |
 | emission | mode (burst / stream), count / pool, burst window, stream /s, stream secs, spawn band, spawn above |
 | responsive | scale w/ width, ref width, count vs width, size vs width, clamp min / max |
 | physics | **gravity (m/s²)**, start vy min / max, start vx ±, air drag, terminal vel, wind; **sway** (amplitude / frequency), **spin** (spawn min / max °/s, drag, airborne: keep / killOnContact / off, from contacts) |
@@ -1794,7 +1797,7 @@ cha-ching to an avatar reaction).
 
 Physics / floor / collision / appearance update **live**; emission, the Stage
 viewport, and the responsive knobs (or **drop again**) re-drop the whole system.
-The Stage viewport frames the canvas at ~390 / ~720 / full px so you see the
+The viewport buttons (top-left) frame the canvas at ~390 / ~720 / full px so you see the
 auto-scale; `?c=rain&vp=phone` deep-links one.
 
 **Gem Reveal**
@@ -1828,7 +1831,7 @@ persists the panel to `localStorage`. Full descriptions in
 
 | Group | Controls |
 |---|---|
-| Stage | **viewport (phone / tablet / full)** · background · ember colour / spread · paused |
+| Stage | background · ember colour / spread · paused |
 | Hesitation | **before final gem** (on/off — go past + snap back, or ease straight in) |
 | result | **lands on (preset)** |
 | grade colours | 6 grades + found gem |
@@ -1856,7 +1859,7 @@ bottom-right. **Swipe the wheel vertically** to spin it.
 
 | Group | Controls |
 |---|---|
-| Stage | **viewport (phone / tablet / full)** · background · ember colour / spread · paused |
+| Stage | background · ember colour / spread · paused |
 | amount | **gold amount** · count from |
 | tease (1) | line · size · pop-in delay · fade · pop from scale / rotate · settled tilt · pop spring · alone before the pour · fade after pour starts |
 | pile-up (2) | **fill level × height** · smaller amount → smaller pile + full pile at / smallest pile · packing · **bar size on phone** · bar size vs width · bars · scale min / max · pour + ease-in + first bars speed · drop in from above · gravity · drop-in speed min / max · top fall speed · bounce · settle after last bar |
@@ -1883,7 +1886,7 @@ for the current viewport.
 
 | Group | Controls |
 |---|---|
-| Stage | **viewport (phone / tablet / full)** · background · ember colour / spread · paused |
+| Stage | background · ember colour / spread · paused |
 | result | **item they get** · **tier** (random / Common / Rare / Grail) · cards in the carousel · other cards · auto-spin after |
 | tease (1) | line · sizes · grow on wider screens · timing · pop spring · carousel comes in at |
 | paparazzi (1) | flashes / s · random timing · size + random ± · gold colour + mix · intensity · fade · tapered glint (points / length / thickness) |

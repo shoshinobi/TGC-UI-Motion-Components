@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { SpecsToggle } from '@/components/SpecsToggle'
+import { useViewport, type Viewport } from '@/lib/viewport'
 import { useControls, folder, button } from 'leva'
 import {
   BannerStack,
@@ -24,7 +25,6 @@ const SAMPLE_BANNERS: BannerSample[] = [
   { title: 'Reward ready', subtitle: '2,400 gold', ctaLabel: 'Claim', imageUrl: '🪙', tint: '#2a1533', subtitleColor: '#d6a8e0' },
 ]
 
-type Viewport = 'phone' | 'tablet' | 'full'
 type FlatConfig = Record<string, number | string | boolean>
 
 function strEase(e: BannerStackMotionConfig['shuffleEase']): string {
@@ -67,8 +67,8 @@ export function BannerBench() {
   const [nonce, setNonce] = useState(0)
   const [advance, setAdvance] = useState(0)
 
+  const viewport = useViewport()
   const stage = useControls('Stage', {
-    viewport: { value: 'phone', options: ['phone', 'tablet', 'full'] },
     background: { value: 'ember', options: ['dark', 'light', 'ember'] },
     paused: false,
   })
@@ -147,7 +147,6 @@ export function BannerBench() {
   const values = v as unknown as Record<string, number | string | boolean>
   const config = Object.fromEntries(Object.keys(D).map((k) => [k, values[k]])) as unknown as BannerStackMotionConfig
 
-  const viewport = stage.viewport as Viewport
 
   // Switching the viewport loads that viewport's approved config into the panel.
   // (Unsaved tweaks for the viewport you leave are discarded — use "save as
@@ -195,7 +194,7 @@ export function BannerBench() {
     'copy config (for defaults)': button(copy('config')),
   }, { order: 3 }) // Export stays last, whichever bench creates it first
 
-  const frameWidth = stage.viewport === 'phone' ? '390px' : stage.viewport === 'tablet' ? '640px' : 'min(880px, 100%)'
+  const frameWidth = viewport === 'phone' ? '390px' : viewport === 'tablet' ? '640px' : 'min(880px, 100%)'
   const animKey = `${nonce}-${JSON.stringify(config)}`
 
   return (
